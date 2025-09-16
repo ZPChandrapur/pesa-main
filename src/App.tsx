@@ -53,6 +53,8 @@ function AppContent() {
     return <WorkProgress />;
   case 'tracking':
     return <Tracking />;
+  case 'tracking':
+    return <Tracking />;
   case 'aarakhada':
     return <Aarakhada />;
   default:
