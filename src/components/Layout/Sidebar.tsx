@@ -13,7 +13,7 @@ interface NavItem {
   id: string;
   icon: React.ComponentType<any>;
   labelKey: string;
-  requiredRole?: 'gramsewak' | 'bdo' | 'ceo';
+  requiredRole?: 'gramsewak' | 'bdo' | 'ceo' |'developer';
 }
 
 const navItems: NavItem[] = [
@@ -23,7 +23,7 @@ const navItems: NavItem[] = [
   { id: 'workProgress', icon: TrendingUp, labelKey: 'workProgress' },
   { id: 'gramPanchayat', icon: Building2, labelKey: 'gramPanchayat' },
   { id: 'taluka', icon: Building2, labelKey: 'taluka'},
-  { id: 'district', icon: Building2, labelKey: 'district', requiredRole: 'bdo' },
+  { id: 'district', icon: Building2, labelKey: 'district', requiredRole: 'developer' },
   { id: 'funds', icon: Banknote, labelKey: 'funds', requiredRole: 'bdo' },
 ];
 
