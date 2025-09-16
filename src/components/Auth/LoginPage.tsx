@@ -47,7 +47,7 @@ export function LoginPage() {
             <Building2 className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
-            {language === 'mr' ? 'पेसा वर्क' : 'PESA Work'}
+            {language === 'mr' ? 'पेसा निधी व्यवस्थापन प्रणाली' : 'PESA Fund management System'}
           </h1>
           <p className="text-gray-600">
             {language === 'mr' 
