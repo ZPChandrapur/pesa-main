@@ -1,7 +1,8 @@
 import React from 'react';
-import { Home, MapPin, Building2, Banknote, TrendingUp, Globe, ChevronDown, ChevronRight } from 'lucide-react';
+import { Home, MapPin, Building2, Banknote, TrendingUp, Globe, LogOut } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface SidebarProps {
   activeTab: string;
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const { t, language, setLanguage } = useLanguage();
   const { hasPermission } = useUser();
+  const { signOut, user } = useAuth();
 
   const filteredNavItems = navItems.filter(item =>
     !item.requiredRole || hasPermission(item.requiredRole)
@@ -48,6 +50,17 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             <p className="text-sm text-slate-400">Work Management</p>
           </div>
         </div>
+        
+        {/* User Info */}
+        {user && (
+          <div className="mb-4 p-3 bg-slate-800/50 rounded-2xl border border-slate-700/50">
+            <p className="text-sm font-medium text-white truncate">{user.email}</p>
+            <p className="text-xs text-slate-400">
+              {language === 'mr' ? 'लॉग इन केले आहे' : 'Logged in'}
+            </p>
+          </div>
+        )}
+        
         <div className="flex items-center gap-2 p-3 bg-slate-800/50 rounded-2xl border border-slate-700/50">
           <Globe className="w-4 h-4 text-slate-400" />
           <select
@@ -80,6 +93,20 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           );
         })}
       </nav>
+      
+      {/* Logout Button */}
+      <div className="mt-auto pt-4">
+        <button
+          onClick={() => signOut()}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 transform hover:scale-105 text-slate-300 hover:bg-red-500/20 hover:text-red-400"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">
+            {language === 'mr' ? 'लॉग आउट' : 'Logout'}
+          </span>
+        </button>
+      </div>
+      
       <div className="mt-8 p-4 bg-gradient-to-br from-emerald-500/10 to-teal-600/10 rounded-2xl border border-emerald-500/20">
         <p className="text-sm text-emerald-400 font-medium mb-2">
           {language === 'mr' ? 'प्रणाली आवृत्ती' : 'System Version'}

@@ -192,7 +192,19 @@ const translations: Record<Language, Record<string, string>> = {
     selectPesaVillageWorkAndBuildWorkflow: 'पेसा गाव काम निवडा आणि सानुकूल टप्प्यांसह वर्कफ्लो तयार करा',
     selectWorkToStartBuildingWorkflow: 'वर्कफ्लो तयार करण्यासाठी काम निवडा',
     selectPesaVillageWorkWorkflowToTrackProgressAndManageSteps: 'प्रगती ट्रॅक करण्यासाठी आणि टप्पे व्यवस्थापित करण्यासाठी पेसा गाव काम वर्कफ्लो निवडा',
-  
+    
+    // Authentication
+    signIn: 'प्रवेश करा',
+    signOut: 'बाहेर पडा',
+    email: 'ईमेल',
+    password: 'पासवर्ड',
+    login: 'लॉगिन',
+    logout: 'लॉगआउट',
+    loginError: 'लॉगिन करताना त्रुटी',
+    invalidCredentials: 'चुकीचे ईमेल किंवा पासवर्ड',
+    fillAllFields: 'कृपया सर्व फील्ड भरा',
+    loggingIn: 'प्रवेश करत आहे...',
+    loggedIn: 'लॉग इन केले आहे',
   },
   en: {
     // Navigation
@@ -367,6 +379,18 @@ const translations: Record<Language, Record<string, string>> = {
     selectWorkToStartBuildingWorkflow: 'Select a work to start building workflow',
     selectPesaVillageWorkWorkflowToTrackProgressAndManageSteps: 'Select a PESA village work workflow to track progress and manage steps',
 
+    // Authentication
+    signIn: 'Sign In',
+    signOut: 'Sign Out',
+    email: 'Email',
+    password: 'Password',
+    login: 'Login',
+    logout: 'Logout',
+    loginError: 'Login Error',
+    invalidCredentials: 'Invalid email or password',
+    fillAllFields: 'Please fill in all fields',
+    loggingIn: 'Signing in...',
+    loggedIn: 'Logged in',
   },
 };
 

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { UserProvider } from './context/UserContext';
+import { LoginPage } from './components/Auth/LoginPage';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Dashboard } from './components/Dashboard/Dashboard';
 import { VillagesList } from './components/Villages/VillagesList';
@@ -13,7 +15,25 @@ import { Tracking } from './components/Placeholders/Tracking';
 import { Aarakhada } from './components/Placeholders/Aarakhada';
 
 function AppContent() {
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login page if user is not authenticated
+  if (!user) {
+    return <LoginPage />;
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -53,11 +73,13 @@ function AppContent() {
 
 function App() {
   return (
-    <LanguageProvider>
-      <UserProvider>
-        <AppContent />
-      </UserProvider>
-    </LanguageProvider>
+    <AuthProvider>
+      <LanguageProvider>
+        <UserProvider>
+          <AppContent />
+        </UserProvider>
+      </LanguageProvider>
+    </AuthProvider>
   );
 }
 

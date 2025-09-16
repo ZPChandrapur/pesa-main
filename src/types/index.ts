@@ -1,6 +1,17 @@
 // Shared
 export type Language = 'mr' | 'en';
 
+// User related types
+export type UserRole = 'gramsewak' | 'bdo' | 'ceo';
+
+export interface User {
+  id: string;
+  name: string;
+  role: UserRole;
+  district: string;
+  block: string;
+}
+
 // Village related types
 export interface Village {
   id?: string;
