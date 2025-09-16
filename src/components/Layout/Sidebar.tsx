@@ -23,8 +23,8 @@ const navItems: NavItem[] = [
   { id: 'workProgress', icon: TrendingUp, labelKey: 'workProgress' },
   { id: 'gramPanchayat', icon: Building2, labelKey: 'gramPanchayat' },
   { id: 'taluka', icon: Building2, labelKey: 'taluka'},
-  { id: 'district', icon: Building2, labelKey: 'district', requiredRole: 'developer' },
-  { id: 'funds', icon: Banknote, labelKey: 'funds', requiredRole: 'bdo' },
+  { id: 'district', icon: Building2, labelKey: 'district'},  // requiredRole: 'developer' 
+  { id: 'funds', icon: Banknote, labelKey: 'funds' }, //, requiredRole: 'bdo'
 ];
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
