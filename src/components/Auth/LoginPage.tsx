@@ -135,7 +135,7 @@ export function LoginPage() {
           <div className="mt-6 pt-6 border-t border-gray-200 text-center">
             <p className="text-sm text-gray-500">
               {language === 'mr' 
-                ? 'पेसा कार्य व्यवस्थापन प्रणाली v1.0.0'
+                ? 'पेसा निधी व्यवस्थापन प्रणाली v1.0.0'
                 : 'PESA Work Management System v1.0.0'
               }
             </p>
