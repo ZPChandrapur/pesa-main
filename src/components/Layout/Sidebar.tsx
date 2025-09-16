@@ -25,7 +25,6 @@ const navItems: NavItem[] = [
   { id: 'taluka', icon: Building2, labelKey: 'taluka'},
   { id: 'district', icon: Building2, labelKey: 'district', requiredRole: 'bdo' },
   { id: 'funds', icon: Banknote, labelKey: 'funds', requiredRole: 'bdo' },
-  { id: 'tracking', icon: MapPin, labelKey: 'tracking' },
 ];
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
