@@ -136,7 +136,7 @@ export function LoginPage() {
             <p className="text-sm text-gray-500">
               {language === 'mr' 
                 ? 'पेसा निधी व्यवस्थापन प्रणाली v1.0.0'
-                : 'PESA Work Management System v1.0.0'
+                : 'PESA Fund Management System v1.0.0'
               }
             </p>
           </div>
