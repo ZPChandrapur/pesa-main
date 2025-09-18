@@ -117,7 +117,7 @@ export function Aarakhada() {
     }
     return true;
   };
-  const handleSubmit = async (e: React.FormEvent) => {debugger;
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
     try {
