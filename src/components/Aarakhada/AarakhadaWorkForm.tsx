@@ -133,7 +133,7 @@ export function AarakhadaWorkForm({
     setFormData(initialFormData);
   };
 
-const handleSubmit = async (e: React.FormEvent) => {debugger;
+const handleSubmit = async (e: React.FormEvent) => {
   
   e.preventDefault();
   const selectedVillage = villages.find(v => v.id === formData.village_id);
