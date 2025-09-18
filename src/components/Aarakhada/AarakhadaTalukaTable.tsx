@@ -11,7 +11,7 @@ interface AarakhadaTalukaTableProps {
 export function AarakhadaTalukaTable({ works, workType, loading }: AarakhadaTalukaTableProps) {
   const { t } = useLanguage();
 console.log('Received works prop in table:', works);
-  debugger;
+  ;
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
