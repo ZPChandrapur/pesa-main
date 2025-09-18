@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { useAuth } from './AuthContext';
 import { User, UserRole } from '../types';
 
 interface UserContextType {
@@ -17,13 +18,20 @@ const roleHierarchy: Record<UserRole, number> = {
 };
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  // Mock user for demo - in real app this would come from authentication
-  const [user] = useState<User>({
-    id: '1',
-    name: 'Demo User',
-    role: 'bdo', // Change this to test different roles
-    district: 'Pune',
-    block: 'Haveli'
+  const { user: authUser } = useAuth();
+  
+  // Create user object from authenticated user
+  // In a real app, you might fetch additional user data from your database
+  const [user] = useState<User | null>(() => {
+    if (!authUser) return null;
+    
+    return {
+      id: authUser.id,
+      name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
+      role: (authUser.user_metadata?.role as UserRole) || 'bdo', // Default role
+      district: authUser.user_metadata?.district || 'Pune',
+      block: authUser.user_metadata?.block || 'Haveli'
+    };
   });
 
   const hasPermission = (requiredRole: UserRole): boolean => {
