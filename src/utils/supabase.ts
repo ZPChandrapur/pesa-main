@@ -1,13 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { Village, AarakhadaWork } from '../types';
-
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables. Please check your .env file.');
-}
-
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   db: {
     schema: 'public'
@@ -368,6 +362,7 @@ export const pesaWorkOperations = {
           const districtPhysicalData = {
             district_name: village.district,
             taluka_name: village.block,
+            village_id: data.village_id,
             pesa_gram_panchayat_count: 0,
             pesa_village_count: 0,
             work_category: data.work_category || null,
@@ -386,6 +381,7 @@ export const pesaWorkOperations = {
           // District financial data insertion
           const districtFinancialData = {
             taluka_name: village.block,
+            village_id: data.village_id,
             pesa_village_count: 0,
             annual_approved_fund: 0,
             annual_received_fund: 0,
