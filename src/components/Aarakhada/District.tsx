@@ -2,7 +2,7 @@ import React from 'react';
 import { Building2, Users, Target, DollarSign, TrendingUp, Filter } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { AarakhadaDistrictTable } from './AarakhadaDistrictTable';
-import { villageService, districtWorkService } from '../../utils/supabase';
+import { villageService, districtWorkService, pesaSupabase } from '../../utils/supabase';
 export function District() {
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = React.useState<'financial' | 'physical'>('physical');
@@ -24,24 +24,26 @@ export function District() {
   const [workCategories, setWorkCategories] = React.useState<any[]>(defaultWorkCategories);
   const availableVillages = selectedTaluka ? (villagesByTaluka[selectedTaluka] || []) : [];
   const loadWorks = async () => {
-    if (selectedDistrict) {
-      setLoading(true);
-      try {
-        // Use districtWorkService to fetch works
-        const data = await districtWorkService.getByDistrictAndCategory({
-          district_name: selectedDistrict,
-          category: selectedCategory || undefined,
-          work_type: activeTab
-        });
-        setWorks(data || []);
-      } catch (err) {
-        console.error('Failed to load works:', err);
-        setWorks([]);
-      } finally {
-        setLoading(false);
+    setLoading(true);
+    try {
+      // Load all district data by default, filter by selected district if provided
+      let query = pesaSupabase.from(activeTab === 'financial' ? 'district_aarakhada_financial' : 'district_aarakhada_physical').select('*');
+      
+      if (selectedDistrict) {
+        query = query.eq('district_name', selectedDistrict);
       }
-    } else {
+      if (selectedCategory) {
+        query = query.eq('work_category', selectedCategory);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      setWorks(data || []);
+    } catch (err) {
+      console.error('Failed to load works:', err);
       setWorks([]);
+    } finally {
+      setLoading(false);
     }
   };
   React.useEffect(() => {
@@ -86,7 +88,7 @@ export function District() {
   React.useEffect(() => {
     loadWorks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVillage, selectedCategory, activeTab, language]);
+  }, [selectedDistrict, selectedCategory, activeTab, language]);
   const totalWorks = works.reduce((sum, work) => sum + (work.approved_works || 0), 0);
   const totalExpenditure = works.reduce((sum, work) => sum + (work.remaining_funds || 0), 0);
   return (
