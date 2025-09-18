@@ -70,7 +70,6 @@ console.log('Received works prop in table:', works);
     ) : (
       works.map((work, index) => {
         console.log(`Rendering row ${index + 1}:`, work);
-        debugger; // Pauses execution here for inspection
         return (
           <tr key={work.id} className="border-t hover:bg-gray-50 transition-colors duration-200">
             <td className="px-4 py-3 font-medium">{index + 1}</td>
