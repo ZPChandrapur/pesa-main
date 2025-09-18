@@ -5,7 +5,6 @@ import { pesaWorkOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
 import WorkflowBuilder from '../Placeholders/WorkflowBuilder';
 import WorkflowProgress from '../Placeholders/WorkflowProgress';
-
 interface PesaWork {
   id: string;
   taluka: string;
@@ -38,7 +37,6 @@ interface PesaWork {
   village?: { village_name: string; village_name_mr?: string };
   gram_panchayat_work?: { work_name: string; work_category: string };
 }
-
 export function WorkProgress() {
   const { t, language } = useLanguage();
   const [works, setWorks] = useState<PesaWork[]>([]);
@@ -57,7 +55,6 @@ export function WorkProgress() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'builder' | 'progress'>('dashboard');
   const handleTab = (tab: 'dashboard' | 'builder' | 'progress') => setActiveTab(tab);
-
   // Reordered formData fields for input order in form
   const [formData, setFormData] = useState({
     taluka: '',
@@ -86,7 +83,6 @@ export function WorkProgress() {
     work_category: '',
     added_month: '', // added month field here
   });
-
   // Added states for filtering dropdowns
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
@@ -94,17 +90,14 @@ export function WorkProgress() {
   const [workCategoryFilter, setWorkCategoryFilter] = useState<string>('all');
   const [pesaGrampanchayatFilter, setPesaGrampanchayatFilter] = useState<string>('all');
   const [villageFilter, setVillageFilter] = useState<string>('all');
-
   const completedStages = works.filter(w => w.current_status === 'completed').length;
   const inProgress = works.filter(w => w.current_status === 'in_progress').length;
   const pending = works.filter(w => w.current_status === 'pending').length;
   const overallProgress = works.length ? Math.round((completedStages / works.length) * 100) : 0;
-
   useEffect(() => {
     loadWorks();
     loadAvailableWorkNames();
   }, []);
-
   const loadWorks = async () => {
     try {
       setLoading(true);
@@ -125,7 +118,6 @@ export function WorkProgress() {
       setLoading(false);
     }
   };
-
   const loadAvailableWorkNames = async () => {
     try {
       const data = await pesaWorkOperations.getAvailableWorkNames();
@@ -134,7 +126,6 @@ export function WorkProgress() {
       console.error('Error loading available work names:', error);
     }
   };
-
   const validateForm = () => {
     // Removed admin_approval_no and admin_approval_date from required fields
     const requiredFields = ['taluka', 'work_name', 'department', 'village_id'];
@@ -146,7 +137,6 @@ export function WorkProgress() {
     }
     return true;
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -179,7 +169,6 @@ export function WorkProgress() {
       toast.error('Error saving work');
     }
   };
-
   const handleEdit = (work: PesaWork) => {
     setEditingWork(work);
     setFormData({
@@ -211,21 +200,20 @@ export function WorkProgress() {
     });
     setShowForm(true);
   };
-
   const handleView = (work: PesaWork) => setViewingWork(work);
-
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this work?')) {
-      try {
-        await pesaWorkOperations.delete(id);
-        await loadWorks();
-        toast.success('Work deleted successfully');
-      } catch (error) {
-        console.error('Error deleting work:', error);
-        toast.error('Error deleting work');
-      }
+  console.log('Attempting to delete work with id:', id);
+  if (window.confirm('Are you sure you want to delete this work?')) {
+    try {
+      await pesaWorkOperations.delete(id);
+      toast.success('Work deleted successfully');
+      await loadWorks(); // Refresh list after delete
+    } catch (error) {
+      console.error('Error deleting work:', error);
+      toast.error('Error deleting work');
     }
-  };
+  }
+};
 
   const handleDuplicate = async (id: string) => {
     try {
@@ -237,7 +225,6 @@ export function WorkProgress() {
       toast.error('Error duplicating work');
     }
   };
-
   const resetForm = () => {
     setFormData({
       taluka: '',
@@ -261,15 +248,14 @@ export function WorkProgress() {
       expected_completion: '',
       note: '',
       village_id: '',
-      gram_panchayat_work_id: '',
+      gram_panchayat_work_id: '', 
       pesa_grampanchayat: '',
       work_category: '',
-      added_month: '',
+      added_month: '', 
     });
     setEditingWork(null);
     setShowForm(false);
   };
-
   const filteredWorks = works.filter(w => {
     const statusMatch = statusFilter === 'all' || w.current_status === statusFilter;
     const priorityMatch = priorityFilter === 'all' || w.priority === priorityFilter;
@@ -279,75 +265,79 @@ export function WorkProgress() {
     const villageMatch = villageFilter === 'all' || (w.village?.village_name === villageFilter);
     return statusMatch && priorityMatch && yearMatch && workCategoryMatch && pesaGrampanchayatMatch && villageMatch;
   });
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
-
   const cards = [
     { icon: CheckCircle, label: t('completed'), value: completedStages, color: 'from-green-500 to-emerald-600' },
     { icon: Clock, label: t('inProgress'), value: inProgress, color: 'from-blue-500 to-indigo-600' },
     { icon: AlertCircle, label: t('pending'), value: pending, color: 'from-amber-500 to-orange-600' },
     { icon: TrendingUp, label: t('overallProgress'), value: `${overallProgress}%`, color: 'from-purple-500 to-pink-600' },
   ];
-
   const uniqueYears = Array.from(new Set(works.map(w => w.year).filter(Boolean) as (string | number)[])).map(String);
-
   return (
     <div className="space-y-6">
       <Toaster position="top-right" />
       {/* Tab Navigation */}
-      <div className="flex gap-4 mb-6">
+      <div style={{ display: 'flex', gap: '16px', marginBottom: '1rem' }}>
         <button
           onClick={() => handleTab('dashboard')}
-          className={`px-6 py-3 rounded-3xl font-semibold transition ${
-            activeTab === 'dashboard'
-              ? 'bg-gradient-to-r from-emerald-500 to-emerald-700 text-white shadow-lg'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+          style={{
+            fontWeight: activeTab === 'dashboard' ? 'bold' : 'normal',
+            color: activeTab === 'dashboard' ? '#2ab085' : 'inherit',
+            background: activeTab === 'dashboard' ? 'rgba(46,184,131,.08)' : 'transparent',
+            borderRadius: '6px',
+            padding: '6px 18px',
+            border: 'none',
+          }}
         >
           {t('workDashboard')}
         </button>
         <button
           onClick={() => handleTab('builder')}
-          className={`px-6 py-3 rounded-3xl font-semibold transition ${
-            activeTab === 'builder'
-              ? 'bg-gradient-to-r from-blue-500 to-blue-700 text-white shadow-lg'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+          style={{
+            fontWeight: activeTab === 'builder' ? 'bold' : 'normal',
+            color: activeTab === 'builder' ? '#2a58ec' : 'inherit',
+            background: activeTab === 'builder' ? 'rgba(52,120,255,.08)' : 'transparent',
+            borderRadius: '6px',
+            padding: '6px 18px',
+            border: 'none',
+          }}
         >
           {t('workflowBuilder')}
         </button>
         <button
           onClick={() => handleTab('progress')}
-          className={`px-6 py-3 rounded-3xl font-semibold transition ${
-            activeTab === 'progress'
-              ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
+          style={{
+            fontWeight: activeTab === 'progress' ? 'bold' : 'normal',
+            color: activeTab === 'progress' ? '#9350d6' : 'inherit',
+            background: activeTab === 'progress' ? 'rgba(147,80,214,.08)' : 'transparent',
+            borderRadius: '6px',
+            padding: '6px 18px',
+            border: 'none',
+          }}
         >
           {t('workflowProgress')}
         </button>
       </div>
-
       {/* Header and Filters replacing Add New Work Button */}
       {activeTab === 'dashboard' && (
-        <div className="bg-gradient-to-r from-emerald-500 to-emerald-700 rounded-3xl shadow-lg p-6 flex items-center justify-between text-white mb-6">
+        <div className="bg-white rounded-3xl shadow-xl p-6 flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-3xl font-bold">{t('workManagement')}</h2>
-            <p className="mt-2 opacity-80">{t('manageAndTrackAllWorkAssignments')}</p>
+            <h2 className="text-3xl font-bold text-emerald-600">{t('workManagement')}</h2>
+            <p className="text-gray-600 mt-2">{t('manageAndTrackAllWorkAssignments')}</p>
           </div>
           <div className="flex gap-6">
             <div className="flex flex-col">
-              <label className="font-bold">{t('pesaGrampanchayat')}</label>
+              <label className="font-bold text-gray-700">{t('pesaGrampanchayat')}</label>
               <select
                 value={pesaGrampanchayatFilter}
                 onChange={e => setPesaGrampanchayatFilter(e.target.value)}
-                className="px-3 py-2 rounded-2xl border border-emerald-300 bg-white text-gray-800 focus:outline-none focus:ring-4 focus:ring-emerald-300"
+                className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">{t('All')}</option>
                 {pesaGrampanchayats.map(gp => (
@@ -358,11 +348,11 @@ export function WorkProgress() {
               </select>
             </div>
             <div className="flex flex-col">
-              <label className="font-bold">{t('village')}</label>
+              <label className="font-bold text-gray-700">{t('village')}</label>
               <select
                 value={villageFilter}
                 onChange={e => setVillageFilter(e.target.value)}
-                className="px-3 py-2 rounded-2xl border border-emerald-300 bg-white text-gray-800 focus:outline-none focus:ring-4 focus:ring-emerald-300"
+                className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">{t('All')}</option>
                 {villages.map(v => (
@@ -375,42 +365,38 @@ export function WorkProgress() {
           </div>
         </div>
       )}
-
       {/* Cards */}
       {activeTab === 'dashboard' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
           {cards.map((item, index) => {
             const Icon = item.icon;
             return (
               <div
                 key={index}
-                className={`bg-white rounded-3xl shadow-lg p-4 hover:shadow-xl transition transform hover:scale-[1.04] flex items-center gap-4`}
+                className="bg-white rounded-2xl shadow p-3 hover:shadow-lg transition-all workDuration-300 transform hover:scale-105"
                 style={{ minWidth: 0, minHeight: 0 }}
               >
                 <div
-                  className={`w-14 h-14 bg-gradient-to-br ${item.color} rounded-3xl flex items-center justify-center shadow-md`}
+                  className={`w-8 h-8 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center mb-2 shadow-md`}
                 >
-                  <Icon className="w-7 h-7 text-white" />
+                  <Icon className="w-4 h-4 text-white" />
                 </div>
-                <div>
-                  <p className="text-xl font-extrabold text-gray-900 mb-1">{item.value}</p>
-                  <p className="text-xs text-gray-600 font-semibold">{item.label}</p>
-                </div>
+                <p className="text-lg font-bold text-gray-800 mb-1">{item.value}</p>
+                <p className="text-xs text-gray-600 font-bold">{item.label}</p>
               </div>
             );
           })}
         </div>
       )}
-
       {/* Filters */}
       {activeTab === 'dashboard' && (
-        <div className="flex flex-wrap items-center gap-6 mb-6">
+        <div className="flex flex-wrap items-center gap-6 mb-4">
           <div className="flex flex-col">
             <label className="font-bold text-gray-700">{t('year')}</label>
             <select
               value={yearFilter}
               onChange={e => setYearFilter(e.target.value)}
-              className="px-3 py-2 rounded-2xl border border-gray-300 focus:ring-4 focus:ring-emerald-300 transition"
+              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">{t('All')}</option>
               {uniqueYears.map(year => (
@@ -423,7 +409,7 @@ export function WorkProgress() {
             <select
               value={workCategoryFilter}
               onChange={e => setWorkCategoryFilter(e.target.value)}
-              className="px-3 py-2 rounded-2xl border border-gray-300 focus:ring-4 focus:ring-emerald-300 transition"
+              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">{t('All')}</option>
               {workCategories.map(cat => (
@@ -438,7 +424,7 @@ export function WorkProgress() {
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as any)}
-              className="px-3 py-2 rounded-2xl border border-gray-300 focus:ring-4 focus:ring-emerald-300 transition"
+              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">{t('All')}</option>
               <option value="pending">{t('pending')}</option>
@@ -448,26 +434,25 @@ export function WorkProgress() {
           </div>
         </div>
       )}
-
       {/* Works Table */}
       {activeTab === 'dashboard' && (
-        <div className="bg-white rounded-3xl shadow-lg overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-gray-700">
-              <thead className="bg-gray-100 text-gray-700 text-xs uppercase">
+            <table className="w-full">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3">{t('Sr. No')}</th>
-                  <th className="px-4 py-3">{t('taluka')}</th>
-                  <th className="px-4 py-3">{t('year')}</th>
-                  <th className="px-4 py-3">{t('pesaGrampanchayat')}</th>
-                  <th className="px-4 py-3">{t('village')}</th>
-                  <th className="px-4 py-3">{t('workCategory')}</th>
-                  <th className="px-4 py-3">{t('month')}</th>
-                  <th className="px-4 py-3">{t('approval_amount')}</th>
-                  <th className="px-4 py-3">{t('contractor_name')}</th>
-                  <th className="px-4 py-3">{t('priority')}</th>
-                  <th className="px-4 py-3">{t('status')}</th>
-                  <th className="px-4 py-3">{t('actions')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('Sr. No')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('taluka')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('year')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('pesaGrampanchayat')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('village')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('workCategory')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('month')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('approval_amount')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('contractor_name')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('priority')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('status')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -493,7 +478,7 @@ export function WorkProgress() {
                     <td className="px-2 py-4 text-xs">
                       {work.priority ? (
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          className={`px-1 py-1 rounded-full text-xs font-semibold ${
                             work.priority === 'low'
                               ? 'bg-green-100 text-green-700'
                               : work.priority === 'medium'
@@ -510,7 +495,7 @@ export function WorkProgress() {
                     <td className="px-1 py-4 text-xs">
                       {work.current_status ? (
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          className={`px-1 py-1 rounded-full text-xs font-semibold ${
                             work.current_status === 'pending'
                               ? 'bg-gray-100 text-gray-700'
                               : work.current_status === 'in_progress'
@@ -550,16 +535,14 @@ export function WorkProgress() {
           )}
         </div>
       )}
-
       {activeTab === 'builder' && <WorkflowBuilder />}
       {activeTab === 'progress' && <WorkflowProgress />}
-
       {/* Form Modal for Add/Edit */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h3 className="text-2xl font-bold mb-6 text-emerald-600">{editingWork ? t('edit') : t('addNewWork')}</h3>
+              <h3 className="text-2xl font-bold mb-6 text-blue-600">{editingWork ? t('edit') : t('addNewWork')}</h3>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Removed Select Gram Panchayat Physical Work */}
                 {/* Added pesaGrampanchayat Dropdown */}
@@ -568,7 +551,7 @@ export function WorkProgress() {
                   <select
                     value={formData.pesa_grampanchayat}
                     onChange={(e) => setFormData({ ...formData, pesa_grampanchayat: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">{t('selectPesaGrampanchayat')}</option>
                     {pesaGrampanchayats.map((gp) => (
@@ -584,7 +567,7 @@ export function WorkProgress() {
                   <select
                     value={formData.work_category}
                     onChange={(e) => setFormData({ ...formData, work_category: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">{t('selectOption')}</option>
                     {workCategories.map((category) => (
@@ -601,7 +584,7 @@ export function WorkProgress() {
                     type="text"
                     value={formData.added_month}
                     onChange={(e) => setFormData({ ...formData, added_month: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. September-2025"
                   />
                 </div>
@@ -612,7 +595,7 @@ export function WorkProgress() {
                     type="text"
                     value={formData.taluka}
                     onChange={(e) => setFormData({ ...formData, taluka: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
@@ -622,7 +605,7 @@ export function WorkProgress() {
                     type="text"
                     value={formData.year}
                     onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
@@ -632,7 +615,7 @@ export function WorkProgress() {
                     type="text"
                     value={formData.work_name}
                     onChange={(e) => setFormData({ ...formData, work_name: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
@@ -642,7 +625,7 @@ export function WorkProgress() {
                     type="text"
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
@@ -651,7 +634,7 @@ export function WorkProgress() {
                   <select
                     value={formData.current_status}
                     onChange={(e) => setFormData({ ...formData, current_status: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">{t('selectOption')}</option>
                     <option value="pending">{t('pending')}</option>
@@ -687,7 +670,7 @@ export function WorkProgress() {
                           required={isRequired}
                           value={(formData as any)[field]}
                           onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">{t('selectOption')}</option>
                           <option value="low">{t('low')}</option>
@@ -722,7 +705,7 @@ export function WorkProgress() {
                             (prev) => ({ ...prev, [field]: numericFields.includes(field) ? (value === '' ? null : Number(value)) : value })
                           );
                         }}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   );
@@ -732,13 +715,13 @@ export function WorkProgress() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="btn-secondary px-6 py-2 rounded-lg border border-emerald-200 font-medium text-gray-800 hover:bg-emerald-50"
+                    className="btn-secondary px-6 py-2 rounded-lg border border-blue-100 font-medium text-gray-800 hover:bg-gray-50"
                   >
                     {t('cancel')}
                   </button>
                   <button
                     type="submit"
-                    className="btn-primary px-6 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-emerald-500 to-emerald-700 shadow hover:scale-105 transition-all"
+                    className="btn-primary px-6 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-400 shadow hover:scale-105 transition-all"
                   >
                     {editingWork ? t('update') : t('save')}
                   </button>
@@ -748,7 +731,6 @@ export function WorkProgress() {
           </div>
         </div>
       )}
-
       {/* View Modal structured like form fields */}
       {viewingWork && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -773,7 +755,7 @@ export function WorkProgress() {
             <div className="flex justify-end mt-6">
               <button
                 onClick={() => setViewingWork(null)}
-                className="btn-secondary px-6 py-2 rounded-lg border border-emerald-200 font-medium text-gray-800 hover:bg-emerald-50"
+                className="btn-secondary px-6 py-2 rounded-lg border border-blue-100 font-medium text-gray-800 hover:bg-gray-50"
               >
                 {t('close')}
               </button>

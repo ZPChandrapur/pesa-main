@@ -133,54 +133,63 @@ export function AarakhadaWorkForm({
     setFormData(initialFormData);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const selectedVillage = villages.find(v => v.id === formData.village_id);
-    if (selectedVillage) {
-      const baseWorkData = {
-        village_id: formData.village_id,
-        village_name: selectedVillage.village_name,
-        gram_panchayat: selectedVillage.gram_panchayat,
-        taluka: selectedVillage.block,
-        district: selectedVillage.district,
-        work_category: formData.work_category,
-        work_name: formData.work_name,
-        work_type: workType,
-        status: formData.status,
-        start_date: formData.start_date === '' ? null : formData.start_date,
-        completion_date: formData.completion_date === '' ? null : formData.completion_date,
+const handleSubmit = async (e: React.FormEvent) => {debugger;
+  
+  e.preventDefault();
+  const selectedVillage = villages.find(v => v.id === formData.village_id);
+
+  if (selectedVillage) {
+    const baseWorkData = {
+      village_id: formData.village_id,
+      village_name: selectedVillage.village_name,
+      gram_panchayat: selectedVillage.gram_panchayat,
+      taluka: selectedVillage.block,
+      district: selectedVillage.district,
+      work_category: formData.work_category,
+      work_name: formData.work_name,
+      work_type: workType,
+      status: formData.status,
+      start_date: formData.start_date === '' ? null : formData.start_date,
+      completion_date: formData.completion_date === '' ? null : formData.completion_date,
+    };
+
+    let workDataToSend;
+
+    if (workType === 'financial') {
+      workDataToSend = {
+        ...(editingWork ? { id: editingWork.id } : {}),
+        ...baseWorkData,
+        estimated_amount: formData.estimated_amount || 0,
+        sanctioned_amount: formData.sanctioned_amount || 0,
+        released_amount: formData.released_amount || 0,
+        expenditure: formData.expenditure || 0,
+        physical_progress: formData.physical_progress || 0,
+        financial_progress: formData.financial_progress || 0,
+        previous_expenditure: formData.previous_expenditure || 0,
+        current_expenditure: formData.current_expenditure || 0,
+        cumulative_expenditure: formData.cumulative_expenditure || 0,
+        remaining_funds: formData.remaining_funds || 0,
       };
-      let workDataToSend;
-      if (workType === 'financial') {
-        workDataToSend = {
-          ...(editingWork ? { id: editingWork.id } : {}),
-          ...baseWorkData,
-          estimated_amount: formData.estimated_amount || 0,
-          sanctioned_amount: formData.sanctioned_amount || 0,
-          released_amount: formData.released_amount || 0,
-          expenditure: formData.expenditure || 0,
-          physical_progress: formData.physical_progress || 0,
-          financial_progress: formData.financial_progress || 0,
-          previous_expenditure: formData.previous_expenditure || 0,
-          current_expenditure: formData.current_expenditure || 0,
-          cumulative_expenditure: formData.cumulative_expenditure || 0,
-          remaining_funds: formData.remaining_funds || 0,
-        };
-      } else {
-        workDataToSend = {
-          ...(editingWork ? { id: editingWork.id } : {}),
-          ...baseWorkData,
-          sanctioned_works: formData.sanctioned_works || 0,
-          completed_works: formData.completed_works || 0,
-          progress_works: formData.progress_works || 0,
-          not_started_works: formData.not_started_works || 0,
-          physical_progress: formData.physical_progress || 0,
-        };
-      }
-      onSave(workDataToSend as any);
-      alert(t('submittedSuccessfully'));
+    } else {
+      workDataToSend = {
+        ...(editingWork ? { id: editingWork.id } : {}),
+        ...baseWorkData,
+        sanctioned_works: formData.sanctioned_works || 0,
+        completed_works: formData.completed_works || 0,
+        progress_works: formData.progress_works || 0,
+        not_started_works: formData.not_started_works || 0,
+        physical_progress: formData.physical_progress || 0,
+      };
     }
-  };
+
+    // ✅ Log final payload
+    console.log("Submitting Data:", workDataToSend);
+
+    await onSave(workDataToSend as any);
+    alert(t('submittedSuccessfully'));
+  }
+};
+
 
   const handleChange = (field: keyof FormDataType, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));

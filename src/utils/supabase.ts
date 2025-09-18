@@ -93,18 +93,14 @@ export const workService = {
   async getByVillageAndCategory({
     village_id,
     category,
-    work_type,
   }: {
     village_id: string;
     category: "" | "A" | "B" | "C" | "D";
-    work_type: "financial" | "physical";
   }) {
     if (!category) {
       return [];
     }
-    // Use the correct table based on work_type
-    const tableName = work_type === 'financial' ? 'aarakhada_financial' : 'aarakhada_physical';
-    
+    const tableName = 'aarakhada_financial'; // Adjust if needed
     const { data, error } = await pesaSupabase
       .from(tableName)
       .select("*")
@@ -114,54 +110,44 @@ export const workService = {
     return data || [];
   },
   async getAll() {
-    // Fetch from both financial and physical tables
     const [financialData, physicalData] = await Promise.all([
       pesaSupabase.from('aarakhada_financial').select('*'),
       pesaSupabase.from('aarakhada_physical').select('*')
     ]);
-    
     if (financialData.error) throw financialData.error;
     if (physicalData.error) throw physicalData.error;
-    
-    // Combine both datasets and add work_type field
     const allWorks = [
       ...(financialData.data || []).map(work => ({ ...work, work_type: 'financial' as const })),
       ...(physicalData.data || []).map(work => ({ ...work, work_type: 'physical' as const }))
     ];
-    
     return allWorks;
   },
   async insert(workData: any) {
-    // Use the correct table based on work_type
-    const tableName = workData.work_type === 'financial' ? 'aarakhada_financial' : 'aarakhada_physical';
-    
-    const { data, error } = await pesaSupabase.from(tableName).insert(workData);
+    const tableName = workData.work_type == 'financial' ? 'aarakhada_financial' : 'aarakhada_physical';
+    const { data, error } = await pesaSupabase.from(tableName).insert(workData).select().single();
     if (error) throw error;
     return data;
   },
   async update(id: string, workData: any) {
-    // Use the correct table based on work_type
     const tableName = workData.work_type === 'financial' ? 'aarakhada_financial' : 'aarakhada_physical';
-
     const { data, error } = await pesaSupabase
       .from(tableName)
       .update({
         ...workData,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id);
+      .eq('id', id)
+      .select()
+      .single();
     if (error) throw error;
     return data;
   },
-
   async delete(id: string, work_type: "financial" | "physical") {
     const tableName = work_type === 'financial' ? 'aarakhada_financial' : 'aarakhada_physical';
-
     const { error } = await pesaSupabase.from(tableName).delete().eq('id', id);
     if (error) throw error;
   },
 };
-
 // === Taluka Work Service ===
 export const talukaWorkService = {
   async getByTalukaAndCategory({
@@ -169,17 +155,16 @@ export const talukaWorkService = {
     category,
     work_type,
   }: {
-    taluka_name: string;
+    taluka_name?: string;
     category?: "A" | "B" | "C" | "D";
     work_type: "financial" | "physical";
   }) {
-    // Use the correct table based on work_type
     const tableName = work_type === 'financial' ? 'taluka_aarakhada_financial' : 'taluka_aarakhada_physical';
-    
-    let query = pesaSupabase
-      .from(tableName)
-      .select("*")
-      .eq("taluka_name", taluka_name);
+    let query = pesaSupabase.from(tableName).select("*");
+
+    if (taluka_name) {
+      query = query.eq("taluka_name", taluka_name);
+    }
     if (category) {
       query = query.eq("work_category", category);
     }
@@ -187,17 +172,16 @@ export const talukaWorkService = {
     if (error) throw error;
     return data || [];
   },
+
   async insert(workData: any) {
-    // Use the correct table based on work_type
     const tableName = workData.work_type === 'financial' ? 'taluka_aarakhada_financial' : 'taluka_aarakhada_physical';
-    
     const { data, error } = await pesaSupabase.from(tableName).insert(workData);
     if (error) throw error;
     return data;
   },
+
   async getAllByTaluka(taluka_name: string, work_type: "financial" | "physical") {
     const tableName = work_type === 'financial' ? 'taluka_aarakhada_financial' : 'taluka_aarakhada_physical';
-    
     const { data, error } = await pesaSupabase
       .from(tableName)
       .select("*")
@@ -207,6 +191,7 @@ export const talukaWorkService = {
     return data || [];
   },
 };
+
 // === District Work Service ===
 export const districtWorkService = {
   async getByDistrictAndCategory({
@@ -218,9 +203,7 @@ export const districtWorkService = {
     category?: "A" | "B" | "C" | "D";
     work_type: "financial" | "physical";
   }) {
-    // Use the correct table based on work_type
     const tableName = work_type === 'financial' ? 'district_aarakhada_financial' : 'district_aarakhada_physical';
-    
     let query = pesaSupabase
       .from(tableName)
       .select("*")
@@ -233,16 +216,13 @@ export const districtWorkService = {
     return data || [];
   },
   async insert(workData: any) {
-    // Use the correct table based on work_type
     const tableName = workData.work_type === 'financial' ? 'district_aarakhada_financial' : 'district_aarakhada_physical';
-    
     const { data, error } = await pesaSupabase.from(tableName).insert(workData);
     if (error) throw error;
     return data;
   },
   async getAllByDistrict(district_name: string, work_type: "financial" | "physical") {
     const tableName = work_type === 'financial' ? 'district_aarakhada_financial' : 'district_aarakhada_physical';
-    
     const { data, error } = await pesaSupabase
       .from(tableName)
       .select("*")
@@ -254,25 +234,25 @@ export const districtWorkService = {
 };
 // === PESA Work Tracking Operations ===
 export const pesaWorkOperations = {
-async getAll() {
-  console.log('Fetching all PESA works...');
-  const { data, error } = await pesaSupabase
-    .from("works")
-    .select(`
-      *,
-      village:villages!village_id(village_name),
-      gram_panchayat_work:aarakhada_physical!gram_panchayat_work_id(work_name, work_category)
-    `)
-    .order("created_at", { ascending: false });
-  if (error) {
-    console.error('Error fetching PESA works:', error);
-    throw error;
-  }
-  console.log('PESA works data:', data);
-  return data ?? [];
-},
-
+  async getAll() {
+    console.log('Fetching all PESA works...');
+    const { data, error } = await pesaSupabase
+      .from("works")
+      .select(`
+        *,
+        village:villages!village_id(village_name),
+        gram_panchayat_work:aarakhada_physical!gram_panchayat_work_id(work_name, work_category)
+      `)
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.error('Error fetching PESA works:', error);
+      throw error;
+    }
+    console.log('PESA works data:', data);
+    return data ?? [];
+  },
   async create(work: any) {
+    debugger
     console.log('Creating PESA work:', work);
     const { data, error } = await pesaSupabase
       .from("works")
@@ -284,8 +264,149 @@ async getAll() {
       throw error;
     }
     console.log('Created PESA work:', data);
+    if (data.village_id && data.work_category && data.year && data.added_month) {
+      try {
+        const village = await villageService.getById(data.village_id);
+        if (village) {
+          // Insert into aarakhada_physical
+          const physicalData = {
+            village_id: data.village_id,
+            village_name: village.village_name,
+            work_category: data.work_category,
+            work_name: data.work_name,
+            work_type: 'physical',
+            status: 'pending',
+            gram_panchayat: village.gram_panchayat,
+            taluka: village.block,
+            district: village.district,
+            start_date: null,
+            completion_date: null,
+            sanctioned_works: 0,
+            completed_works: 0,
+            ongoing_works: 0,
+            pending_works: 0,
+            approved_works: 0,
+            progress_works: 0,
+            not_started_works: 0,
+            physical_progress: 0
+          };
+          await workService.insert(physicalData);
+          console.log('Added to aarakhada_physical table:', physicalData);
+          
+          // Insert into aarakhada_financial
+          const financialData = {
+            village_id: data.village_id,
+            village_name: village.village_name,
+            work_category: data.work_category,
+            work_name: data.work_name,
+            work_type: 'financial',
+            status: 'pending',
+            gram_panchayat: village.gram_panchayat,
+            taluka: village.block,
+            district: village.district,
+            start_date: null,
+            completion_date: null,
+            estimated_amount: 0,
+            sanctioned_amount: 0,
+            released_amount: 0,
+            expenditure: 0,
+            physical_progress: 0,
+            financial_progress: 0,
+            previous_expenditure: 0,
+            current_expenditure: 0,
+            cumulative_expenditure: 0,
+            remaining_funds: 0,
+          };
+          await workService.insert(financialData);
+          console.log('Added to aarakhada_financial table:', financialData);
+
+          // Insert taluka physical data
+          const talukaPhysicalData = {
+            taluka_name: village.block,
+            work_category: data.work_category,
+            gram_panchayat: village.gram_panchayat,
+            village_id: data.village_id,
+            approved_works: 0,
+            sanctioned_works: 0,
+            completed_works: 0,
+            ongoing_works: 0,
+            pending_works: 0,
+            work_name: data.work_name,
+            work_type: 'physical'
+          };
+          await talukaWorkService.insert(talukaPhysicalData);
+          console.log('Added to taluka_aarakhada_physical table:', talukaPhysicalData);
+
+          // Insert taluka financial data
+          const talukaFinancialData = {
+            taluka_name: village.block,
+            work_category: data.work_category,
+            gram_panchayat: village.gram_panchayat,
+            village_id: data.village_id,
+            annual_approved_fund: 0,
+            annual_received_fund: 0,
+            received_interest: 0,
+            total_received_fund: 0,
+            previous_expenditure: 0,
+            current_expenditure: 0,
+            cumulative_expenditure: 0,
+            remaining_funds: 0,
+            work_name: data.work_name,
+            work_type: 'financial',
+          };
+          await talukaWorkService.insert(talukaFinancialData);
+          console.log('Added to taluka_aarakhada_financial table:', talukaFinancialData);
+
+          // --- New District level insertions ---
+          // District physical data insertion
+          const districtPhysicalData = {
+            district_name: village.district,
+            taluka_name: village.block,
+            pesa_gram_panchayat_count: 0,
+            pesa_village_count: 0,
+            work_category: data.work_category || null,
+            approved_works: 0,
+            sanctioned_works: 0,
+            completed_works: 0,
+            ongoing_works: 0,
+            pending_works: 0,
+            physical_progress_percentage: 0,
+            work_name: data.work_name || null,
+            work_type: 'physical',
+          };
+          await districtWorkService.insert(districtPhysicalData);
+          console.log('Added to district_aarakhada_physical table:', districtPhysicalData);
+
+          // District financial data insertion
+          const districtFinancialData = {
+            taluka_name: village.block,
+            pesa_village_count: 0,
+            annual_approved_fund: 0,
+            annual_received_fund: 0,
+            received_interest: 0,
+            total_received_fund: 0,
+            previous_expenditure: 0,
+            current_expenditure: 0,
+            cumulative_expenditure: 0,
+            remaining_funds: 0,
+            work_category: data.work_category || null,
+            work_name: data.work_name || null,
+            status: 'pending',
+            financial_progress: 0,
+            start_date: null,
+            completion_date: null,
+            work_type: 'financial'
+          };
+          await districtWorkService.insert(districtFinancialData);
+          console.log('Added to district_aarakhada_financial table:', districtFinancialData);
+        }
+      } catch (err) {
+        console.error('Error adding to related tables:', err);
+      }
+    }
     return data;
   },
+
   async update(id: string, work: any) {
     console.log('Updating PESA work:', id, work);
     const { data, error } = await pesaSupabase
@@ -306,12 +427,12 @@ async getAll() {
   },
   async delete(id: string) {
     console.log('Deleting PESA work:', id);
-    const { error } = await pesaSupabase.from("works").delete().eq("id", id);
+    const { data, error } = await pesaSupabase.from("works").delete().eq("id", id).select();
     if (error) {
       console.error('Error deleting PESA work:', error);
       throw error;
     }
-    console.log('Deleted PESA work:', id);
+    console.log('Deleted PESA work:', data);
   },
   async duplicate(id: string) {
     console.log('Duplicating PESA work:', id);

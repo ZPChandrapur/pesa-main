@@ -17,7 +17,6 @@ interface WorkflowStep {
   created_at?: string;
   location_name?: string;
 }
-
 interface Workflow {
   id: string;
   title: string;
@@ -51,7 +50,6 @@ const WorkflowProgress: React.FC = () => {
   useEffect(() => {
     loadWorkflows();
   }, []);
-
   const loadWorkflows = async () => {
     try {
       setLoading(true);
@@ -63,18 +61,15 @@ const WorkflowProgress: React.FC = () => {
       setLoading(false);
     }
   };
-
   const handleSelectWorkflow = (workflow: Workflow) => {
     setSelectedWorkflow(workflow);
   };
-
   const handleBackToList = () => {
     setSelectedWorkflow(null);
     setEditingStep(null);
     setViewMode(false);
     loadWorkflows();
   };
-
   const handleEditStep = (step: WorkflowStep) => {
     setEditingStep(step);
     setViewMode(false);
@@ -85,7 +80,6 @@ const WorkflowProgress: React.FC = () => {
       location_name: step.location_name || step.location_data?.location_name || '',
     });
   };
-
   const handleViewStep = (step: WorkflowStep) => {
     setEditingStep(step);
     setViewMode(true);
@@ -96,7 +90,6 @@ const WorkflowProgress: React.FC = () => {
       location_name: step.location_name || step.location_data?.location_name || '',
     });
   };
-
   const handleSaveStep = async () => {
     if (!editingStep) return;
     try {
@@ -113,9 +106,11 @@ const WorkflowProgress: React.FC = () => {
         updates.completed_at = new Date().toISOString();
       }
       await pesaWorkflowOperations.updateStep(editingStep.id, updates);
+
       const updatedWorkflows = await pesaWorkflowOperations.getAll();
       const updatedWorkflow = updatedWorkflows.find((w: Workflow) => w.id === selectedWorkflow?.id);
       setSelectedWorkflow(updatedWorkflow);
+
       setEditingStep(null);
       setViewMode(false);
       alert('Step updated successfully!');
@@ -124,20 +119,22 @@ const WorkflowProgress: React.FC = () => {
       alert('Error updating step. Please try again.');
     }
   };
-
   const handleCaptureLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
+
           try {
             const response = await fetch(
               `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyDzOjsiqs6rRjSJWVdXfUBl4ckXayL8AbE`
             );
             const data = await response.json();
+
             let locationName = '';
             let fullAddress = '';
+
             if (data.results && data.results.length > 0) {
               const result = data.results[0];
               fullAddress = result.formatted_address;
@@ -157,12 +154,14 @@ const WorkflowProgress: React.FC = () => {
               locationName = `Location ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
               fullAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
             }
+
             const locationData = {
               latitude: lat,
               longitude: lng,
               address: fullAddress,
               location_name: locationName,
             };
+
             setStepForm({
               ...stepForm,
               location_data: locationData,
@@ -194,7 +193,6 @@ const WorkflowProgress: React.FC = () => {
       alert('Geolocation is not supported by this browser.');
     }
   };
-
   const handlePlaceSelect = (event: any) => {
     const place = event.target.place;
     if (place && place.geometry) {
@@ -212,7 +210,6 @@ const WorkflowProgress: React.FC = () => {
       });
     }
   };
-
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && editingStep && selectedWorkflow) {
@@ -232,6 +229,7 @@ const WorkflowProgress: React.FC = () => {
             editingStep.id
           );
         });
+
         const uploadedUrls = await Promise.all(uploadPromises);
         setStepForm({
           ...stepForm,
@@ -246,7 +244,6 @@ const WorkflowProgress: React.FC = () => {
       }
     }
   };
-
   const handleRemovePhoto = async (index: number) => {
     const photoUrl = stepForm.completion_photos[index];
     try {
@@ -258,7 +255,6 @@ const WorkflowProgress: React.FC = () => {
       alert('Error removing photo. Please try again.');
     }
   };
-
   const handleChangeWorkflowStatus = async (workflowId: string, newStatus: string) => {
     try {
       await pesaWorkflowOperations.updateWorkflow(workflowId, { status: newStatus });
@@ -277,13 +273,11 @@ const WorkflowProgress: React.FC = () => {
       alert('Error updating workflow status. Please try again.');
     }
   };
-
   const getProgressPercentage = (steps: WorkflowStep[]) => {
     if (!steps || steps.length === 0) return 0;
     const completedSteps = steps.filter(step => step.status === 'completed').length;
     return Math.round((completedSteps / steps.length) * 100);
   };
-
   const getStatusColor = (status: string) => {
     const colors = {
       draft: 'bg-gradient-to-r from-gray-400 to-gray-500',
@@ -305,7 +299,7 @@ const WorkflowProgress: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -314,13 +308,12 @@ const WorkflowProgress: React.FC = () => {
     return (
       <div className="space-y-6">
         {/* Header with Back Button */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg p-6 border border-white/20">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <button
                 onClick={handleBackToList}
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
-                aria-label="Back to workflows"
               >
                 <ArrowLeft className="w-6 h-6" />
               </button>
@@ -340,8 +333,7 @@ const WorkflowProgress: React.FC = () => {
               <select
                 value={selectedWorkflow.status}
                 onChange={(e) => handleChangeWorkflowStatus(selectedWorkflow.id, e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                aria-label="Change workflow status"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
               >
                 <option value="active">Active</option>
                 <option value="completed">Completed</option>
@@ -350,9 +342,8 @@ const WorkflowProgress: React.FC = () => {
             </div>
           </div>
         </div>
-
         {/* Progress Overview */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg p-6 border border-white/20">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="text-center">
               <div className="text-3xl font-bold text-green-600">
@@ -389,13 +380,12 @@ const WorkflowProgress: React.FC = () => {
             </div>
           </div>
         </div>
-
         {/* Steps Grid */}
         <div className="space-y-4">
           {selectedWorkflow.workflow_steps?.map((step: WorkflowStep, index: number) => (
             <div
               key={step.id}
-              className={`p-6 rounded-3xl border-2 transition-all duration-200 ${
+              className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
                 step.status === 'completed'
                   ? 'bg-green-50 border-green-200'
                   : step.status === 'in_progress'
@@ -416,11 +406,11 @@ const WorkflowProgress: React.FC = () => {
                     {t(step.status.replace('_', ''))}
                   </span>
                 </div>
+                {/* Eye for completed, Edit otherwise */}
                 {step.status === 'completed' ? (
                   <button
                     onClick={() => handleViewStep(step)}
                     className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200 ml-4"
-                    aria-label={`View completed step ${step.title}`}
                   >
                     <Eye className="w-4 h-4" />
                   </button>
@@ -428,7 +418,6 @@ const WorkflowProgress: React.FC = () => {
                   <button
                     onClick={() => handleEditStep(step)}
                     className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200 ml-4"
-                    aria-label={`Edit step ${step.title}`}
                   >
                     <Edit className="w-4 h-4" />
                   </button>
@@ -461,20 +450,18 @@ const WorkflowProgress: React.FC = () => {
             </div>
           ))}
         </div>
-
         {/* Step Edit/View Modal */}
         {editingStep && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  <h3 className={`text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent`}>
                     {viewMode ? `View Step: ${editingStep.title}` : `Edit Step: ${editingStep.title}`}
                   </h3>
                   <button
                     onClick={() => { setEditingStep(null); setViewMode(false); }}
                     className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
-                    aria-label="Close step modal"
                   >
                     <X className="w-6 h-6" />
                   </button>
@@ -488,7 +475,7 @@ const WorkflowProgress: React.FC = () => {
                     <select
                       value={stepForm.status}
                       onChange={(e) => setStepForm({ ...stepForm, status: e.target.value as any })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-3xl focus:ring-4 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={viewMode}
                     >
                       <option value="pending">Pending</option>
@@ -501,6 +488,7 @@ const WorkflowProgress: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Location
                     </label>
+                    {/* Location Name Input */}
                     <div className="mb-3">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Location Name
@@ -510,12 +498,14 @@ const WorkflowProgress: React.FC = () => {
                         value={stepForm.location_name}
                         onChange={(e) => setStepForm({ ...stepForm, location_name: e.target.value })}
                         placeholder="Enter location name"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-3xl focus:ring-4 focus:ring-blue-500 focus:border-transparent text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                         disabled={viewMode}
                       />
                     </div>
+                    {/* Hide Search/Capture in view mode */}
                     {!viewMode && (
                       <>
+                        {/* Google Places Picker */}
                         <div className="mb-3">
                           <label className="block text-xs font-medium text-gray-600 mb-1">
                             Search Location
@@ -534,11 +524,12 @@ const WorkflowProgress: React.FC = () => {
                             ></gmpx-place-picker>
                           </div>
                         </div>
+                        {/* Capture Current Location Button */}
                         <div className="flex space-x-2 mb-3">
                           <button
                             type="button"
                             onClick={handleCaptureLocation}
-                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-3xl hover:bg-blue-700 transition-colors duration-200 text-sm"
+                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm"
                           >
                             <MapPin className="w-4 h-4" />
                             <span>Capture Location</span>
@@ -546,8 +537,9 @@ const WorkflowProgress: React.FC = () => {
                         </div>
                       </>
                     )}
+                    {/* Location Details Display */}
                     {stepForm.location_data && (
-                      <div className="px-4 py-3 bg-green-50 border border-green-200 rounded-3xl text-sm">
+                      <div className="px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-sm">
                         <div className="flex items-start space-x-2">
                           <MapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
                           <div className="flex-1">
@@ -573,6 +565,7 @@ const WorkflowProgress: React.FC = () => {
                       Completion Photos
                     </label>
                     <div className="space-y-4">
+                      {/* Hide choose files input in view mode */}
                       {!viewMode && (
                         <div className="flex items-center space-x-4">
                           <input
@@ -581,7 +574,7 @@ const WorkflowProgress: React.FC = () => {
                             accept="image/*"
                             onChange={handlePhotoUpload}
                             disabled={uploadingPhotos}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-3xl focus:ring-4 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
                           />
                           {uploadingPhotos && (
                             <div className="flex items-center space-x-2 text-blue-600">
@@ -607,7 +600,6 @@ const WorkflowProgress: React.FC = () => {
                                 <button
                                   onClick={() => handleRemovePhoto(index)}
                                   className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors duration-200"
-                                  aria-label={`Remove photo ${index + 1}`}
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -626,15 +618,16 @@ const WorkflowProgress: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => { setEditingStep(null); setViewMode(false); }}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-3xl hover:bg-gray-50 transition-colors duration-200"
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
                   >
                     Close
                   </button>
+                  {/* Hide Save button in view mode */}
                   {!viewMode && (
                     <button
                       type="button"
                       onClick={handleSaveStep}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-3xl hover:bg-blue-700 transition-colors duration-200"
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
                     >
                       <Save className="w-4 h-4" />
                       <span>Save Changes</span>
@@ -653,7 +646,7 @@ const WorkflowProgress: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg p-6 border border-white/20">
+      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
@@ -666,9 +659,8 @@ const WorkflowProgress: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Filters */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg p-4 border border-white/20">
+      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-4 border border-white/20">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <input
@@ -676,14 +668,14 @@ const WorkflowProgress: React.FC = () => {
               placeholder="Search workflows..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-3xl focus:ring-4 focus:ring-emerald-300 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
           <div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-3xl focus:ring-4 focus:ring-emerald-300 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -692,18 +684,13 @@ const WorkflowProgress: React.FC = () => {
           </div>
         </div>
       </div>
-
       {/* Workflows List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredWorkflows.map((workflow) => (
           <div
             key={workflow.id}
             onClick={() => handleSelectWorkflow(workflow)}
-            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg p-6 border border-white/20 cursor-pointer hover:shadow-xl transition-shadow"
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => e.key === 'Enter' && handleSelectWorkflow(workflow)}
-            aria-label={`Select workflow ${workflow.title}`}
+            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20 card-hover cursor-pointer"
           >
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
@@ -733,7 +720,6 @@ const WorkflowProgress: React.FC = () => {
                   ></div>
                 </div>
               </div>
-
               {/* Stats */}
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
@@ -755,7 +741,6 @@ const WorkflowProgress: React.FC = () => {
                   <div className="text-xs text-gray-500">Days</div>
                 </div>
               </div>
-
               {/* Status */}
               <div className="flex justify-between items-center">
                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(workflow.status)}`}>
@@ -769,14 +754,12 @@ const WorkflowProgress: React.FC = () => {
           </div>
         ))}
       </div>
-
       {filteredWorkflows.length === 0 && workflows.length > 0 && (
         <div className="text-center py-12">
           <div className="text-gray-400 text-lg mb-2">No workflows match your search</div>
           <p className="text-gray-500">Try adjusting your search terms or filters</p>
         </div>
       )}
-
       {workflows.length === 0 && (
         <div className="text-center py-12">
           <div className="text-gray-400 text-lg mb-2">No workflows found</div>
@@ -786,5 +769,4 @@ const WorkflowProgress: React.FC = () => {
     </div>
   );
 };
-
 export default WorkflowProgress;

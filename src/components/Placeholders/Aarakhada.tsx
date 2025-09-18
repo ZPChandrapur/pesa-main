@@ -117,7 +117,7 @@ export function Aarakhada() {
     }
     return true;
   };
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {debugger;
     e.preventDefault();
     if (!validateForm()) return;
     try {
@@ -128,7 +128,7 @@ export function Aarakhada() {
         await pesaWorkOperations.create(formData);
         toast.success(t('workCreatedSuccessfully'));
       }
-      resetForm();
+      //resetForm();
     } catch (error) {
       console.error('Error saving work:', error);
       toast.error(t('errorSavingWork'));

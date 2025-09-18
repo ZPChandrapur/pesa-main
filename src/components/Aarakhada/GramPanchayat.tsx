@@ -68,7 +68,7 @@ export function GramPanchayat() {
   }, []);
   useEffect(() => {
     filterWorks();
-  }, [selectedVillage, selectedCategory, selectedGramPanchayat, selectedYear, selectedMonth, activeTab, allWorks]);
+  }, [allWorks, activeTab, selectedGramPanchayat, selectedVillage, selectedCategory, selectedYear, selectedMonth]);
   // Load all villages
   const loadVillages = async () => {
     try {
@@ -82,36 +82,10 @@ export function GramPanchayat() {
   const loadAllWorks = async () => {
     try {
       setLoading(true);
-      const data = await pesaWorkOperations.getAll();
-      if (data) {
-        const mappedData = data.map((w: any) => {
-          const base = {
-            ...w,
-            gram_panchayat: w.pesa_grampanchayat || w.gram_panchayat || '',
-            village_name: w.village?.village_name || w.village_name || '',
-            work_category: w.work_category || (w.gram_panchayat_work?.work_category) || '',
-            status: w.current_status || w.status || '',
-            work_type: w.work_type || 'physical',
-          };
-          return {
-            ...base,
-            sanctioned_amount: w.admin_approval_amount || w.agreement_approval_amount || 0,
-            released_amount: w.agreement_approval_amount || 0,
-            current_expenditure: w.admin_approval_amount || 0,
-            monthly_expenditure: 0,
-            cumulative_expenditure: w.admin_approval_amount || 0,
-            remaining_funds: 0,
-            sanctioned_works: w.sanctioned_works ?? 0,
-            completed_works: w.completed_works ?? (w.current_status === 'completed' ? 1 : 0),
-            progress_works: w.progress_works ?? (w.current_status === 'in_progress' ? 1 : 0),
-            not_started_works: w.not_started_works ?? (w.current_status === 'pending' ? 1 : 0),
-            added_month: w.added_month || '',
-          };
-        });
-        setAllWorks(mappedData);
-      } else {
-        setAllWorks([]);
-      }
+      // Load all works from workService which handles both physical and financial
+      const allWorksData = await workService.getAll();
+      
+      setAllWorks(allWorksData);
     } catch (error) {
       console.error('Error loading works:', error);
       setAllWorks([]);
@@ -144,23 +118,27 @@ export function GramPanchayat() {
     setWorks(filtered);
   };
   const handleSaveWork = async (
-    workData: Omit<AarakhadaWork, 'created_at' | 'updated_at'> & { id?: string }
-  ) => {
-    try {
-      if (workData.id) {
-        await workService.update(workData.id, workData);
-      } else {
-        await workService.insert(workData);
-      }
-      setShowForm(false);
-      setEditingWork(null);
-      setViewMode(false);
-      await loadAllWorks();
-    } catch (error) {
-      console.error('Error saving work:', error);
-      alert('Error saving work. Please try again.');
+  workData: Omit<AarakhadaWork, 'created_at' | 'updated_at'> & { id?: string }
+) => {
+  try {
+    // Decide insert or update based on ID presence
+    if (workData.id) {
+      await workService.update(workData.id, workData); // Only update if id exists
+    } else {
+      await workService.insert(workData); // Only insert if no id
     }
-  };
+
+    setShowForm(false);
+    setEditingWork(null);
+    setViewMode(false);
+    await loadAllWorks();
+    filterWorks();
+  } catch (error) {
+    console.error('Error saving work:', error);
+    alert('Error saving work. Please try again.');
+  }
+};
+
   const handleEditWork = (work: AarakhadaWork) => {
     setEditingWork(work);
     setViewMode(false);
@@ -173,8 +151,15 @@ export function GramPanchayat() {
   };
   const handleDeleteWork = async (work: AarakhadaWork) => {
     try {
-      await workService.delete(work.id, work.work_type);
+      if (activeTab === 'financial') {
+        await workService.delete(work.id, work.work_type);
+      } else {
+        // Physical tab - use workService for aarakhada_physical table
+        await workService.delete(work.id, work.work_type);
+      }
       await loadAllWorks();
+      // Force re-filter to update the displayed works
+      filterWorks();
     } catch (error) {
       console.error('Error deleting work:', error);
       alert(t('errorDelete') || 'Failed to delete, please try again.');
