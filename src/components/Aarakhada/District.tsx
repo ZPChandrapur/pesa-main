@@ -105,8 +105,17 @@ export function District() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDistrict, selectedTaluka, selectedCategory, activeTab, language]);
  
-  const totalWorks = works.reduce((sum, work) => sum + (work.approved_works || 0), 0);
-  const totalExpenditure = works.reduce((sum, work) => sum + (work.remaining_funds || 0), 0);
+  const totalWorks =
+  activeTab === 'physical'
+    ? works.reduce((sum, work) => sum + (work.sanctioned_works || 0), 0)
+    : works.reduce((sum, work) => sum + (work.approved_works || 0), 0);
+ 
+const totalExpenditure =
+  activeTab === 'financial'
+    ? works.reduce((sum, work) => sum + (work.remaining_funds || 0), 0)
+    : works.reduce((sum, work) => sum + (work.remaining_funds || 0), 0);
+ 
+ 
  
   return (
     <div className="space-y-6">
