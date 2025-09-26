@@ -18,7 +18,6 @@ interface AarakhadaTableProps {
   loadAllWorks:()=>void;
 }
 
-
 export function AarakhadaTable({
   works,
   workType,
