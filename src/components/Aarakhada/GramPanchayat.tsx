@@ -174,7 +174,7 @@ export function GramPanchayat() {
   const totalSanctionedWorks = works.reduce((sum, w) => sum + (w.sanctioned_works || 0), 0);
   const totalCompletedWorks = works.reduce((sum, w) => sum + (w.completed_works || 0), 0);
   const totalOngoingWorks = works.reduce((sum, w) => sum + (w.ongoing_works || 0), 0);
-  const totalPendingWorks = works.reduce((sum, w) => sum + (w.not_started_works || 0), 0);
+  const totalPendingWorks = works.reduce((sum, w) => sum + (w.pending_works || 0), 0);
   const totalReleasedAmount = works.reduce((sum, w) => sum + (Number(w.released_amount) || 0), 0);
   const totalPreviousMonthExpenditure = works.reduce((sum, w) => sum + (Number(w.previous_expenditure) || 0), 0);
   const totalCurrentMonthExpenditure = works.reduce((sum, w) => sum + (Number(w.current_expenditure) || 0), 0);
