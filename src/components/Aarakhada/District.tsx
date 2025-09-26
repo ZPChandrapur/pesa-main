@@ -116,7 +116,6 @@ const totalExpenditure =
     : works.reduce((sum, work) => sum + (work.remaining_funds || 0), 0);
  
  
- 
   return (
     <div className="space-y-6">
       {/* Header */}
