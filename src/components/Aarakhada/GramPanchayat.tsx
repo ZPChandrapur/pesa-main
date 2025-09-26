@@ -233,7 +233,7 @@ export function GramPanchayat() {
         }, {
           icon: DollarSign,
           label: language === 'mr' ? 'एकूण कामे' : 'Total Works',
-          value: totalWorks.toString(),
+          value: totalSanctionedWorks.toString(),
           color: 'from-teal-500 to-emerald-600'
         }, {
           icon: DollarSign,
