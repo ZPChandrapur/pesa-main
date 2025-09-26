@@ -161,7 +161,7 @@ export function Dashboard() {
 
         <div className="relative z-10">
           <h1 className="text-4xl font-bold text-white mb-4">
-            {language === 'mr' ? 'पेसा कार्य व्यवस्थापन' : 'PESA Work Management'}
+            {language === 'mr' ? 'पेसा निधी आणि कामकाज व्यवस्थापन' : 'PESA Fund and work Management'}
           </h1>
           <p className="text-xl text-indigo-100 mb-6">
             {language === 'mr'
