@@ -28,7 +28,7 @@ export function GramPanchayat() {
     { id: 'A', name: 'Category A - Basic Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
   { id: 'B', name: 'Category B - Implementation of FRA & PESA Acts', name_mr: 'प्रकार ब - वन हक्क अधिनियम (FRA) व पेसा (PESA) कायद्याची अंमलबजावणी' },
   { id: 'C', name: 'Category C - Health, Sanitation & Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता, शिक्षण' },
-  { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation & Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' }
+  { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation & Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
   ];
   const years = [
     '2022-23',
