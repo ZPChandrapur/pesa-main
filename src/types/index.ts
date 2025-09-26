@@ -87,9 +87,14 @@ export interface AarakhadaWork {
   gram_panchayat: string;
   taluka: string;
   district: string;
+
+  // ✅ Add this (for financial table)
+  added_month?: string;
+
   created_at?: string;
   updated_at?: string;
 }
+
 
 export interface WorkCategory {
   id: string;

@@ -84,7 +84,7 @@ export function GramPanchayat() {
       setLoading(true);
       // Load all works from workService which handles both physical and financial
       const allWorksData = await workService.getAll();
-      
+
       setAllWorks(allWorksData);
     } catch (error) {
       console.error('Error loading works:', error);
@@ -95,10 +95,10 @@ export function GramPanchayat() {
   };
   const filterWorks = () => {
     let filtered = [...allWorks];
-    if (activeTab) {
-      filtered = filtered.filter(w =>
-        activeTab === 'financial' ? true : w.work_type === activeTab
-      );
+    if (activeTab === 'physical') {
+      filtered = filtered.filter(w => w.work_type === 'physical');
+    } else if (activeTab === 'financial') {
+      filtered = filtered.filter(w => w.work_type === 'financial');
     }
     if (selectedGramPanchayat) {
       filtered = filtered.filter(w => w.gram_panchayat === selectedGramPanchayat);
@@ -118,26 +118,26 @@ export function GramPanchayat() {
     setWorks(filtered);
   };
   const handleSaveWork = async (
-  workData: Omit<AarakhadaWork, 'created_at' | 'updated_at'> & { id?: string }
-) => {
-  try {
-    // Decide insert or update based on ID presence
-    if (workData.id) {
-      await workService.update(workData.id, workData); // Only update if id exists
-    } else {
-      await workService.insert(workData); // Only insert if no id
-    }
+    workData: Omit<AarakhadaWork, 'created_at' | 'updated_at'> & { id?: string }
+  ) => {
+    try {
+      // Decide insert or update based on ID presence
+      if (workData.id) {
+        await workService.update(workData.id, workData); // Only update if id exists
+      } else {
+        await workService.insert(workData); // Only insert if no id
+      }
 
-    setShowForm(false);
-    setEditingWork(null);
-    setViewMode(false);
-    await loadAllWorks();
-    filterWorks();
-  } catch (error) {
-    console.error('Error saving work:', error);
-    alert('Error saving work. Please try again.');
-  }
-};
+      setShowForm(false);
+      setEditingWork(null);
+      setViewMode(false);
+      await loadAllWorks();
+      filterWorks();
+    } catch (error) {
+      console.error('Error saving work:', error);
+      alert('Error saving work. Please try again.');
+    }
+  };
 
   const handleEditWork = (work: AarakhadaWork) => {
     setEditingWork(work);
@@ -176,8 +176,8 @@ export function GramPanchayat() {
   const totalOngoingWorks = works.reduce((sum, w) => sum + (w.progress_works || 0), 0);
   const totalPendingWorks = works.reduce((sum, w) => sum + (w.not_started_works || 0), 0);
   const totalReleasedAmount = works.reduce((sum, w) => sum + (Number(w.released_amount) || 0), 0);
-  const totalPreviousMonthExpenditure = works.reduce((sum, w) => sum + (Number(w.current_expenditure) || 0), 0);
-  const totalCurrentMonthExpenditure = works.reduce((sum, w) => sum + (Number(w.monthly_expenditure) || 0), 0);
+  const totalPreviousMonthExpenditure = works.reduce((sum, w) => sum + (Number(w.previous_expenditure) || 0), 0);
+  const totalCurrentMonthExpenditure = works.reduce((sum, w) => sum + (Number(w.current_expenditure) || 0), 0);
   const totalCumulativeExpenditure = works.reduce((sum, w) => sum + (Number(w.cumulative_expenditure) || 0), 0);
   const gramPanchayatNames = Array.from(new Set(villages.map(v => v.gram_panchayat))).filter(Boolean);
   return (
@@ -264,11 +264,10 @@ export function GramPanchayat() {
         <div className="flex gap-0 mb-6 rounded-3xl overflow-hidden">
           <button
             onClick={() => setActiveTab('physical')}
-            className={`flex-1 px-6 py-3 font-medium flex items-center justify-center gap-2 transition-all duration-300 ${
-              activeTab === 'physical'
-                ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
-                : 'bg-white text-transparent relative'
-            }`}
+            className={`flex-1 px-6 py-3 font-medium flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'physical'
+              ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+              : 'bg-white text-transparent relative'
+              }`}
             style={{ borderRadius: 0 }}
           >
             {activeTab === 'physical' ? (
@@ -297,11 +296,10 @@ export function GramPanchayat() {
           </button>
           <button
             onClick={() => setActiveTab('financial')}
-            className={`flex-1 px-6 py-3 font-medium flex items-center justify-center gap-2 transition-all duration-300 ${
-              activeTab === 'financial'
-                ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
-                : 'bg-white text-transparent relative'
-            }`}
+            className={`flex-1 px-6 py-3 font-medium flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'financial'
+              ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg'
+              : 'bg-white text-transparent relative'
+              }`}
             style={{ borderRadius: 0 }}
           >
             {activeTab === 'financial' ? (
@@ -343,7 +341,7 @@ export function GramPanchayat() {
                 className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white text-sm"
               >
                 <option value="">{t('selectVillage')}</option>
-                {filteredVillages.map(village => (
+                {(filteredVillages ?? []).map(village => (
                   <option key={village.id} value={village.id}>
                     {language === 'mr'
                       ? (village.village_name_mr || village.village_name)
@@ -351,6 +349,7 @@ export function GramPanchayat() {
                   </option>
                 ))}
               </select>
+
             </div>
           </div>
           <div className="space-y-1">
@@ -365,11 +364,13 @@ export function GramPanchayat() {
                 className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white text-sm"
               >
                 <option value="">{t('selectCategory') || 'Select Category'}</option>
-                {workCategories.map(category => (
+                {(workCategories ?? []).map(category => (
                   <option key={category.id} value={category.id}>
                     {language === 'mr' ? category.name_mr : category.name}
                   </option>
                 ))}
+
+
               </select>
             </div>
           </div>
@@ -519,7 +520,12 @@ export function GramPanchayat() {
           onEdit={handleEditWork}
           onView={handleViewWork}
           onDelete={handleDeleteWork}
+          villages={villages}              // Pass villages here
+          workCategories={workCategories}  // Pass workCategories here
+          workNamesMap={workNamesMap}
+          loadAllWorks={loadAllWorks}
         />
+
       </div>
       {/* Form Modal */}
       <AarakhadaWorkForm

@@ -12,7 +12,7 @@ interface PesaWork {
   current_status?: string;
   priority?: string;
   contractor_name?: string;
-  expected_completion?: string;
+  expected_completion_date?: string;
   note?: string;
 }
 
@@ -235,8 +235,8 @@ const WorkflowBuilder: React.FC = () => {
                 {selectedWork.contractor_name || '-'}
 
                 <Calendar className="w-3 h-3 ml-3 mr-1" />
-                {selectedWork.expected_completion
-                  ? new Date(selectedWork.expected_completion).toLocaleDateString()
+                {selectedWork.expected_completion_date
+                  ? new Date(selectedWork.expected_completion_date).toLocaleDateString()
                   : '-'}
 
                 <span className="ml-3">

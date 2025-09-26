@@ -88,6 +88,7 @@ const translations: Record<Language, Record<string, string>> = {
     currentMonthExpenditure: 'चालू महिन्यातील खर्च (रु)',
     selectMonth: 'महिना निवडा',
     month: 'महिना',
+    currentMonth:'चालू महिना',
 
     // Physical table
     approvedWorks: 'चालू मंजूर कामांची संख्या',
@@ -133,7 +134,7 @@ const translations: Record<Language, Record<string, string>> = {
     contractor_name: 'कंत्राटदाराचे नाव',
     current_status: 'सध्याची स्थिती',
     delay: 'उशीर',
-    expected_completion: 'अपेक्षित पूर्णता दिनांक',
+    expected_completion_date: 'अपेक्षित पूर्णता दिनांक',
     note: 'नोंद',
     priority: "प्राधान्य",
     selectOption: "पर्याय निवडा",
@@ -276,6 +277,8 @@ const translations: Record<Language, Record<string, string>> = {
     currentMonthExpenditure: 'Current Month Expenditure',
     selectMonth: 'Select Month',
     month: 'Month',
+    currentMonth:'Current Month',
+
 
     // Physical table
     approvedWorks: 'Current Approved Works',
@@ -320,7 +323,7 @@ const translations: Record<Language, Record<string, string>> = {
     contractor_name: 'Contractor Name',
     current_status: 'Current Status',
     delay: 'Delay',
-    expected_completion: 'Expected Completion Date',
+    expected_completion_date: 'Expected Completion Date',
     note: 'Note',
     priority: "Priority",
     selectOption: "Select an option",

@@ -27,6 +27,7 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
             <tr>
               <th className="px-4 py-3">{t('srNo')}</th>
               <th className="px-4 py-3">{t('talukaName')}</th>
+              <th className="px-4 py-3">{t('workCategory')}</th>
               <th className="px-4 py-3">{t('pesaGramPanchayatCount')}</th>
               <th className="px-4 py-3">{t('pesaVillageCount')}</th>
               <th className="px-4 py-3">{t('annualApprovedFund')}</th>
@@ -39,9 +40,9 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
             <tr>
               <th className="px-4 py-3">{t('srNo')}</th>
               <th className="px-4 py-3">{t('talukaName')}</th>
+              <th className="px-4 py-3">{t('workCategory')}</th>
               <th className="px-4 py-3">{t('pesaGramPanchayatCount')}</th>
-              <th className="px-4 py-3">{t('pesaVillageCount')}</th>
-              <th className="px-4 py-3">{t('approvedWorks')}</th>
+              <th className="px-4 py-3">{t('pesaVillageCount')}</th>         
               <th className="px-4 py-3">{t('sanctionedWorks')}</th>
               <th className="px-4 py-3">{t('completedWorks')}</th>
               <th className="px-4 py-3">{t('ongoingWorks')}</th>
@@ -72,6 +73,7 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
               <tr key={work.id} className="border-t hover:bg-gray-50 transition-colors duration-200">
                 <td className="px-4 py-3 font-medium">{index + 1}</td>
                 <td className="px-4 py-3">{work.taluka_name}</td>
+                <td className="px-4 py-3">{work.work_category || 0}</td>
                 <td className="px-4 py-3">{work.pesa_gram_panchayat_count}</td>
                 <td className="px-4 py-3">{work.pesa_village_count}</td>
 
@@ -84,7 +86,6 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
                   </>
                 ) : (
                   <>
-                    <td className="px-4 py-3">{work.approved_works || 0}</td>
                     <td className="px-4 py-3">{work.sanctioned_works || 0}</td>
                     <td className="px-4 py-3">{work.completed_works || 0}</td>
                     <td className="px-4 py-3">{work.ongoing_works || 0}</td>

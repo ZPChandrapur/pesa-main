@@ -44,11 +44,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
         
         // Handle token refresh errors
         if (event === 'TOKEN_REFRESHED' && !session) {
-          console.log('Token refresh failed, clearing session');
           setSession(null);
           setUser(null);
         } else if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
@@ -80,7 +78,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Session and user will be set by the auth state change listener
-      console.log('Sign in successful:', data.user?.email);
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;
@@ -97,7 +94,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw error;
       }
       // Session and user will be cleared by the auth state change listener
-      console.log('Sign out successful');
     } catch (error) {
       console.error('Sign out error:', error);
       throw error;

@@ -35,33 +35,31 @@ function AppContent() {
     return <LoginPage />;
   }
 
-  const renderContent = () => {
+   const renderContent = () => {
     switch (activeTab) {
-  case 'dashboard':
-    return <Dashboard />;
-  case 'villages':
-    return <VillagesList />;
-  case 'gramPanchayat':
-    return <GramPanchayat />;
-  case 'taluka':
-    return <Taluka />;
-  case 'district':
-    return <District />;
-  case 'funds':
-    return <Funds />;
-  case 'workProgress':
-    return <WorkProgress />;
-  case 'tracking':
-    return <Tracking />;
-  case 'tracking':
-    return <Tracking />;
-  case 'aarakhada':
-    return <Aarakhada />;
-  default:
-    return <Dashboard />;
-}
-
+      case 'dashboard':
+        return <Dashboard />;
+      case 'villages':
+        return <VillagesList />;
+      case 'gramPanchayat':
+        return <GramPanchayat />;
+      case 'taluka':
+        return <Taluka />;
+      case 'district':
+        return <District />;
+      case 'funds':
+        return <Funds />;
+      case 'workProgress':
+        return <WorkProgress />;
+      case 'tracking':
+        return <Tracking />;
+      case 'aarakhada':
+        return <Aarakhada />;
+      default:
+        return <Dashboard />;
+    }
   };
+
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
@@ -76,11 +74,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <LanguageProvider>
-        <UserProvider>
+      <UserProvider>
+        <LanguageProvider>
           <AppContent />
-        </UserProvider>
-      </LanguageProvider>
+        </LanguageProvider>
+      </UserProvider>
     </AuthProvider>
   );
 }

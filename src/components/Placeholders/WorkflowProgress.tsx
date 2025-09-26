@@ -50,17 +50,39 @@ const WorkflowProgress: React.FC = () => {
   useEffect(() => {
     loadWorkflows();
   }, []);
-  const loadWorkflows = async () => {
-    try {
-      setLoading(true);
-      const data = await pesaWorkflowOperations.getAll();
-      setWorkflows(data.filter((workflow: Workflow) => workflow.status !== 'draft'));
-    } catch (error) {
-      console.error('Error loading workflows:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+ const loadWorkflows = async () => {debugger;
+  try {
+    setLoading(true);
+    const data = await pesaWorkflowOperations.getAll();
+
+    const updatedWorkflows = await Promise.all(
+      data
+        .filter((workflow: Workflow) => workflow.status !== "draft")
+        .map(async (workflow: Workflow) => {
+          const allStepsCompleted = workflow.workflow_steps?.every(
+            (step: any) => step.status === "completed"
+          );
+
+          // 🔑 If steps are completed but workflow is not marked, update in Supabase
+          if (allStepsCompleted && workflow.status !== "completed") {
+            const updated = await pesaWorkflowOperations.updateWorkflow(workflow.id, {
+              status: "completed",
+            });
+            return updated; // return updated record from Supabase
+          }
+
+          return workflow;
+        })
+    );
+
+    setWorkflows(updatedWorkflows);
+  } catch (error) {
+    console.error("Error loading workflows:", error);
+  } finally {
+    setLoading(false);
+  }
+};
   const handleSelectWorkflow = (workflow: Workflow) => {
     setSelectedWorkflow(workflow);
   };
@@ -90,35 +112,55 @@ const WorkflowProgress: React.FC = () => {
       location_name: step.location_name || step.location_data?.location_name || '',
     });
   };
-  const handleSaveStep = async () => {
-    if (!editingStep) return;
-    try {
-      const updates: Partial<WorkflowStep> = {
-        status: stepForm.status,
-        completion_photos: stepForm.completion_photos,
-        location_data: {
-          ...stepForm.location_data,
-          location_name: stepForm.location_name,
-        },
+
+  const handleSaveStep = async () => {debugger
+  if (!editingStep) return;
+  try {
+    const updates: Partial<WorkflowStep> = {
+      status: stepForm.status,
+      completion_photos: stepForm.completion_photos,
+      location_data: {
+        ...stepForm.location_data,
         location_name: stepForm.location_name,
-      };
-      if (stepForm.status === 'completed' && editingStep.status !== 'completed') {
-        updates.completed_at = new Date().toISOString();
-      }
-      await pesaWorkflowOperations.updateStep(editingStep.id, updates);
-
-      const updatedWorkflows = await pesaWorkflowOperations.getAll();
-      const updatedWorkflow = updatedWorkflows.find((w: Workflow) => w.id === selectedWorkflow?.id);
-      setSelectedWorkflow(updatedWorkflow);
-
-      setEditingStep(null);
-      setViewMode(false);
-      alert('Step updated successfully!');
-    } catch (error) {
-      console.error('Error updating step:', error);
-      alert('Error updating step. Please try again.');
+      },
+      location_name: stepForm.location_name,
+    };
+    if (stepForm.status === 'completed' && editingStep.status !== 'completed') {
+      updates.completed_at = new Date().toISOString();
     }
-  };
+
+    // 1️⃣ Update step in Supabase
+    await pesaWorkflowOperations.updateStep(editingStep.id, updates);
+
+    // 2️⃣ Fetch updated workflow steps for the selected workflow
+    const updatedWorkflows = await pesaWorkflowOperations.getAll();
+    const updatedWorkflow = updatedWorkflows.find((w: Workflow) => w.id === selectedWorkflow?.id);
+    setSelectedWorkflow(updatedWorkflow);
+
+    // 3️⃣ Check if all steps of this workflow are completed
+    const allCompleted = updatedWorkflow?.workflow_steps?.every(
+      (step) => step.status === 'completed'
+    );
+
+    if (allCompleted && updatedWorkflow) {
+      // 4️⃣ Update workflow status in Supabase
+      await pesaWorkflowOperations.updateWorkflow(updatedWorkflow.id, {
+        status: 'completed',
+        updated_at: new Date().toISOString()
+      });
+      // 5️⃣ Update local state with workflow marked completed
+      setSelectedWorkflow({ ...updatedWorkflow, status: 'completed' });
+    }
+
+    setEditingStep(null);
+    setViewMode(false);
+    alert('Step updated successfully!');
+  } catch (error) {
+    console.error('Error updating step:', error);
+    alert('Error updating step. Please try again.');
+  }
+};
+
   const handleCaptureLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(

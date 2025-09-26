@@ -322,7 +322,7 @@ export function Aarakhada() {
             'tech_approval_amount',
             'priority',
             'delay',
-            'expected_completion',
+            'expected_completion_date',
             'note',
           ];
           if (removedFields.includes(field)) return null;
@@ -339,10 +339,10 @@ export function Aarakhada() {
                   field.includes('date')
                     ? 'date'
                     : field === 'year'
-                    ? 'text'
-                    : typeof (formData as any)[field] === 'number'
-                    ? 'number'
-                    : 'text'
+                      ? 'text'
+                      : typeof (formData as any)[field] === 'number'
+                        ? 'number'
+                        : 'text'
                 }
                 required={isRequired}
                 value={(formData as any)[field] ?? ''}
@@ -355,6 +355,10 @@ export function Aarakhada() {
                   );
                 }}
                 className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
+                onKeyDown={(e) => ['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key) && e.preventDefault()}
+                onFocus={e => e.target.addEventListener('wheel', function (ev) { ev.preventDefault(); }, { passive: false })}
+                onBlur={e => e.target.removeEventListener('wheel', function (ev) { ev.preventDefault(); })}
+
               />
             </div>
           );

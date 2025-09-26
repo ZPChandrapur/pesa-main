@@ -19,12 +19,12 @@ const roleHierarchy: Record<UserRole, number> = {
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const { user: authUser } = useAuth();
-  
+
   // Create user object from authenticated user
   // In a real app, you might fetch additional user data from your database
-  const [user] = useState<User | null>(() => {
+  const [user, setUser] = useState<User | null>(() => {
     if (!authUser) return null;
-    
+
     return {
       id: authUser.id,
       name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'User',
@@ -40,7 +40,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ user, setUser: () => {}, hasPermission }}>
+    <UserContext.Provider value={{ user, setUser, hasPermission }}>
       {children}
     </UserContext.Provider>
   );

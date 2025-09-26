@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Clock, CheckCircle, AlertCircle, Plus, Edit, Trash2, Eye, Copy, Layers } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -19,12 +20,12 @@ interface PesaWork {
   tech_approval_amount?: number;
   agreement_approval_no?: number;
   agreement_approval_date?: string;
-  agreement_approval_amount?: number;
+  agreement_approval_amount?: string;
   duration?: string;
   contractor_name?: string;
   current_status?: string;
   delay?: string;
-  expected_completion?: string;
+  expected_completion_date?: string;
   note?: string;
   priority?: string;
   village_id?: string;
@@ -75,7 +76,7 @@ export function WorkProgress() {
     contractor_name: '',
     priority: '',
     delay: '',
-    expected_completion: '',
+    expected_completion_date: '',
     note: '',
     village_id: '',
     gram_panchayat_work_id: '',
@@ -128,7 +129,7 @@ export function WorkProgress() {
   };
   const validateForm = () => {
     // Removed admin_approval_no and admin_approval_date from required fields
-    const requiredFields = ['taluka', 'work_name', 'department', 'village_id'];
+    const requiredFields = ['taluka', 'work_name', 'village_id'];
     for (let field of requiredFields) {
       if (!(formData as any)[field]) {
         toast.error(`${t(field)} is required`);
@@ -138,6 +139,7 @@ export function WorkProgress() {
     return true;
   };
   const handleSubmit = async (e: React.FormEvent) => {
+    debugger;
     e.preventDefault();
     if (!validateForm()) return;
     const formattedData = {
@@ -190,7 +192,7 @@ export function WorkProgress() {
       contractor_name: work.contractor_name || '',
       priority: work.priority || '',
       delay: work.delay || '',
-      expected_completion: work.expected_completion || '',
+      expected_completion_date: work.expected_completion_date || '',
       note: work.note || '',
       village_id: work.village_id || '',
       gram_panchayat_work_id: '',  // removed gram_panchayat_work_id usage
@@ -202,18 +204,17 @@ export function WorkProgress() {
   };
   const handleView = (work: PesaWork) => setViewingWork(work);
   const handleDelete = async (id: string) => {
-  console.log('Attempting to delete work with id:', id);
-  if (window.confirm('Are you sure you want to delete this work?')) {
-    try {
-      await pesaWorkOperations.delete(id);
-      toast.success('Work deleted successfully');
-      await loadWorks(); // Refresh list after delete
-    } catch (error) {
-      console.error('Error deleting work:', error);
-      toast.error('Error deleting work');
+    if (window.confirm('Are you sure you want to delete this work?')) {
+      try {
+        await pesaWorkOperations.delete(id);
+        toast.success('Work deleted successfully');
+        await loadWorks(); // Refresh list after delete
+      } catch (error) {
+        console.error('Error deleting work:', error);
+        toast.error('Error deleting work');
+      }
     }
-  }
-};
+  };
 
   const handleDuplicate = async (id: string) => {
     try {
@@ -245,13 +246,13 @@ export function WorkProgress() {
       contractor_name: '',
       priority: '',
       delay: '',
-      expected_completion: '',
+      expected_completion_date: '',
       note: '',
       village_id: '',
-      gram_panchayat_work_id: '', 
+      gram_panchayat_work_id: '',
       pesa_grampanchayat: '',
       work_category: '',
-      added_month: '', 
+      added_month: '',
     });
     setEditingWork(null);
     setShowForm(false);
@@ -447,6 +448,7 @@ export function WorkProgress() {
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('pesaGrampanchayat')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('village')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('workCategory')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('workName')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('month')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('approval_amount')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('contractor_name')}</th>
@@ -472,19 +474,19 @@ export function WorkProgress() {
                           : work.work_category
                       ) : '-'}
                     </td>
+                    <td className="px-2 py-4 text-xs">{work.work_name || '-'}</td>
                     <td className="px-2 py-4 text-xs">{work.added_month || '-'}</td>
                     <td className="px-2 py-4 text-xs">{work.agreement_approval_amount}</td>
                     <td className="px-2 py-4 text-xs">{work.contractor_name}</td>
                     <td className="px-2 py-4 text-xs">
                       {work.priority ? (
                         <span
-                          className={`px-1 py-1 rounded-full text-xs font-semibold ${
-                            work.priority === 'low'
+                          className={`px-1 py-1 rounded-full text-xs font-semibold ${work.priority === 'low'
                               ? 'bg-green-100 text-green-700'
                               : work.priority === 'medium'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}
+                                ? 'bg-yellow-100 text-yellow-700'
+                                : 'bg-red-100 text-red-700'
+                            }`}
                         >
                           {t(work.priority)}
                         </span>
@@ -495,13 +497,12 @@ export function WorkProgress() {
                     <td className="px-1 py-4 text-xs">
                       {work.current_status ? (
                         <span
-                          className={`px-1 py-1 rounded-full text-xs font-semibold ${
-                            work.current_status === 'pending'
+                          className={`px-1 py-1 rounded-full text-xs font-semibold ${work.current_status === 'pending'
                               ? 'bg-gray-100 text-gray-700'
                               : work.current_status === 'in_progress'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-green-100 text-green-700'
-                          }`}
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-green-100 text-green-700'
+                            }`}
                         >
                           {t(work.current_status)}
                         </span>
@@ -626,7 +627,6 @@ export function WorkProgress() {
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                    required
                   />
                 </div>
                 <div>
@@ -691,10 +691,10 @@ export function WorkProgress() {
                           field.includes('date')
                             ? 'date'
                             : field === 'year'
-                            ? 'text'
-                            : typeof (formData as any)[field] === 'number'
-                            ? 'number'
-                            : 'text'
+                              ? 'text'
+                              : typeof (formData as any)[field] === 'number'
+                                ? 'number'
+                                : 'text'
                         }
                         required={isRequired}
                         value={(formData as any)[field] ?? ''}
@@ -706,6 +706,10 @@ export function WorkProgress() {
                           );
                         }}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                        onKeyDown={(e) => ['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key) && e.preventDefault()}
+                        onFocus={e => e.target.addEventListener('wheel', function (ev) { ev.preventDefault(); }, { passive: false })}
+                        onBlur={e => e.target.removeEventListener('wheel', function (ev) { ev.preventDefault(); })}
+
                       />
                     </div>
                   );
