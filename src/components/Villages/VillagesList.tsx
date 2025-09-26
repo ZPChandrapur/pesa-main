@@ -104,7 +104,6 @@ export function VillagesList() {
   // Unique districts and blocks for filter dropdowns
   const uniqueDistricts = Array.from(new Set(villages.map(v => v.district)));
   const uniqueBlocks = Array.from(new Set(villages.map(v => v.block)));
-  const uniquegrampanchayt = Array.from(new Set(villages.map(v => v.district)));
   // Helper to detect if a village is marked as PESA (strict boolean test plus common string/number values)
   const isPesaVillage = (v: Village) => {
     const anyV = v as any;
@@ -340,10 +339,10 @@ export function VillagesList() {
                       <td className="px-4 py-3">{Number((v as any).village_population) || 0}</td>
                       <td className="px-4 py-3">{stPop}</td>
                       <td className="px-4 py-3">{amtPerHead}</td>
-                      <td className="px-4 py-3">{fundAllocatedVillage}</td>
+                      <td className="px-4 py-3">{fundAllocatedVillage.toFixed(0)}</td>
                       {isFirstOfGroup && (
                         <td rowSpan={groupSize} className="px-4 py-3 align-middle">
-                          {fundAllocatedGp}
+                          {fundAllocatedGp.toFixed(0)}
                         </td>
                       )}
                       <td className="px-4 py-3 flex gap-2">
