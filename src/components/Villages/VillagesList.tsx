@@ -104,6 +104,7 @@ export function VillagesList() {
   // Unique districts and blocks for filter dropdowns
   const uniqueDistricts = Array.from(new Set(villages.map(v => v.district)));
   const uniqueBlocks = Array.from(new Set(villages.map(v => v.block)));
+  const uniquegrampanchayt = Array.from(new Set(villages.map(v => v.district)));
   // Helper to detect if a village is marked as PESA (strict boolean test plus common string/number values)
   const isPesaVillage = (v: Village) => {
     const anyV = v as any;
