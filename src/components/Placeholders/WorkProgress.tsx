@@ -474,7 +474,13 @@ export function WorkProgress() {
                           : work.work_category
                       ) : '-'}
                     </td>
-                    <td className="px-2 py-4 text-xs">{work.work_name || '-'}</td>
+                    <td
+  className="px-2 py-4 text-xs max-w-[150px] truncate"
+  title={work.work_name || ''}
+  style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+>
+  {work.work_name || '-'}
+</td>
                     <td className="px-2 py-4 text-xs">{work.added_month || '-'}</td>
                     <td className="px-2 py-4 text-xs">{work.agreement_approval_amount}</td>
                     <td className="px-2 py-4 text-xs">{work.contractor_name}</td>
