@@ -15,6 +15,7 @@ export function VillagesList() {
   const [showForm, setShowForm] = useState(false);
   const [editingVillage, setEditingVillage] = useState<Village | null>(null);
   const [viewMode, setViewMode] = useState(false);
+  const [selectedGramPanchayat, setSelectedGramPanchayat] = useState('');
   const labelColorsMap: Record<string, string> = {
     'from-indigo-500 to-purple-600': 'text-indigo-600',
     'from-blue-500 to-indigo-600': 'text-blue-600',
@@ -48,9 +49,10 @@ export function VillagesList() {
         (village.village_code || '').toString().toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    if (selectedDistrict) {
-      filtered = filtered.filter(v => v.district === selectedDistrict);
+    if (selectedGramPanchayat) {
+      filtered = filtered.filter(v => v.gram_panchayat === selectedGramPanchayat);
     }
+ 
     if (selectedBlock) {
       filtered = filtered.filter(v => v.block === selectedBlock);
     }
@@ -118,7 +120,7 @@ export function VillagesList() {
   const totalVillages = filteredVillages.length;
   // Calculate total GP count from filtered villages
   const totalGP = new Set(filteredVillages.map(v => v.gram_panchayat)).size;
-  // Calculate total Population by summing unique gram_panchayat_population values 
+  // Calculate total Population by summing unique gram_panchayat_population values
   // We use a Map keyed by gram_panchayat to avoid counting duplicates
   const uniqueGpPopulations = new Map<string, number>();
   filteredVillages.forEach(v => {
@@ -128,6 +130,19 @@ export function VillagesList() {
       uniqueGpPopulations.set(gpKey, gpPop);
     }
   });
+ 
+  const filteredGramPanchayats = Array.from(
+    new Set(
+      villages
+        .filter(v => !selectedBlock || v.block === selectedBlock)
+        .map(v => v.gram_panchayat)
+    )
+  );
+  useEffect(() => {
+    setSelectedGramPanchayat('');
+  }, [selectedBlock]);
+ 
+ 
   const totalPopulation = Array.from(uniqueGpPopulations.values()).reduce((sum, val) => sum + val, 0);
   // Updated total PESA population calculation:
   // Sum village_population only for villages with isPesa true
@@ -240,20 +255,7 @@ export function VillagesList() {
             />
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
           </div>
-          {/* District */}
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <select
-              value={selectedDistrict}
-              onChange={(e) => setSelectedDistrict(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-2xl bg-white focus:ring-4 focus:ring-emerald-500/20"
-            >
-              <option value="">{t('district')}</option>
-              {uniqueDistricts.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
+ 
           {/* Block */}
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -268,6 +270,28 @@ export function VillagesList() {
               ))}
             </select>
           </div>
+ 
+          {/* Gram Panchayat */}
+          <div className="relative">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <select
+              value={selectedGramPanchayat}
+              onChange={(e) => setSelectedGramPanchayat(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-2xl bg-white focus:ring-4 focus:ring-emerald-500/20"
+            >
+              <option value="">{t('gramPanchayat')}</option>
+              {villages
+                .filter(v => !selectedBlock || v.block === selectedBlock) // filter by selected block
+                .map(v => v.gram_panchayat)
+                .filter((gp, index, self) => gp && self.indexOf(gp) === index) // remove duplicates + skip empty
+                .map(gp => (
+                  <option key={gp} value={gp}>
+                    {gp}
+                  </option>
+                ))}
+            </select>
+          </div>
+ 
         </div>
         {/* Table */}
         <div className="overflow-x-auto bg-white rounded-2xl shadow-lg">
@@ -301,7 +325,7 @@ export function VillagesList() {
                 renderRows.map(({ village: v, isFirstOfGroup, groupSize, groupSrNo, gramPanchayat }, i) => {
                   const amtPerHead = Number((v as any).amount_per_head_st_population) || 0;
                   const stPop = Number((v as any).village_st_population) || 0;
-                  const fundAllocatedVillage = amtPerHead * stPop;
+                  const fundAllocatedVillage = Math.round((amtPerHead * stPop + Number.EPSILON) * 100) / 100;
                   const fundAllocatedGp = gpFundsMap[gramPanchayat] || 0;
                   return (
                     <tr key={v.id} className="border-t hover:bg-gray-50 transition-colors">
@@ -344,6 +368,7 @@ export function VillagesList() {
                         <td rowSpan={groupSize} className="px-4 py-3 align-middle">
                           {fundAllocatedGp.toFixed(0)}
                         </td>
+ 
                       )}
                       <td className="px-4 py-3 flex gap-2">
                         <button
@@ -395,3 +420,5 @@ export function VillagesList() {
     </div>
   );
 }
+ 
+ 
