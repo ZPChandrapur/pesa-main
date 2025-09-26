@@ -29,7 +29,7 @@ export function Aarakhada() {
   const [pesaGramPanchayats, setPesaGramPanchayats] = useState<any[]>([]);
   const [workCategories] = useState<any[]>([
     { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
-    { id: 'B', name: 'Category B - Social Development', name_mr: 'प्रकार ब - सामाजिक विकास' },
+    { id: 'B', name: 'Category B - Social Development', name_mr: 'प्रकार ब - वन हक्क अधिनियम (FRA) व पेसा (PESA) कायद्याची अंमलबजावणी' },
     { id: 'C', name: 'Category C - Economic Development', name_mr: 'प्रकार क - आर्थिक विकास' },
     { id: 'D', name: 'Category D - Environmental', name_mr: 'प्रकार ड - पर्यावरण' },
   ]);
