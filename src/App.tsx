@@ -82,8 +82,8 @@ const [userId, setUserId] = useState<string | null>(() => {
       return <Taluka userId={userId} roleName={roleName} />;
     case 'district':
       return <District userId={userId} />;
-    case 'funds':
-      return <Funds userId={userId} />;
+    // case 'funds':s
+    //   return <Funds userId={userId} />;
     case 'workProgress':
       return <WorkProgress userId={userId} roleName={roleName}/>;
     case 'tracking':
