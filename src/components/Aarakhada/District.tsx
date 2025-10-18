@@ -236,10 +236,10 @@ export function District() {
           <button
             onClick={handleDownloadExcel}
             className="bg-white text-purple-600 px-6 py-3 rounded-2xl hover:bg-purple-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
-            title={language === 'mr' ? '[translate:Excel डाउनलोड]' : 'Download Excel'}
+            title={'Download Excel'}
           >
             <Download className="w-5 h-5" />
-            {language === 'mr' ? '[translate:Excel डाउनलोड]' : 'Download Excel'}
+            Download Excel
           </button>
         </div>
       </div>
