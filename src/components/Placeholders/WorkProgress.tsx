@@ -495,10 +495,10 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
             <button
               onClick={handleDownloadCSV}
               className="text-teal-600 px-6 py-3 hover transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium"
-              title={language === 'mr' ? '[translate:CSV डाउनलोड]' : 'Download CSV'}
+              title={'Download Excel'}
             >
               <Download className="w-5 h-5" />
-              {language === 'mr' ? '[translate:CSV डाउनलोड]' : 'Download CSV'}
+              Download Excel
             </button>
 
             <div className="flex flex-col">
