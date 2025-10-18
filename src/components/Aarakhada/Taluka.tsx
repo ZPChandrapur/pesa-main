@@ -278,7 +278,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
           <button
             onClick={handleDownloadExcel}
             className="bg-white text-indigo-600 px-6 py-3 rounded-2xl hover:bg-indigo-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
-            {'Download Excel'}
+            title={'Download Excel'}
           >
             <Download className="w-5 h-5" />
             Download Excel
