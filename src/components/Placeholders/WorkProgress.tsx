@@ -669,9 +669,9 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                         <button onClick={() => handleEdit(work)} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit work">
                           <Edit className="w-4 h-4" />
                         </button>
-                        <button onClick={() => handleDuplicate(work.id)} className="p-1 text-green-600 hover:bg-green-50 rounded-lg" title="Duplicate work">
+                        {/* <button onClick={() => handleDuplicate(work.id)} className="p-1 text-green-600 hover:bg-green-50 rounded-lg" title="Duplicate work">
                           <Copy className="w-4 h-4" />
-                        </button>
+                        </button> */}
                         <button onClick={() => handleDelete(work.id)} className="p-1 text-red-600 hover:bg-red-50 rounded-lg" title="Delete work">
                           <Trash2 className="w-4 h-4" />
                         </button>
