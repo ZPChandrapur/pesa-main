@@ -38,7 +38,9 @@ export function Taluka({ userId, roleName }: TalukaProps) {
         setLoading(true);
         let data = await villageService.getAll();
 
-        if (roleName?.trim().toLowerCase() !== 'district' && userId) {
+(!['district', 'developer', 'super admin'].includes(roleName?.trim().toLowerCase()) && userId)
+        
+        if (!['district', 'developer', 'super admin'].includes(roleName?.trim().toLowerCase()) && userId) {
           data = data.filter(
             (v: any) => v.tal_user_access === userId || v.gram_user_access === userId
           );
