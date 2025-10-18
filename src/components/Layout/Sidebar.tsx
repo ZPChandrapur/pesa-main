@@ -45,7 +45,7 @@ export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: Si
     ];
   } else if (roleName === "district") {
     allowedNavs = [
-      "dashboard", "villages", "aarakhada", "workProgress", "gramPanchayat", "taluka" ,"district", "funds"
+      "dashboard", "villages", "aarakhada", "workProgress", "gramPanchayat", "taluka" ,"district"
     ];
   }
 
