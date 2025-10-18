@@ -182,7 +182,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
 
       let allowedVillageIds: string[] = [];
 
-      if (roleName !== 'district' && userId) {
+      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
         allowedVillageIds = allVillageData
           .filter((v: any) => {
             if (v.tal_user_access === null && v.gram_user_access === null) {
