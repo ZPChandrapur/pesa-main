@@ -298,7 +298,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
                 title={language === 'mr' ? '[translate:Excel डाउनलोड]' : 'Download Excel'}
               >
                 <Download className="w-5 h-5" />
-                {language === 'mr' ? '[translate:Excel डाउनलोड]' : 'Download Excel'}
+                 'Download Excel'
               </button>
               <div className="flex flex-col">
                 <label className="block text-xs font-semibold text-white mb-1">
