@@ -37,8 +37,6 @@ export function Taluka({ userId, roleName }: TalukaProps) {
       try {
         setLoading(true);
         let data = await villageService.getAll();
-
-(!['district', 'developer', 'super admin'].includes(roleName?.trim().toLowerCase()) && userId)
         
         if (!['district', 'developer', 'super admin'].includes(roleName?.trim().toLowerCase()) && userId) {
           data = data.filter(
