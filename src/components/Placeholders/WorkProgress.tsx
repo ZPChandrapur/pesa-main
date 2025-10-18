@@ -641,7 +641,12 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                           : work.work_category
                       ) : '-'}
                     </td>
-                    <td className="px-2 py-4 text-xs" onClick={() => handleWorkClick(work)}>{work.work_name || '-'}</td>
+                    <td
+                      className="px-2 py-4 text-xs text-blue-600 underline cursor-pointer hover:text-blue-800"
+                      onClick={() => handleWorkClick(work)}
+                    >
+                      {work.work_name || '-'}
+                    </td>
                     <td className="px-2 py-4 text-xs">{work.added_month || '-'}</td>
                     <td className="px-2 py-4 text-xs">{work.agreement_approval_amount}</td>
                     <td className="px-2 py-4 text-xs">{work.contractor_name}</td>
