@@ -106,7 +106,7 @@ export function AarakhadaTable({
 
   // Filter works based on access
   
-  const filteredWorks = ['district', 'developer', 'super admin'].includes(roleName?.trim().toLowerCase())
+  const filteredWorks = ['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase())
     ? works // show all works, skip userId check
     : works.filter(work => {
       if (!userId) return true;
