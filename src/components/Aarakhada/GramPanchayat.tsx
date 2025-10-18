@@ -250,9 +250,9 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
   const isNoVillages = !villages || villages.length === 0;
 
   // Filter works to only those belonging to filtered villages (accessible by the user)
-  const accessibleWorks = (roleName?.trim().toLowerCase() === 'district')
-    ? works // all works visible
-    : (() => {
+  const accessibleWorks = ['district', 'developer', 'super admin'].includes(roleName?.trim().toLowerCase())
+  ? works // all works visible to these roles
+  : (() => {
       const accessibleVillageIds = new Set(villages.map(v => v.id));
       return works.filter(w => accessibleVillageIds.has(w.village_id));
     })();
