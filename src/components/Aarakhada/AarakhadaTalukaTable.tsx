@@ -47,7 +47,7 @@ export function AarakhadaTalukaTable({
   }
 
   // Filter works where work.gram_panchayat matches any item in allowedGramPanchayats
-  const filteredWorks = ['district', 'developer', 'super admin'].includes(roleName?.trim().toLowerCase())
+  const filteredWorks = ['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase())
   ? works // show all works for district-level
   : works.filter(work =>
       allowedGramPanchayats.some(
