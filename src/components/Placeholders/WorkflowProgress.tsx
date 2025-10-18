@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, Camera, CheckCircle, Play, Pause, TrendingUp, Edit, ArrowLeft, Upload, X, Save, Eye } from 'lucide-react';
+import { Clock, MapPin, Camera, CheckCircle, Play, Pause, TrendingUp, Edit, ArrowLeft, Upload, X, Save, Eye, Trash2 } from 'lucide-react';
 import { pesaWorkflowOperations, pesaWorkOperations, storageOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
+import { Village } from '../../types';
 
 interface WorkflowStep {
   id: string;
@@ -30,7 +31,15 @@ interface Workflow {
   updated_at?: string;
 }
 
-const WorkflowProgress: React.FC = () => {
+interface WorkflowProgressProps {
+  userId: string;
+  allVillageData: Village[];
+  initialSelectedWorkName?: string;
+  onBackToList: () => void;
+}
+
+
+const WorkflowProgress: React.FC<WorkflowProgressProps> = ({ userId, allVillageData, initialSelectedWorkName, onBackToList }) => {
   const { t, language } = useLanguage();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
@@ -51,47 +60,81 @@ const WorkflowProgress: React.FC = () => {
     loadWorkflows();
   }, []);
 
- const loadWorkflows = async () => {debugger;
-  try {
-    setLoading(true);
-    const data = await pesaWorkflowOperations.getAll();
+  useEffect(() => {
+    if (initialSelectedWorkName && workflows.length > 0) {
+      const workflowToSelect = workflows.find(
+        (w) => w.work?.work_name === initialSelectedWorkName
+      );
+      if (workflowToSelect) {
+        setSelectedWorkflow(workflowToSelect);
+      }
+    }
+  }, [initialSelectedWorkName, workflows]);
 
-    const updatedWorkflows = await Promise.all(
-      data
-        .filter((workflow: Workflow) => workflow.status !== "draft")
-        .map(async (workflow: Workflow) => {
-          const allStepsCompleted = workflow.workflow_steps?.every(
-            (step: any) => step.status === "completed"
-          );
+  const loadWorkflows = async () => {
+    try {
+      setLoading(true);
 
-          // 🔑 If steps are completed but workflow is not marked, update in Supabase
-          if (allStepsCompleted && workflow.status !== "completed") {
-            const updated = await pesaWorkflowOperations.updateWorkflow(workflow.id, {
-              status: "completed",
-            });
-            return updated; // return updated record from Supabase
-          }
+      // Compute allowedVillageIds here if not computed globally in component
+      const allowedVillageIds = allVillageData
+        .filter(v => v.tal_user_access === userId || v.gram_user_access === userId)
+        .map(v => v.id);
 
-          return workflow;
-        })
-    );
+      let worksData = await pesaWorkOperations.getAll();
 
-    setWorkflows(updatedWorkflows);
-  } catch (error) {
-    console.error("Error loading workflows:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+      if (allowedVillageIds.length > 0) {
+        worksData = worksData.filter(w => allowedVillageIds.includes(w.village_id));
+      }
+
+      const data = await pesaWorkflowOperations.getAll();
+
+      const allowedWorkNames = worksData.map(work => work.work_name);
+
+      const filteredWorkflows = data.filter(
+        workflow =>
+          workflow.work &&
+          workflow.work.work_name &&
+          allowedWorkNames.includes(workflow.work.work_name)
+      );
+
+      const updatedWorkflows = await Promise.all(
+        filteredWorkflows
+          .filter(workflow => workflow.status !== "draft")
+          .map(async (workflow) => {
+            const allStepsCompleted = workflow.workflow_steps?.every(
+              step => step.status === "completed"
+            );
+            if (allStepsCompleted && workflow.status !== "completed") {
+              const updated = await pesaWorkflowOperations.updateWorkflow(workflow.id, {
+                status: "completed"
+              });
+              return updated;
+            }
+            return workflow;
+          })
+      );
+
+      setWorkflows(updatedWorkflows);
+    } catch (error) {
+      console.error("Error loading workflows:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   const handleSelectWorkflow = (workflow: Workflow) => {
     setSelectedWorkflow(workflow);
   };
+
   const handleBackToList = () => {
     setSelectedWorkflow(null);
     setEditingStep(null);
     setViewMode(false);
     loadWorkflows();
+    onBackToList();
   };
+
   const handleEditStep = (step: WorkflowStep) => {
     setEditingStep(step);
     setViewMode(false);
@@ -113,53 +156,53 @@ const WorkflowProgress: React.FC = () => {
     });
   };
 
-  const handleSaveStep = async () => {debugger
-  if (!editingStep) return;
-  try {
-    const updates: Partial<WorkflowStep> = {
-      status: stepForm.status,
-      completion_photos: stepForm.completion_photos,
-      location_data: {
-        ...stepForm.location_data,
+  const handleSaveStep = async () => {
+    if (!editingStep) return;
+    try {
+      const updates: Partial<WorkflowStep> = {
+        status: stepForm.status,
+        completion_photos: stepForm.completion_photos,
+        location_data: {
+          ...stepForm.location_data,
+          location_name: stepForm.location_name,
+        },
         location_name: stepForm.location_name,
-      },
-      location_name: stepForm.location_name,
-    };
-    if (stepForm.status === 'completed' && editingStep.status !== 'completed') {
-      updates.completed_at = new Date().toISOString();
+      };
+      if (stepForm.status === 'completed' && editingStep.status !== 'completed') {
+        updates.completed_at = new Date().toISOString();
+      }
+
+      // 1️⃣ Update step in Supabase
+      await pesaWorkflowOperations.updateStep(editingStep.id, updates);
+
+      // 2️⃣ Fetch updated workflow steps for the selected workflow
+      const updatedWorkflows = await pesaWorkflowOperations.getAll();
+      const updatedWorkflow = updatedWorkflows.find((w: Workflow) => w.id === selectedWorkflow?.id);
+      setSelectedWorkflow(updatedWorkflow);
+
+      // 3️⃣ Check if all steps of this workflow are completed
+      const allCompleted = updatedWorkflow?.workflow_steps?.every(
+        (step) => step.status === 'completed'
+      );
+
+      if (allCompleted && updatedWorkflow) {
+        // 4️⃣ Update workflow status in Supabase
+        await pesaWorkflowOperations.updateWorkflow(updatedWorkflow.id, {
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        });
+        // 5️⃣ Update local state with workflow marked completed
+        setSelectedWorkflow({ ...updatedWorkflow, status: 'completed' });
+      }
+
+      setEditingStep(null);
+      setViewMode(false);
+      alert('Step updated successfully!');
+    } catch (error) {
+      console.error('Error updating step:', error);
+      alert('Error updating step. Please try again.');
     }
-
-    // 1️⃣ Update step in Supabase
-    await pesaWorkflowOperations.updateStep(editingStep.id, updates);
-
-    // 2️⃣ Fetch updated workflow steps for the selected workflow
-    const updatedWorkflows = await pesaWorkflowOperations.getAll();
-    const updatedWorkflow = updatedWorkflows.find((w: Workflow) => w.id === selectedWorkflow?.id);
-    setSelectedWorkflow(updatedWorkflow);
-
-    // 3️⃣ Check if all steps of this workflow are completed
-    const allCompleted = updatedWorkflow?.workflow_steps?.every(
-      (step) => step.status === 'completed'
-    );
-
-    if (allCompleted && updatedWorkflow) {
-      // 4️⃣ Update workflow status in Supabase
-      await pesaWorkflowOperations.updateWorkflow(updatedWorkflow.id, {
-        status: 'completed',
-        updated_at: new Date().toISOString()
-      });
-      // 5️⃣ Update local state with workflow marked completed
-      setSelectedWorkflow({ ...updatedWorkflow, status: 'completed' });
-    }
-
-    setEditingStep(null);
-    setViewMode(false);
-    alert('Step updated successfully!');
-  } catch (error) {
-    console.error('Error updating step:', error);
-    alert('Error updating step. Please try again.');
-  }
-};
+  };
 
   const handleCaptureLocation = () => {
     if (navigator.geolocation) {
@@ -320,6 +363,23 @@ const WorkflowProgress: React.FC = () => {
     const completedSteps = steps.filter(step => step.status === 'completed').length;
     return Math.round((completedSteps / steps.length) * 100);
   };
+
+const handleDeleteWorkflow = async (workflowId: string) => {debugger
+  if (!window.confirm("Are you sure you want to delete this workflow?")) {
+    return;
+  }
+  try {
+    await pesaWorkflowOperations.deleteWorkflow(workflowId);
+    alert("Workflow deleted successfully!");
+    loadWorkflows(); 
+    setSelectedWorkflow(null); 
+  } catch (error) {
+    console.error('Error deleting workflow:', error);
+    alert("Error deleting workflow. Please try again.");
+  }
+};
+
+
   const getStatusColor = (status: string) => {
     const colors = {
       draft: 'bg-gradient-to-r from-gray-400 to-gray-500',
@@ -427,13 +487,12 @@ const WorkflowProgress: React.FC = () => {
           {selectedWorkflow.workflow_steps?.map((step: WorkflowStep, index: number) => (
             <div
               key={step.id}
-              className={`p-6 rounded-2xl border-2 transition-all duration-200 ${
-                step.status === 'completed'
+              className={`p-6 rounded-2xl border-2 transition-all duration-200 ${step.status === 'completed'
                   ? 'bg-green-50 border-green-200'
                   : step.status === 'in_progress'
                     ? 'bg-blue-50 border-blue-200'
                     : 'bg-gray-50 border-gray-200'
-              }`}
+                }`}
             >
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-4 flex-1">
@@ -744,7 +803,17 @@ const WorkflowProgress: React.FC = () => {
                   </p>
                 )}
               </div>
-              <Eye className="w-5 h-5 text-gray-400 flex-shrink-0 ml-2" />
+              <div className="flex items-center space-x-3">
+                <Eye className="w-5 h-5 text-gray-400 flex-shrink-0 cursor-pointer" />
+                <Trash2
+                  className="w-5 h-5 text-red-600 cursor-pointer hover:text-red-800"
+                  onClick={(e) => {
+                    e.stopPropagation(); // prevent triggering parent onClick
+                    handleDeleteWorkflow(workflow.id);
+                  }}
+                  title="Delete workflow"
+                />
+              </div>
             </div>
             <div className="space-y-3">
               {/* Progress Bar */}

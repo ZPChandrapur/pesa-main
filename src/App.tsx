@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { UserProvider } from './context/UserContext';
@@ -14,11 +14,46 @@ import { WorkProgress } from './components/Placeholders/WorkProgress';
 import { Tracking } from './components/Placeholders/Tracking';
 import { Aarakhada } from './components/Placeholders/Aarakhada';
 
+
 function AppContent() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [roleId, setRoleId] = useState<number | null>(() => {
+  const stored = localStorage.getItem('roleId');
+  return stored ? Number(stored) : null;
+});
+const [roleName, setRoleName] = useState<string | null>(() => {
+  return localStorage.getItem('roleName');
+});
 
-  // Show loading spinner while checking authentication
+const [userId, setUserId] = useState<string | null>(() => {
+  return localStorage.getItem('userId');
+});
+
+
+  // Update callback for LoginPage: set both roleId and roleName
+  const handleRoleFetch = (roleId: number | null, roleName: string | null, userId: string | null) => {
+    setRoleId(roleId);
+     if (roleId !== null) {
+      localStorage.setItem("roleId", String(roleId));
+      localStorage.setItem("roleName", String(roleName));
+      localStorage.setItem("userId", String(userId));
+   }
+    setRoleName(roleName);
+    setUserId(userId);
+  };
+ 
+  useEffect(() => {
+    if (!loading && !user) {
+      setRoleId(null);
+      setRoleName(null);
+      localStorage.removeItem('roleId');
+      localStorage.removeItem('roleName');
+    }
+  }, [user, loading]);
+
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 flex items-center justify-center">
@@ -30,40 +65,46 @@ function AppContent() {
     );
   }
 
-  // Show login page if user is not authenticated
   if (!user) {
-    return <LoginPage />;
+    // Pass the new callback to LoginPage
+    return <LoginPage onRoleIdFetch={handleRoleFetch} />;
   }
 
-   const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'villages':
-        return <VillagesList />;
-      case 'gramPanchayat':
-        return <GramPanchayat />;
-      case 'taluka':
-        return <Taluka />;
-      case 'district':
-        return <District />;
-      case 'funds':
-        return <Funds />;
-      case 'workProgress':
-        return <WorkProgress />;
-      case 'tracking':
-        return <Tracking />;
-      case 'aarakhada':
-        return <Aarakhada />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
+  const renderContent = () => {
+  switch (activeTab) {
+    case 'dashboard':
+      return <Dashboard />;
+    case 'villages':
+      return <VillagesList userId={userId} roleName={roleName} />;
+    case 'gramPanchayat':
+      return <GramPanchayat userId={userId} roleName={roleName} />;
+    case 'taluka':
+      return <Taluka userId={userId} roleName={roleName} />;
+    case 'district':
+      return <District userId={userId} />;
+    case 'funds':
+      return <Funds userId={userId} />;
+    case 'workProgress':
+      return <WorkProgress userId={userId} roleName={roleName}/>;
+    case 'tracking':
+      return <Tracking userId={userId} />;
+    case 'aarakhada':
+      return <Aarakhada userId={userId} roleName={roleName} />;
+    default:
+      return <Dashboard />;
+  }
+};
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* Pass roleId and roleName as props */}
+      <Sidebar 
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        roleId={roleId}
+        roleName={roleName}
+        userId={userId}
+      />
       <div className="flex-1 p-8 overflow-auto">
         {renderContent()}
       </div>

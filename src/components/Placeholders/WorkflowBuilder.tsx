@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Plus, Clock, User, Flag, Calendar, ArrowRight, CheckCircle, Settings } from 'lucide-react';
 import { pesaWorkOperations, pesaWorkflowOperations } from '../../utils/supabase'; // Import service objects here
 import { useLanguage } from '../../context/LanguageContext';
+import { Village } from '../../types';
 
 interface PesaWork {
   id: string;
@@ -16,7 +17,13 @@ interface PesaWork {
   note?: string;
 }
 
-const WorkflowBuilder: React.FC = () => {
+interface WorkflowBuilderProps {
+  userId: string;
+  roleName: string;
+  allVillageData: Village[];
+}
+
+const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ userId, roleName, allVillageData }) => {
   const { t } = useLanguage();
   const [works, setWorks] = useState<PesaWork[]>([]);
   const [selectedWork, setSelectedWork] = useState<PesaWork | null>(null);
@@ -43,21 +50,39 @@ const WorkflowBuilder: React.FC = () => {
 
   useEffect(() => {
     loadWorks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
 
   const loadWorks = async () => {
     try {
       setLoading(true);
       const data = await pesaWorkOperations.getAll();
-      // Filter works that can have workflows
-      setWorks(data.filter(work => work.current_status !== 'completed'));
+
+      let allowedVillageIds = allVillageData
+        .filter(v =>
+          roleName !== 'district' && userId
+            ? (v.tal_user_access === userId || v.gram_user_access === userId)
+            : true
+        )
+        .map(v => v.id);
+
+      if (roleName !== 'district' && userId) {
+        if (!allowedVillageIds.length) {
+          setWorks([]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      const filteredWorks = data.filter(work => allowedVillageIds.includes(work.village_id));
+      setWorks(filteredWorks.filter(work => work.current_status !== 'completed'));
     } catch (error) {
       console.error('Error loading works:', error);
     } finally {
       setLoading(false);
     }
   };
+
 
   const handleSelectWork = (work: PesaWork) => {
     setSelectedWork(work);
@@ -240,8 +265,8 @@ const WorkflowBuilder: React.FC = () => {
                   : '-'}
 
                 <span className="ml-3">
-  {(worksSteps[selectedWork.id] || []).reduce((sum, step) => sum + step.duration, 0)} days
-</span>
+                  {(worksSteps[selectedWork.id] || []).reduce((sum, step) => sum + step.duration, 0)} days
+                </span>
 
               </div>
             </div>
@@ -295,12 +320,12 @@ const WorkflowBuilder: React.FC = () => {
             </h3>
             {selectedWork && (
               <button
-  onClick={() => setShowStepForm(true)}
-  className="btn-primary flex items-center space-x-2 px-6 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow hover:scale-105 transition-all"
->
-  <Plus className="w-5 h-5 mr-2" />
-  <span>{t('addStep')}</span>
-</button>
+                onClick={() => setShowStepForm(true)}
+                className="btn-primary flex items-center space-x-2 px-6 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow hover:scale-105 transition-all"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                <span>{t('addStep')}</span>
+              </button>
 
             )}
           </div>
@@ -335,9 +360,9 @@ const WorkflowBuilder: React.FC = () => {
                     </div>
                     <p className="text-sm text-purple-700 mb-2">{step.description}</p>
                     <div className="flex items-center text-xs text-purple-600">
-  <Clock className="w-3 h-3 mr-1" />
-  {step.duration} days
-</div>
+                      <Clock className="w-3 h-3 mr-1" />
+                      {step.duration} days
+                    </div>
 
                   </div>
                 ))}
@@ -355,11 +380,11 @@ const WorkflowBuilder: React.FC = () => {
                 <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-2xl p-4 border border-indigo-200">
                   <h4 className="font-medium text-indigo-900 mb-2">Workflow Summary</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm text-indigo-700 mb-2">
-  <span>Total Steps: {steps.length}</span>
-  <span>Total Duration: {steps.reduce((total, step) => total + step.duration, 0)} days</span>
-  <span>Estimated Days: {steps.reduce((total, step) => total + step.duration, 0)}</span>
-  <span>Work: {selectedWork.work_name}</span>
-</div>
+                    <span>Total Steps: {steps.length}</span>
+                    <span>Total Duration: {steps.reduce((total, step) => total + step.duration, 0)} days</span>
+                    <span>Estimated Days: {steps.reduce((total, step) => total + step.duration, 0)}</span>
+                    <span>Work: {selectedWork.work_name}</span>
+                  </div>
 
                   <button
                     onClick={handleActivateWorkflow}
@@ -425,20 +450,20 @@ const WorkflowBuilder: React.FC = () => {
                 </div>
 
                 <div className="md:col-span-2 flex justify-end space-x-4 pt-6 border-t border-purple-200">
-  <button
-    type="button"
-    onClick={() => setShowStepForm(false)}
-    className="btn-secondary px-6 py-2 rounded-lg border border-purple-300 font-medium text-purple-800 hover:bg-purple-50"
-  >
-    {t('cancel')}
-  </button>
-  <button
-    type="submit"
-    className="btn-primary px-6 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow hover:scale-105 transition-all"
-  >
-    {t('addStep')}
-  </button>
-</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowStepForm(false)}
+                    className="btn-secondary px-6 py-2 rounded-lg border border-purple-300 font-medium text-purple-800 hover:bg-purple-50"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary px-6 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow hover:scale-105 transition-all"
+                  >
+                    {t('addStep')}
+                  </button>
+                </div>
 
               </form>
             </div>

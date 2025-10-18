@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Edit, Trash2, Eye, Plus } from "lucide-react";
 import { AarakhadaWork } from "../../types";
 import { useLanguage } from "../../context/LanguageContext";
 import { AarakhadaWorkForm } from './AarakhadaWorkForm';
-import { workService } from "../../utils/supabase";
+import { pesaWorkOperations, workService } from "../../utils/supabase";
 
 interface AarakhadaTableProps {
   works: AarakhadaWork[];
@@ -12,10 +12,12 @@ interface AarakhadaTableProps {
   onEdit: (work: AarakhadaWork) => void;
   onView: (work: AarakhadaWork) => void;
   onDelete: (work: AarakhadaWork) => void;
-  villages: any[];                  // Add villages prop
-  workCategories: any[];            // Add workCategories prop
+  villages: any[];
+  workCategories: any[];
   workNamesMap: Record<string, Record<string, string[]>>;
-  loadAllWorks:()=>void;
+  loadAllWorks: () => void;
+  userId?: string;
+  roleName?: string;
 }
 
 export function AarakhadaTable({
@@ -28,33 +30,49 @@ export function AarakhadaTable({
   villages,
   workCategories,
   workNamesMap,
-  loadAllWorks
+  loadAllWorks,
+  userId,
+  roleName
 }: AarakhadaTableProps) {
   const { t, language } = useLanguage();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingWork, setEditingWork] = useState<AarakhadaWork | null>(null);
   const [currentMonth, setCurrentMonth] = useState<string>("");
+  const [allWorks, setAllWorks] = useState<AarakhadaWork[]>([]);
 
+  // Pagination state
+  const rowsPerPage = 10; // adjust as needed
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  const handleAddClick = (work: AarakhadaWork) => {debugger;
+  useEffect(() => {
+    const fetchAllWorks = async () => {
+      try {
+        const allWorksData = await pesaWorkOperations.getAll();
+        setAllWorks(allWorksData);
+      } catch (error) {
+        console.error("Error loading works:", error);
+        setAllWorks([]);
+      }
+    };
+    fetchAllWorks();
+  }, []);
+
+  const handleAddClick = (work: AarakhadaWork) => {
     const now = new Date();
     const months = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     const cm = `${months[now.getMonth()]}-${now.getFullYear()}`;
-    // prefill with existing work but reset month for new row
     setEditingWork({
-    ...work,
-    added_month: cm,
-    previous_expenditure: work.cumulative_expenditure,  
-    current_expenditure: '',   
-  });
+      ...work,
+      added_month: cm,
+      previous_expenditure: work.cumulative_expenditure,
+      current_expenditure: '',
+    });
     setCurrentMonth(cm);
     setIsAddOpen(true);
   };
-
-
 
   const handleCloseForm = () => {
     setIsAddOpen(false);
@@ -62,19 +80,17 @@ export function AarakhadaTable({
     setCurrentMonth("");
   };
 
- const handleSaveWork = async (savedWork: AarakhadaWork) => {
-  const newWork = {
-    ...savedWork,
-    id: undefined, // force insert, not update
-    added_month: currentMonth,
-    work_type: workType,
+  const handleSaveWork = async (savedWork: AarakhadaWork) => {
+    const newWork = {
+      ...savedWork,
+      id: undefined,
+      added_month: currentMonth,
+      work_type: workType,
+    };
+    await workService.insert(newWork);
+    setIsAddOpen(false);
+    loadAllWorks()
   };
-  await workService.insert(newWork);
-  setIsAddOpen(false);
-  loadAllWorks()
-};
-
-
 
   const getDisplayMonth = (addedMonth: string) => {
     if (!addedMonth) return "-";
@@ -87,6 +103,25 @@ export function AarakhadaTable({
         {t("loading...")}
       </div>
     );
+
+  // Filter works based on access
+  const filteredWorks = (roleName?.trim().toLowerCase() === 'district')
+    ? works // show all works, skip userId check
+    : works.filter(work => {
+      if (!userId) return true;
+      const allowed = villages.some(v =>
+        (v.gram_user_access && v.gram_user_access === userId && work.gram_panchayat === v.gram_panchayat) ||
+        (v.tal_user_access && v.tal_user_access === userId && work.taluka === v.taluka)
+      );
+      return allowed;
+    });
+
+  // PAGINATION:
+  const totalPages = Math.ceil(filteredWorks.length / rowsPerPage);
+  const paginatedWorks = filteredWorks.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
 
   return (
     <div>
@@ -122,97 +157,161 @@ export function AarakhadaTable({
             </tr>
           </thead>
           <tbody>
-            {works.length === 0 ? (
+            {paginatedWorks.length === 0 ? (
               <tr>
                 <td colSpan={workType === "financial" ? 13 : 9} className="px-4 py-6 text-center text-gray-500">
                   {language === "mr" ? "कोणतीही कामे आढळली नाहीत" : "No works found"}
                 </td>
               </tr>
             ) : (
-              works.map((work, index) => (
-                <tr key={work.id} className="border-t">
-                  <td className="px-4 py-3">{index + 1}</td>
-                  <td className="px-4 py-3">{work.village_name}</td>
-                  <td className="px-4 py-3">{work.work_category}</td>
-                  <td className="px-4 py-3">{work.year}</td>
-                  <td className="px-4 py-3">{getDisplayMonth(work.added_month)}</td>
-                  {workType === "financial" ? (
-                    <>
-                      <td className="px-4 py-3">{work.sanctioned_amount?.toLocaleString() ?? 0}</td>
-                      <td className="px-4 py-3">{work.released_amount?.toLocaleString() ?? 0}</td>
-                      <td className="px-4 py-3">{work.previous_expenditure?.toLocaleString() ?? 0}</td>
-                      <td className="px-4 py-3">{work.current_expenditure?.toLocaleString() ?? 0}</td>
-                      <td className="px-4 py-3">{work.cumulative_expenditure?.toLocaleString() ?? 0}</td>
-                      <td className="px-4 py-3">{work.remaining_funds?.toLocaleString() ?? 0}</td>
-                      <td className="px-4 py-3 flex gap-2 items-center">
-                        <button
-                          className="text-purple-600 hover:text-purple-800"
-                          onClick={() => handleAddClick(work)}
-                          title={t("addWork")}
-                        >
-                          <Plus size={18} />
-                        </button>
-                        <button
-                          className="text-green-500 hover:text-green-700"
-                          onClick={() => onEdit(work)}
-                          title={t("edit")}
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          className="text-blue-500 hover:text-blue-700"
-                          onClick={() => onView(work)}
-                          title={t("view")}
-                        >
-                          <Eye size={18} />
-                        </button>
-                        <button
-                          className="text-red-500 hover:text-red-700"
-                          onClick={() => window.confirm(t("confirmDelete")) && onDelete(work)}
-                          title={t("delete")}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="px-4 py-3">{work.sanctioned_works ?? 0}</td>
-                      <td className="px-4 py-3">{work.completed_works ?? 0}</td>
-                      <td className="px-4 py-3">{work.ongoing_works ?? 0}</td>
-                      <td className="px-4 py-3">{work.pending_works ?? 0}</td>
-                      <td className="px-4 py-3 flex gap-2">
-                        <button
-                          className="text-green-500 hover:text-green-700"
-                          onClick={() => onEdit(work)}
-                          title={t("edit")}
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          className="text-blue-500 hover:text-blue-700"
-                          onClick={() => onView(work)}
-                          title={t("view")}
-                        >
-                          <Eye size={18} />
-                        </button>
-                        <button
-                          className="text-red-500 hover:text-red-700"
-                          onClick={() => window.confirm(t("confirmDelete")) && onDelete(work)}
-                          title={t("delete")}
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              ))
+              paginatedWorks.map((work, index) => {
+                const completedNames = allWorks
+                  .filter(item =>
+                    item?.village?.village_name?.trim() === work.village_name?.trim() &&
+                    item?.work_category === work.work_category &&
+                    item?.current_status === "completed"
+                  )
+                  .map(item => item.work_name)
+                  .filter(Boolean);
+
+                const ongoingNames = allWorks
+                  .filter(item =>
+                    item?.village?.village_name?.trim() === work.village_name?.trim() &&
+                    item?.work_category === work.work_category &&
+                    item?.current_status === "in_progress"
+                  )
+                  .map(item => item.work_name)
+                  .filter(Boolean);
+
+                const pendingNames = allWorks
+                  .filter(item =>
+                    item?.village?.village_name?.trim() === work.village_name?.trim() &&
+                    item?.work_category === work.work_category &&
+                    item?.current_status === "pending"
+                  )
+                  .map(item => item.work_name)
+                  .filter(Boolean);
+
+                const completedTitle = completedNames.length ? completedNames.join("\n") : undefined;
+                const ongoingTitle = ongoingNames.length ? ongoingNames.join("\n") : undefined;
+                const pendingTitle = pendingNames.length ? pendingNames.join("\n") : undefined;
+
+                return (
+                  <tr key={work.id} className="border-t">
+                    <td className="px-4 py-3">{(currentPage - 1) * rowsPerPage + index + 1}</td>
+                    <td className="px-4 py-3">{work.village_name}</td>
+                    <td className="px-4 py-3">{work.work_category}</td>
+                    <td className="px-4 py-3">{work.year}</td>
+                    <td className="px-4 py-3">{getDisplayMonth(work.added_month)}</td>
+                    {workType === "financial" ? (
+                      <>
+                        <td className="px-4 py-3">{work.sanctioned_amount?.toLocaleString() ?? 0}</td>
+                        <td className="px-4 py-3">{work.released_amount?.toLocaleString() ?? 0}</td>
+                        <td className="px-4 py-3">{work.previous_expenditure?.toLocaleString() ?? 0}</td>
+                        <td className="px-4 py-3">{work.current_expenditure?.toLocaleString() ?? 0}</td>
+                        <td className="px-4 py-3">{work.cumulative_expenditure?.toLocaleString() ?? 0}</td>
+                        <td className="px-4 py-3">{work.remaining_funds?.toLocaleString() ?? 0}</td>
+                        <td className="px-4 py-3 flex gap-2 items-center">
+                          <button
+                            className="text-purple-600 hover:text-purple-800"
+                            onClick={() => handleAddClick(work)}
+                            title={t("addWork")}
+                          >
+                            <Plus size={18} />
+                          </button>
+                          <button
+                            className="text-green-500 hover:text-green-700"
+                            onClick={() => onEdit(work)}
+                            title={t("edit")}
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            className="text-blue-500 hover:text-blue-700"
+                            onClick={() => onView(work)}
+                            title={t("view")}
+                          >
+                            <Eye size={18} />
+                          </button>
+                          {/* {roleName?.trim().toLowerCase() != 'grampanchayat' &&(
+                            <button
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => window.confirm(t("confirmDelete")) && onDelete(work)}
+                              title={t("delete")}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )} */}
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3">{work.sanctioned_works ?? 0}</td>
+                        <td className="px-4 py-3" title={completedTitle}>{work.completed_works ?? 0}</td>
+                        <td className="px-4 py-3" title={ongoingTitle}>{work.ongoing_works ?? 0}</td>
+                        <td className="px-4 py-3" title={pendingTitle}>{work.pending_works ?? 0}</td>
+                        <td className="px-4 py-3 flex gap-2">
+                          <button
+                            className="text-green-500 hover:text-green-700"
+                            onClick={() => onEdit(work)}
+                            title={t("edit")}
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            className="text-blue-500 hover:text-blue-700"
+                            onClick={() => onView(work)}
+                            title={t("view")}
+                          >
+                            <Eye size={18} />
+                          </button>
+                          {/* {roleName?.trim().toLowerCase() != 'grampanchayat' && (
+                            <button
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => window.confirm(t("confirmDelete")) && onDelete(work)}
+                              title={t("delete")}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )} */}
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
-      {/* Add form modal */}
+      {/* PAGINATION UI */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2 mt-4 mb-4">
+          <button
+            className="px-3 py-1 border rounded disabled:opacity-50"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(prev => prev - 1)}
+          >
+            {t('prev')}
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-gray-200' : ''}`}
+              onClick={() => setCurrentPage(i + 1)}
+            >
+              {i + 1}
+            </button>
+          ))}
+          <button
+            className="px-3 py-1 border rounded disabled:opacity-50"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(prev => prev + 1)}
+          >
+            {t('next')}
+          </button>
+        </div>
+      )}
       {isAddOpen && (
         <AarakhadaWorkForm
           isOpen={isAddOpen}

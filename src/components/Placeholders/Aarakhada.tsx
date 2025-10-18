@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { pesaWorkOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
-export function Aarakhada() {
+export function Aarakhada({ userId }: { userId: string }) {
   const { t, language } = useLanguage();
   const [formData, setFormData] = useState({
     taluka: '' as string,
@@ -16,6 +16,9 @@ export function Aarakhada() {
     agreement_approval_no: null as number | null,
     agreement_approval_date: '',
     agreement_approval_amount: null as number | null,
+    tech_approval_no: '',
+    tech_approval_date: '',
+    tech_approval_amount: null as number | null,
     duration: '',
     contractor_name: '',
     village_id: '',
@@ -28,11 +31,10 @@ export function Aarakhada() {
   const [filteredVillages, setFilteredVillages] = useState<any[]>([]);
   const [pesaGramPanchayats, setPesaGramPanchayats] = useState<any[]>([]);
   const [workCategories] = useState<any[]>([
-
-  { id: 'A', name: 'Category A - Basic Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
-  { id: 'B', name: 'Category B - Implementation of FRA & PESA Acts', name_mr: 'प्रकार ब - वन हक्क अधिनियम (FRA) व पेसा (PESA) कायद्याची अंमलबजावणी' },
-  { id: 'C', name: 'Category C - Health, Sanitation & Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता, शिक्षण' },
-  { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation & Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
+    { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
+    { id: 'B', name: 'Category B - Social Development', name_mr: 'प्रकार ब - सामाजिक विकास' },
+    { id: 'C', name: 'Category C - Economic Development', name_mr: 'प्रकार क - आर्थिक विकास' },
+    { id: 'D', name: 'Category D - Environmental', name_mr: 'प्रकार ड - पर्यावरण' },
   ]);
   const [editingWork, setEditingWork] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,20 +88,31 @@ export function Aarakhada() {
   const loadVillages = async () => {
     try {
       const { villageService } = await import('../../utils/supabase');
-      const data = await villageService.getAll();
+      let data = await villageService.getAll();
+
+      // ✅ Filter based on userId prop
+      if (userId) {
+        data = data.filter(
+          (v: any) => v.tal_user_access === userId || v.gram_user_access === userId
+        );
+      }
+
       setVillages(data);
-      // Extract unique gram panchayat names from villages
+
+      // ✅ Extract only VALID Gram Panchayat values for dropdown
       const uniqueGramPanchayats = Array.from(
-        new Set(data.map((v) => v.gram_panchayat).filter(Boolean)),
+        new Set(data.map((v: any) => v.gram_panchayat).filter(Boolean))
       ).map((gp) => ({
         id: gp,
         gram_panchayat: gp,
       }));
+
       setPesaGramPanchayats(uniqueGramPanchayats);
     } catch (error) {
       console.error('Error loading villages:', error);
     }
   };
+
   const validateForm = () => {
     const requiredFields = [
       'taluka',
@@ -108,7 +121,8 @@ export function Aarakhada() {
       'pesa_grampanchayat',
       'village_id',
       'work_category',
-      'current_status', // made required
+      'current_status',
+      'agreement_approval_amount'
     ];
     for (let field of requiredFields) {
       if (!(formData as any)[field]) {
@@ -119,6 +133,7 @@ export function Aarakhada() {
     return true;
   };
   const handleSubmit = async (e: React.FormEvent) => {
+
     e.preventDefault();
     if (!validateForm()) return;
     try {
@@ -148,12 +163,15 @@ export function Aarakhada() {
       agreement_approval_no: null,
       agreement_approval_date: '',
       agreement_approval_amount: null,
+      tech_approval_no: '',
+      tech_approval_date: '',
+      tech_approval_amount: null,
       duration: '',
       contractor_name: '',
       village_id: '',
       pesa_grampanchayat: '',
-      added_month: '', // ✅ reset as well
-      current_status: '', // keep position consistent
+      added_month: '',
+      current_status: '',
     });
     setEditingWork(null);
     setFilteredVillages([]);
@@ -313,14 +331,26 @@ export function Aarakhada() {
             <option value="completed">{t('completed')}</option>
           </select>
         </div>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-semibold text-gray-700">
+            {t('agreement_approval_amount')}
+            <span className="text-red-500 ml-1">*</span>
+          </label>
+          <input
+            type="number"
+            value={formData.agreement_approval_amount ?? ''}
+            readOnly={readonly}
+            onChange={(e) => !readonly && handleChange('agreement_approval_amount', e.target.value === '' ? null : Number(e.target.value))}
+            className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
+            required
+          />
+        </div>
         {/* Remaining Inputs */}
         {Object.keys(formData).map((field) => {
-          if (['village_id', 'work_category', 'work_name', 'pesa_grampanchayat', 'taluka', 'year', 'added_month', 'current_status'].includes(field))
+          if (['village_id', 'work_category', 'work_name', 'pesa_grampanchayat', 'taluka', 'year', 'added_month', 'current_status', 'agreement_approval_amount'].includes(field))
             return null;
           const removedFields = [
-            'tech_approval_no',
-            'tech_approval_date',
-            'tech_approval_amount',
             'priority',
             'delay',
             'expected_completion_date',
@@ -349,7 +379,7 @@ export function Aarakhada() {
                 value={(formData as any)[field] ?? ''}
                 onChange={(e) => {
                   const value = e.target.value;
-                  const numericFields = ['agreement_approval_no', 'agreement_approval_amount', 'admin_approval_amount'];
+                  const numericFields = ['agreement_approval_no', 'admin_approval_amount'];
                   handleChange(
                     field,
                     numericFields.includes(field) ? (value === '' ? null : Number(value)) : value,

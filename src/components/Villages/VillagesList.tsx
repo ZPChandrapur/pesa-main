@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Users, Plus, Filter, MapPin, Edit, Trash2, Eye } from 'lucide-react';
+import { Building2, Users, Plus, Filter, MapPin, Edit, Trash2, Eye, Download } from 'lucide-react';
 import { Village } from '../../types';
 import { VillageForm } from './VillageForm';
-import { villageService } from '../../utils/supabase';
+import { pesaSupabase, villageService } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
-export function VillagesList() {
+
+export function VillagesList({ userId, roleName }: { userId: string }) {
   const { t, language } = useLanguage();
   const [villages, setVillages] = useState<Village[]>([]);
   const [filteredVillages, setFilteredVillages] = useState<Village[]>([]);
@@ -16,23 +17,100 @@ export function VillagesList() {
   const [editingVillage, setEditingVillage] = useState<Village | null>(null);
   const [viewMode, setViewMode] = useState(false);
   const [selectedGramPanchayat, setSelectedGramPanchayat] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+
+  const handleDownloadCSV = () => {
+    const headers = [
+      'District',
+      'Block',
+      'Gram Panchayat',
+      'Village Name',
+      'Village Population',
+      'Village ST Population',
+      'Amount Per Head ST Population',
+      'Fund Allocated Village Wise',
+      'Fund Allocated GP Wise'
+    ];
+
+    const headerHtml = headers.map(h => `
+    <th style="
+      background-color: #10b981; 
+      color: white; 
+      font-weight: bold; 
+      padding: 6px 8px; 
+      text-align: left;
+      border: 1px solid #ddd;
+    ">${h}</th>`).join('');
+
+    const rowsHtml = filteredVillages.map((v: any) => {
+      const amtPerHead = Number(v.amount_per_head_st_population) || 0;
+      const stPop = Number(v.village_st_population) || 0;
+      const fundAllocatedVillage = Math.round((amtPerHead * stPop + Number.EPSILON) * 100) / 100;
+
+      const villagesInGp = filteredVillages.filter(fv => fv.gram_panchayat === v.gram_panchayat);
+      const fundAllocatedGp = villagesInGp.reduce((sum, gv) => {
+        const amt = Number(gv.amount_per_head_st_population) || 0;
+        const st = Number(gv.village_st_population) || 0;
+        return sum + amt * st;
+      }, 0);
+
+      return `<tr>
+      <td style="border: 1px solid #ddd; padding: 4px;">${v.district || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${v.block || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${v.gram_panchayat || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${v.village_name || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${v.village_population || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${v.village_st_population || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${v.amount_per_head_st_population || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${fundAllocatedVillage.toFixed(0)}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${fundAllocatedGp.toFixed(0)}</td>
+    </tr>`;
+    }).join('');
+
+    const tableHtml = `
+    <table style="border-collapse: collapse; width: 100%;">
+      <thead><tr>${headerHtml}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  `;
+
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'villages_data.xls';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const labelColorsMap: Record<string, string> = {
     'from-indigo-500 to-purple-600': 'text-indigo-600',
     'from-blue-500 to-indigo-600': 'text-blue-600',
     'from-emerald-500 to-teal-600': 'text-emerald-600',
     'from-pink-500 to-rose-500': 'text-pink-600',
   };
+
   useEffect(() => {
     loadVillages();
   }, []);
+
   useEffect(() => {
     filterVillages();
+    setCurrentPage(1);
   }, [villages, searchTerm, selectedDistrict, selectedBlock, language]);
-  // Load all villages from service
+
   const loadVillages = async () => {
     try {
       setLoading(true);
-      const data = await villageService.getAll();
+      let data = await villageService.getAll();
+
+      if (roleName !== 'district' && userId) {
+        data = data.filter(v =>
+          v.tal_user_access === userId || v.gram_user_access === userId
+        );
+      }
+
       setVillages(data);
     } catch (error) {
       console.error('Error loading villages:', error);
@@ -40,7 +118,8 @@ export function VillagesList() {
       setLoading(false);
     }
   };
-  // Apply search and filters to villages
+
+
   const filterVillages = () => {
     let filtered = villages;
     if (searchTerm) {
@@ -52,13 +131,12 @@ export function VillagesList() {
     if (selectedGramPanchayat) {
       filtered = filtered.filter(v => v.gram_panchayat === selectedGramPanchayat);
     }
- 
     if (selectedBlock) {
       filtered = filtered.filter(v => v.block === selectedBlock);
     }
     setFilteredVillages(filtered);
   };
-  // Save or update village
+
   const handleSave = async (villageData: Omit<Village, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       if (editingVillage?.id) {
@@ -74,19 +152,19 @@ export function VillagesList() {
       console.error('Error saving village:', error);
     }
   };
-  // Edit village handler
+
   const handleEdit = (village: Village) => {
     setEditingVillage(village);
     setViewMode(false);
     setShowForm(true);
   };
-  // View village handler
+
   const handleView = (village: Village) => {
     setEditingVillage(village);
     setViewMode(true);
     setShowForm(true);
   };
-  // Delete village handler
+
   const handleDelete = async (id: string) => {
     if (window.confirm(language === 'mr' ? 'गाव हटवायचे आहे?' : 'Are you sure you want to delete this village?')) {
       try {
@@ -97,66 +175,56 @@ export function VillagesList() {
       }
     }
   };
-  // Add new village handler
+
   const handleAddNew = () => {
     setEditingVillage(null);
     setViewMode(false);
     setShowForm(true);
   };
-  // Unique districts and blocks for filter dropdowns
+
   const uniqueDistricts = Array.from(new Set(villages.map(v => v.district)));
   const uniqueBlocks = Array.from(new Set(villages.map(v => v.block)));
-  // Helper to detect if a village is marked as PESA (strict boolean test plus common string/number values)
+
   const isPesaVillage = (v: Village) => {
     const anyV = v as any;
     const candidates = [anyV.is_pesa, anyV.pesa, anyV.pesa_flag, anyV.isPesa];
     for (const c of candidates) {
-      if (c === true) return true;
-      if (c === 1) return true;
+      if (c === true || c === 1) return true;
       if (typeof c === 'string' && ['1', 'true', 'yes', 'y'].includes(c.toLowerCase())) return true;
     }
     return false;
   };
+
   const totalVillages = filteredVillages.length;
-  // Calculate total GP count from filtered villages
   const totalGP = new Set(filteredVillages.map(v => v.gram_panchayat)).size;
-  // Calculate total Population by summing unique gram_panchayat_population values
-  // We use a Map keyed by gram_panchayat to avoid counting duplicates
+
   const uniqueGpPopulations = new Map<string, number>();
   filteredVillages.forEach(v => {
     const gpKey = v.gram_panchayat || '';
     const gpPop = Number((v as any).gram_panchayat_population) || 0;
-    if (gpKey && !uniqueGpPopulations.has(gpKey)) {
-      uniqueGpPopulations.set(gpKey, gpPop);
-    }
+    if (gpKey && !uniqueGpPopulations.has(gpKey)) uniqueGpPopulations.set(gpKey, gpPop);
   });
- 
+
   const filteredGramPanchayats = Array.from(
-    new Set(
-      villages
-        .filter(v => !selectedBlock || v.block === selectedBlock)
-        .map(v => v.gram_panchayat)
-    )
+    new Set(villages.filter(v => !selectedBlock || v.block === selectedBlock).map(v => v.gram_panchayat))
   );
+
   useEffect(() => {
     setSelectedGramPanchayat('');
   }, [selectedBlock]);
- 
- 
+
   const totalPopulation = Array.from(uniqueGpPopulations.values()).reduce((sum, val) => sum + val, 0);
-  // Updated total PESA population calculation:
-  // Sum village_population only for villages with isPesa true
   const totalPesaVillagesPopulation = filteredVillages
     .filter(v => isPesaVillage(v))
     .reduce((sum, v) => sum + (Number((v as any).village_population) || 0), 0);
-  // Group villages by gram_panchayat for rendering merged rows and calculations
+
   const groupedByGp = filteredVillages.reduce((acc, village) => {
     const gp = village.gram_panchayat || '-';
     if (!acc[gp]) acc[gp] = [];
     acc[gp].push(village);
     return acc;
   }, {} as Record<string, Village[]>);
-  // Calculate fund_allocated_village and fund_allocated_gp per gram_panchayat
+
   const gpFundsMap = Object.fromEntries(
     Object.entries(groupedByGp).map(([gp, villages]) => {
       const totalFundAllocatedGp = villages.reduce((sum, v) => {
@@ -167,6 +235,7 @@ export function VillagesList() {
       return [gp, totalFundAllocatedGp];
     })
   );
+
   interface RenderRow {
     village: Village;
     isFirstOfGroup: boolean;
@@ -174,21 +243,31 @@ export function VillagesList() {
     groupSrNo: number;
     gramPanchayat: string;
   }
-  // Prepare row data for row grouping and rowspan rendering
+
+  // ----------------- UPDATED PAGINATION LOGIC -----------------
+  const groupedArray = Object.entries(groupedByGp).map(([gp, villages], idx) => ({
+    gp,
+    villages,
+    groupSrNo: idx + 1,
+  }));
+
+  const totalPages = Math.ceil(groupedArray.length / rowsPerPage);
+  const paginatedGroups = groupedArray.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   const renderRows: RenderRow[] = [];
-  let srNoCounter = 1;
-  Object.entries(groupedByGp).forEach(([gp, villages]) => {
+  paginatedGroups.forEach(({ gp, villages, groupSrNo }) => {
     villages.forEach((village, index) => {
       renderRows.push({
         village,
         isFirstOfGroup: index === 0,
         groupSize: villages.length,
-        groupSrNo: srNoCounter,
+        groupSrNo,
         gramPanchayat: gp,
       });
     });
-    srNoCounter++;
   });
+  // ----------------- END UPDATED PAGINATION LOGIC -----------------
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -206,15 +285,27 @@ export function VillagesList() {
               </p>
             </div>
           </div>
-          <button
-            onClick={handleAddNew}
-            className="bg-white text-emerald-600 px-6 py-3 rounded-2xl hover:bg-emerald-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
-          >
-            <Plus className="w-5 h-5" />
-            {t('addVillage')}
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleDownloadCSV}
+              className="bg-white text-teal-600 px-6 py-3 rounded-2xl hover:bg-teal-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
+            >
+              <Download className="w-5 h-5" />
+              {language === 'mr' ? 'CSV डाउनलोड' : 'Download CSV'}
+            </button>
+
+            <button
+              onClick={handleAddNew}
+              className="bg-white text-emerald-600 px-6 py-3 rounded-2xl hover:bg-emerald-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
+            >
+              <Plus className="w-5 h-5" />
+              {t('addVillage')}
+            </button>
+          </div>
+
         </div>
       </div>
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-3">
         {[
@@ -240,11 +331,11 @@ export function VillagesList() {
           );
         })}
       </div>
+
       {/* Main Content */}
       <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
-          {/* Search */}
           <div className="relative">
             <input
               type="text"
@@ -255,8 +346,7 @@ export function VillagesList() {
             />
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
           </div>
- 
-          {/* Block */}
+
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <select
@@ -270,8 +360,7 @@ export function VillagesList() {
               ))}
             </select>
           </div>
- 
-          {/* Gram Panchayat */}
+
           <div className="relative">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <select
@@ -281,18 +370,16 @@ export function VillagesList() {
             >
               <option value="">{t('gramPanchayat')}</option>
               {villages
-                .filter(v => !selectedBlock || v.block === selectedBlock) // filter by selected block
+                .filter(v => !selectedBlock || v.block === selectedBlock)
                 .map(v => v.gram_panchayat)
-                .filter((gp, index, self) => gp && self.indexOf(gp) === index) // remove duplicates + skip empty
+                .filter((gp, index, self) => gp && self.indexOf(gp) === index)
                 .map(gp => (
-                  <option key={gp} value={gp}>
-                    {gp}
-                  </option>
+                  <option key={gp} value={gp}>{gp}</option>
                 ))}
             </select>
           </div>
- 
         </div>
+
         {/* Table */}
         <div className="overflow-x-auto bg-white rounded-2xl shadow-lg">
           <table className="w-full text-sm text-left text-gray-600">
@@ -304,7 +391,6 @@ export function VillagesList() {
                 <th className="px-4 py-3">{t('gsk')}</th>
                 <th className="px-4 py-3">{t('gskPopulation')}</th>
                 <th className="px-4 py-3">{t('gskStPopulation')}</th>
-                {/* Skipped 7th column as per instruction */}
                 <th className="px-4 py-3">{t('villageName')}</th>
                 <th className="px-4 py-3">{t('villagePopulation')}</th>
                 <th className="px-4 py-3">{t('villageSTPopulation')}</th>
@@ -314,6 +400,7 @@ export function VillagesList() {
                 <th className="px-4 py-3">{t('actions')}</th>
               </tr>
             </thead>
+
             <tbody>
               {renderRows.length === 0 ? (
                 <tr>
@@ -330,72 +417,25 @@ export function VillagesList() {
                   return (
                     <tr key={v.id} className="border-t hover:bg-gray-50 transition-colors">
                       {isFirstOfGroup && (
-                        <td rowSpan={groupSize} className="px-4 py-3 font-medium align-middle">
-                          {groupSrNo}
-                        </td>
+                        <td rowSpan={groupSize} className="px-4 py-3 font-medium align-middle">{groupSrNo}</td>
                       )}
-                      {isFirstOfGroup && (
-                        <td rowSpan={groupSize} className="px-4 py-3 align-middle">
-                          {v.district || '-'}
-                        </td>
-                      )}
-                      {isFirstOfGroup && (
-                        <td rowSpan={groupSize} className="px-4 py-3 align-middle">
-                          {v.block || '-'}
-                        </td>
-                      )}
-                      {isFirstOfGroup && (
-                        <td rowSpan={groupSize} className="px-4 py-3 align-middle">
-                          {gramPanchayat}
-                        </td>
-                      )}
-                      {isFirstOfGroup && (
-                        <td rowSpan={groupSize} className="px-4 py-3 align-middle">
-                          {Number((v as any).gram_panchayat_population) || 0}
-                        </td>
-                      )}
-                      {isFirstOfGroup && (
-                        <td rowSpan={groupSize} className="px-4 py-3 align-middle">
-                          {Number((v as any).gram_panchayat_st_population) || 0}
-                        </td>
-                      )}
+                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{v.district || '-'}</td>}
+                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{v.block || '-'}</td>}
+                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{gramPanchayat}</td>}
+                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{Number((v as any).gram_panchayat_population) || 0}</td>}
+                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{Number((v as any).gram_panchayat_st_population) || 0}</td>}
+
                       <td className="px-4 py-3">{v.village_name}</td>
                       <td className="px-4 py-3">{Number((v as any).village_population) || 0}</td>
                       <td className="px-4 py-3">{stPop}</td>
                       <td className="px-4 py-3">{amtPerHead}</td>
                       <td className="px-4 py-3">{fundAllocatedVillage.toFixed(0)}</td>
-                      {isFirstOfGroup && (
-                        <td rowSpan={groupSize} className="px-4 py-3 align-middle">
-                          {fundAllocatedGp.toFixed(0)}
-                        </td>
- 
-                      )}
+                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{fundAllocatedGp.toFixed(0)}</td>}
+
                       <td className="px-4 py-3 flex gap-2">
-                        <button
-                          className="text-blue-500 hover:text-blue-700"
-                          onClick={() => handleView(v)}
-                          title={language === 'mr' ? 'पहा' : 'View'}
-                        >
-                          <Eye size={18} />
-                        </button>
-                        <button
-                          className="text-green-500 hover:text-green-700"
-                          onClick={() => handleEdit(v)}
-                          title={language === 'mr' ? 'संपादित करा' : 'Edit'}
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          className="text-red-500 hover:text-red-700"
-                          onClick={() => {
-                            if (window.confirm(language === 'mr' ? 'गाव हटवायचे आहे?' : 'Are you sure you want to delete this village?')) {
-                              v.id && handleDelete(v.id);
-                            }
-                          }}
-                          title={language === 'mr' ? 'हटवा' : 'Delete'}
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <button className="text-blue-500 hover:text-blue-700" onClick={() => handleView(v)}><Eye size={18} /></button>
+                        <button className="text-green-500 hover:text-green-700" onClick={() => handleEdit(v)}><Edit size={18} /></button>
+                        <button className="text-red-500 hover:text-red-700" onClick={() => { v.id && handleDelete(v.id); }}><Trash2 size={18} /></button>
                       </td>
                     </tr>
                   );
@@ -403,8 +443,36 @@ export function VillagesList() {
               )}
             </tbody>
           </table>
+
+          {/* Pagination */}
+          <div className="flex justify-center gap-2 mt-4 mb-4">
+            <button
+              className="px-3 py-1 border rounded disabled:opacity-50"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => prev - 1)}
+            >
+              {t("prev")}
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                className={`px-3 py-1 border rounded ${currentPage === i + 1 ? "bg-gray-200" : ""}`}
+                onClick={() => setCurrentPage(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              className="px-3 py-1 border rounded disabled:opacity-50"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+            >
+              {t("next")}
+            </button>
+          </div>
         </div>
       </div>
+
       {/* Modal Form */}
       <VillageForm
         village={editingVillage}
@@ -420,5 +488,3 @@ export function VillagesList() {
     </div>
   );
 }
- 
- 

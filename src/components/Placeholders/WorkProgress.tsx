@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Clock, CheckCircle, AlertCircle, Plus, Edit, Trash2, Eye, Copy, Layers } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle, AlertCircle, Plus, Edit, Trash2, Eye, Copy, Layers, Download } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import { pesaWorkOperations } from '../../utils/supabase';
+import { pesaWorkflowOperations, pesaWorkOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
 import WorkflowBuilder from '../Placeholders/WorkflowBuilder';
 import WorkflowProgress from '../Placeholders/WorkflowProgress';
+import { Village } from '../../types';
 interface PesaWork {
   id: string;
   taluka: string;
@@ -27,7 +28,6 @@ interface PesaWork {
   delay?: string;
   expected_completion_date?: string;
   note?: string;
-  priority?: string;
   village_id?: string;
   gram_panchayat_work_id?: string;
   pesa_grampanchayat?: string;
@@ -38,24 +38,40 @@ interface PesaWork {
   village?: { village_name: string; village_name_mr?: string };
   gram_panchayat_work?: { work_name: string; work_category: string };
 }
-export function WorkProgress() {
+export function WorkProgress({ userId, roleName }: { userId: string; roleName: string }) {
   const { t, language } = useLanguage();
   const [works, setWorks] = useState<PesaWork[]>([]);
   const [availableWorkNames, setAvailableWorkNames] = useState<any[]>([]);
   const [pesaGrampanchayats, setPesaGrampanchayats] = useState<string[]>([]);
   const [workCategories, setWorkCategories] = useState([
-    { id: 'A', name: 'Category A - Basic Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
-  { id: 'B', name: 'Category B - Implementation of FRA & PESA Acts', name_mr: 'प्रकार ब - वन हक्क अधिनियम (FRA) व पेसा (PESA) कायद्याची अंमलबजावणी' },
-  { id: 'C', name: 'Category C - Health, Sanitation & Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता, शिक्षण' },
-  { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation & Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
+    { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
+    { id: 'B', name: 'Category B - Social Development', name_mr: 'प्रकार ब - सामाजिक विकास' },
+    { id: 'C', name: 'Category C - Economic Development', name_mr: 'प्रकार क - आर्थिक विकास' },
+    { id: 'D', name: 'Category D - Environmental', name_mr: 'प्रकार ड - पर्यावरण' },
   ]);
   const [villages, setVillages] = useState<{ id: string; village_name: string; village_name_mr?: string }[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editingWork, setEditingWork] = useState<PesaWork | null>(null);
   const [viewingWork, setViewingWork] = useState<PesaWork | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10; // adjust as needed
   const [loading, setLoading] = useState(true);
+  const [allVillageData, setAllVillageData] = useState<Village[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'builder' | 'progress'>('dashboard');
-  const handleTab = (tab: 'dashboard' | 'builder' | 'progress') => setActiveTab(tab);
+  const [selectedWork, setSelectedWork] = useState<PesaWork | null>(null);
+  const handleTab = (tab: 'dashboard' | 'builder' | 'progress') => {
+    setActiveTab(tab);
+    if (tab === 'progress' && !selectedWork && works.length > 0) {
+      setSelectedWork(works[0]);
+    }
+  };
+
+  const handleBackToWorkflowProgress = () => {
+    setSelectedWork(null);    // clear selected work
+    setActiveTab('progress'); // switch to progress tab (workflow cards/list)
+  };
+
+
   // Reordered formData fields for input order in form
   const [formData, setFormData] = useState({
     taluka: '',
@@ -74,7 +90,6 @@ export function WorkProgress() {
     agreement_approval_amount: '',
     duration: '',
     contractor_name: '',
-    priority: '',
     delay: '',
     expected_completion_date: '',
     note: '',
@@ -86,7 +101,6 @@ export function WorkProgress() {
   });
   // Added states for filtering dropdowns
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [yearFilter, setYearFilter] = useState<string>('all');
   const [workCategoryFilter, setWorkCategoryFilter] = useState<string>('all');
   const [pesaGrampanchayatFilter, setPesaGrampanchayatFilter] = useState<string>('all');
@@ -98,20 +112,115 @@ export function WorkProgress() {
   useEffect(() => {
     loadWorks();
     loadAvailableWorkNames();
-  }, []);
+    setCurrentPage(1);
+  }, [userId]);
+
+
+  const handleDownloadCSV = () => {
+    const headers = [
+      'Taluka',
+      'Year',
+      'PESA Gram Panchayat',
+      'Village',
+      'Work Category',
+      'Work Name',
+      'Month',
+      'Approval Amount',
+      'Contractor Name',
+      'Status',
+    ];
+
+    const rowsHtml = filteredWorks.map((w: any) => {
+      return `<tr>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.taluka || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.year ?? ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.pesa_grampanchayat || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.village?.village_name || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.work_category || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.work_name || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.added_month || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.agreement_approval_amount || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.contractor_name || ''}</td>
+      <td style="border: 1px solid #ddd; padding: 4px;">${w.current_status || ''}</td>
+    </tr>`;
+    }).join('');
+
+    const headerHtml = headers.map(h => `
+    <th style="
+      background-color: #10b981;
+      color: white;
+      font-weight: bold;
+      padding: 6px 8px;
+      text-align: left;
+      border: 1px solid #ddd;
+    ">${h}</th>`).join('');
+
+    const tableHtml = `
+    <table style="border-collapse: collapse; width: 100%;">
+      <thead><tr>${headerHtml}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  `;
+
+    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'work_progress_data.xls';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+
   const loadWorks = async () => {
     try {
       setLoading(true);
-      const data = await pesaWorkOperations.getAll();
-      setWorks(data);
-      // Load villages for filter dropdown from the fetched data
-      const uniqueVillages = Array.from(new Set(data.map(w => w.village?.village_name).filter(Boolean))) as string[];
+
+      const { villageService } = await import('../../utils/supabase');
+      const allVillageData = await villageService.getAll();
+      setAllVillageData(allVillageData);
+
+      let allowedVillageIds: string[] = [];
+
+      if (roleName !== 'district' && userId) {
+        allowedVillageIds = allVillageData
+          .filter((v: any) => {
+            if (v.tal_user_access === null && v.gram_user_access === null) {
+              return false;
+            }
+
+            return v.tal_user_access === userId || v.gram_user_access === userId;
+          })
+          .map((v: any) => v.id);
+
+        if (!allowedVillageIds.length) {
+          setWorks([]);
+          return;
+        }
+      }
+
+      let worksData = await pesaWorkOperations.getAll();
+
+      if (allowedVillageIds.length > 0) {
+        worksData = worksData.filter((w: any) =>
+          allowedVillageIds.includes(w.village_id)
+        );
+      }
+
+      setWorks(worksData);
+
+      const uniqueVillages = Array.from(
+        new Set(
+          worksData.map((w: any) => w.village?.village_name).filter(Boolean)
+        )
+      ) as string[];
       setVillages(uniqueVillages.map(name => ({ id: name, village_name: name })));
-      // Load unique gram panchayats for filter dropdown
+
       const uniqueGramPanchayats = Array.from(
-        new Set(data.map(w => w.pesa_grampanchayat).filter(Boolean) as string[])
+        new Set(worksData.map((w: any) => w.pesa_grampanchayat).filter(Boolean))
       );
       setPesaGrampanchayats(uniqueGramPanchayats);
+
     } catch (error) {
       console.error('Error loading works:', error);
       toast.error('Error loading works');
@@ -119,6 +228,8 @@ export function WorkProgress() {
       setLoading(false);
     }
   };
+
+
   const loadAvailableWorkNames = async () => {
     try {
       const data = await pesaWorkOperations.getAvailableWorkNames();
@@ -128,7 +239,6 @@ export function WorkProgress() {
     }
   };
   const validateForm = () => {
-    // Removed admin_approval_no and admin_approval_date from required fields
     const requiredFields = ['taluka', 'work_name', 'village_id'];
     for (let field of requiredFields) {
       if (!(formData as any)[field]) {
@@ -138,8 +248,35 @@ export function WorkProgress() {
     }
     return true;
   };
+
+  const handleWorkClick = async (work: PesaWork) => {
+    try {
+      const workflowsData = await pesaWorkflowOperations.getAll();
+
+      // Filter workflows for the clicked work_name
+      const filteredWorkflows = workflowsData.filter(
+        (workflow: any) => workflow.work?.work_name === work.work_name
+      );
+
+      const hasProgressData = filteredWorkflows.some(
+        (workflow: any) => workflow.workflow_steps && workflow.workflow_steps.length > 0
+      );
+
+      if (!hasProgressData) {
+        alert('There are no steps added for this work.');
+        return;
+      }
+
+      setSelectedWork(work);
+      setActiveTab('progress');
+    } catch (error) {
+      console.error('Error checking workflow progress:', error);
+      toast.error('Error checking workflow progress');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
-    debugger;
+
     e.preventDefault();
     if (!validateForm()) return;
     const formattedData = {
@@ -148,7 +285,6 @@ export function WorkProgress() {
       tech_approval_amount: formData.tech_approval_amount ? Number(formData.tech_approval_amount) : null,
       agreement_approval_no: formData.agreement_approval_no ? Number(formData.agreement_approval_no) : null,
       agreement_approval_amount: formData.agreement_approval_amount ? Number(formData.agreement_approval_amount) : null,
-      priority: ['low', 'medium', 'high'].includes(formData.priority) ? formData.priority : 'low',
       current_status: ['pending', 'in_progress', 'completed'].includes(formData.current_status)
         ? formData.current_status
         : 'pending',
@@ -190,7 +326,6 @@ export function WorkProgress() {
       agreement_approval_amount: work.agreement_approval_amount ? String(work.agreement_approval_amount) : '',
       duration: work.duration || '',
       contractor_name: work.contractor_name || '',
-      priority: work.priority || '',
       delay: work.delay || '',
       expected_completion_date: work.expected_completion_date || '',
       note: work.note || '',
@@ -244,7 +379,6 @@ export function WorkProgress() {
       agreement_approval_amount: '',
       duration: '',
       contractor_name: '',
-      priority: '',
       delay: '',
       expected_completion_date: '',
       note: '',
@@ -259,12 +393,11 @@ export function WorkProgress() {
   };
   const filteredWorks = works.filter(w => {
     const statusMatch = statusFilter === 'all' || w.current_status === statusFilter;
-    const priorityMatch = priorityFilter === 'all' || w.priority === priorityFilter;
     const yearMatch = yearFilter === 'all' || String(w.year) === yearFilter;
     const workCategoryMatch = workCategoryFilter === 'all' || w.work_category === workCategoryFilter;
     const pesaGrampanchayatMatch = pesaGrampanchayatFilter === 'all' || w.pesa_grampanchayat === pesaGrampanchayatFilter;
     const villageMatch = villageFilter === 'all' || (w.village?.village_name === villageFilter);
-    return statusMatch && priorityMatch && yearMatch && workCategoryMatch && pesaGrampanchayatMatch && villageMatch;
+    return statusMatch && yearMatch && workCategoryMatch && pesaGrampanchayatMatch && villageMatch;
   });
   if (loading) {
     return (
@@ -280,6 +413,28 @@ export function WorkProgress() {
     { icon: TrendingUp, label: t('overallProgress'), value: `${overallProgress}%`, color: 'from-purple-500 to-pink-600' },
   ];
   const uniqueYears = Array.from(new Set(works.map(w => w.year).filter(Boolean) as (string | number)[])).map(String);
+
+  const groupedBySomeKey = works.reduce((acc, work) => {
+    const key = work.groupKey || '-'; // replace 'groupKey' with your actual group field
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(work);
+    return acc;
+  }, {} as Record<string, typeof works[0][]>);
+
+  const groupedArray = Object.entries(groupedBySomeKey).map(([key, items], idx) => ({
+    key,
+    items,
+    groupSrNo: idx + 1,
+  }));
+
+  const totalPages = Math.ceil(filteredWorks.length / rowsPerPage);
+
+  const paginatedWorks = filteredWorks.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+
   return (
     <div className="space-y-6">
       <Toaster position="top-right" />
@@ -312,7 +467,10 @@ export function WorkProgress() {
           {t('workflowBuilder')}
         </button>
         <button
-          onClick={() => handleTab('progress')}
+          onClick={() => {
+            setActiveTab('progress');
+            setSelectedWork(null);
+          }}
           style={{
             fontWeight: activeTab === 'progress' ? 'bold' : 'normal',
             color: activeTab === 'progress' ? '#9350d6' : 'inherit',
@@ -324,6 +482,7 @@ export function WorkProgress() {
         >
           {t('workflowProgress')}
         </button>
+
       </div>
       {/* Header and Filters replacing Add New Work Button */}
       {activeTab === 'dashboard' && (
@@ -333,6 +492,15 @@ export function WorkProgress() {
             <p className="text-gray-600 mt-2">{t('manageAndTrackAllWorkAssignments')}</p>
           </div>
           <div className="flex gap-6">
+            <button
+              onClick={handleDownloadCSV}
+              className="text-teal-600 px-6 py-3 hover transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium"
+              title={language === 'mr' ? '[translate:CSV डाउनलोड]' : 'Download CSV'}
+            >
+              <Download className="w-5 h-5" />
+              {language === 'mr' ? '[translate:CSV डाउनलोड]' : 'Download CSV'}
+            </button>
+
             <div className="flex flex-col">
               <label className="font-bold text-gray-700">{t('pesaGrampanchayat')}</label>
               <select
@@ -452,13 +620,12 @@ export function WorkProgress() {
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('month')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('approval_amount')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('contractor_name')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('priority')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('status')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredWorks.map((work, index) => (
+                {paginatedWorks.map((work, index) => (
                   <tr key={work.id} className="hover:bg-gray-50">
                     <td className="px-2 py-4 text-xs">{index + 1}</td>
                     <td className="px-2 py-4 text-xs">{work.taluka}</td>
@@ -474,40 +641,18 @@ export function WorkProgress() {
                           : work.work_category
                       ) : '-'}
                     </td>
-                    <td
-  className="px-2 py-4 text-xs max-w-[150px] truncate"
-  title={work.work_name || ''}
-  style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
->
-  {work.work_name || '-'}
-</td>
+                    <td className="px-2 py-4 text-xs" onClick={() => handleWorkClick(work)}>{work.work_name || '-'}</td>
                     <td className="px-2 py-4 text-xs">{work.added_month || '-'}</td>
                     <td className="px-2 py-4 text-xs">{work.agreement_approval_amount}</td>
                     <td className="px-2 py-4 text-xs">{work.contractor_name}</td>
-                    <td className="px-2 py-4 text-xs">
-                      {work.priority ? (
-                        <span
-                          className={`px-1 py-1 rounded-full text-xs font-semibold ${work.priority === 'low'
-                              ? 'bg-green-100 text-green-700'
-                              : work.priority === 'medium'
-                                ? 'bg-yellow-100 text-yellow-700'
-                                : 'bg-red-100 text-red-700'
-                            }`}
-                        >
-                          {t(work.priority)}
-                        </span>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
                     <td className="px-1 py-4 text-xs">
                       {work.current_status ? (
                         <span
                           className={`px-1 py-1 rounded-full text-xs font-semibold ${work.current_status === 'pending'
-                              ? 'bg-gray-100 text-gray-700'
-                              : work.current_status === 'in_progress'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-green-100 text-green-700'
+                            ? 'bg-gray-100 text-gray-700'
+                            : work.current_status === 'in_progress'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-green-100 text-green-700'
                             }`}
                         >
                           {t(work.current_status)}
@@ -540,10 +685,47 @@ export function WorkProgress() {
           {filteredWorks.length === 0 && (
             <div className="text-center py-12 text-gray-500">{t('No works found')}</div>
           )}
+
+          <div className="flex justify-center gap-2 mt-4 mb-4">
+            <button
+              className="px-3 py-1 border rounded disabled:opacity-50"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => prev - 1)}
+            >
+              {t("prev")}
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                className={`px-3 py-1 border rounded ${currentPage === i + 1 ? "bg-gray-200" : ""}`}
+                onClick={() => setCurrentPage(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              className="px-3 py-1 border rounded disabled:opacity-50"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => prev + 1)}
+            >
+              {t("next")}
+            </button>
+          </div>
+
         </div>
       )}
-      {activeTab === 'builder' && <WorkflowBuilder />}
-      {activeTab === 'progress' && <WorkflowProgress />}
+      {activeTab === 'builder' && (
+        <WorkflowBuilder userId={userId} allVillageData={allVillageData} roleName={roleName} />
+      )}
+      {activeTab === 'progress' && (
+        <WorkflowProgress
+          userId={userId}
+          allVillageData={allVillageData}
+          initialSelectedWorkName={selectedWork?.work_name || null}
+          onBackToList={handleBackToWorkflowProgress}  // pass callback for back handling
+        />
+      )}
+
       {/* Form Modal for Add/Edit */}
       {showForm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -666,26 +848,6 @@ export function WorkProgress() {
                   )
                     return null;
                   const isRequired = false; // admin_approval_no and admin_approval_date not required now
-                  if (field === 'priority') {
-                    return (
-                      <div key={field}>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                          {t(field)} {isRequired && <span className="text-red-500">*</span>}
-                        </label>
-                        <select
-                          required={isRequired}
-                          value={(formData as any)[field]}
-                          onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">{t('selectOption')}</option>
-                          <option value="low">{t('low')}</option>
-                          <option value="medium">{t('medium')}</option>
-                          <option value="high">{t('high')}</option>
-                        </select>
-                      </div>
-                    );
-                  }
                   return (
                     <div key={field}>
                       <label className="block text-sm font-bold text-gray-700 mb-2">

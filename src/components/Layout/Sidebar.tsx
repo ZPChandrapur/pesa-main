@@ -7,13 +7,15 @@ import { useAuth } from '../../context/AuthContext';
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  roleId: number | null;
+  roleName: string | null;
+  userId: string | null;
 }
 
 interface NavItem {
   id: string;
   icon: React.ComponentType<any>;
   labelKey: string;
-  requiredRole?: 'gramsewak' | 'bdo' | 'ceo' | 'developer';
 }
 
 const navItems: NavItem[] = [
@@ -23,18 +25,31 @@ const navItems: NavItem[] = [
   { id: 'workProgress', icon: TrendingUp, labelKey: 'workProgress' },
   { id: 'gramPanchayat', icon: Building2, labelKey: 'gramPanchayat' },
   { id: 'taluka', icon: Building2, labelKey: 'taluka' },
-  { id: 'district', icon: Building2, labelKey: 'district' }, // requiredRole: 'developer' 
-  { id: 'funds', icon: Banknote, labelKey: 'funds' }, // requiredRole: 'bdo'
+  { id: 'district', icon: Building2, labelKey: 'district' },
+  { id: 'funds', icon: Banknote, labelKey: 'distributedFunds' },
 ];
 
-export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: SidebarProps) {
   const { t, language, setLanguage } = useLanguage();
-  const { hasPermission } = useUser();
   const { signOut, user } = useAuth();
 
-  const filteredNavItems = navItems.filter((item) =>
-    !item.requiredRole || (hasPermission && hasPermission(item.requiredRole))
-  );
+  let allowedNavs: string[] = navItems.map(item => item.id);
+
+  if (roleName === "grampanchayat") {
+    allowedNavs = [
+      "dashboard", "villages", "aarakhada", "workProgress", "gramPanchayat"
+    ];
+  } else if (roleName === "taluka") {
+    allowedNavs = [
+      "dashboard", "villages", "aarakhada", "workProgress", "taluka"
+    ];
+  } else if (roleName === "district") {
+    allowedNavs = [
+      "dashboard", "villages", "aarakhada", "workProgress", "gramPanchayat", "taluka" ,"district", "funds"
+    ];
+  }
+
+  const filteredNavItems = navItems.filter(item => allowedNavs.includes(item.id));
 
   return (
     <div className="w-64 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-6 shadow-2xl">
@@ -50,8 +65,6 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             <p className="text-sm text-slate-400">Work Management</p>
           </div>
         </div>
-
-        {/* User Info */}
         {user && (
           <div className="mb-4 p-3 bg-slate-800/50 rounded-2xl border border-slate-700/50">
             <p className="text-sm font-medium text-white truncate">{user.email}</p>
@@ -60,7 +73,6 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             </p>
           </div>
         )}
-
         <div className="flex items-center gap-2 p-3 bg-slate-800/50 rounded-2xl border border-slate-700/50">
           <Globe className="w-4 h-4 text-slate-400" />
           <select
@@ -93,8 +105,6 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           );
         })}
       </nav>
-
-      {/* Logout Button */}
       <div className="mt-auto pt-4">
         <button
           onClick={() => signOut()}
@@ -106,7 +116,6 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           </span>
         </button>
       </div>
-
       <div className="mt-8 p-4 bg-gradient-to-br from-emerald-500/10 to-teal-600/10 rounded-2xl border border-emerald-500/20">
         <p className="text-sm text-emerald-400 font-medium mb-2">
           {language === 'mr' ? 'प्रणाली आवृत्ती' : 'System Version'}
