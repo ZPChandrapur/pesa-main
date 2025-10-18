@@ -163,7 +163,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
     try {
       let data = await villageService.getAll();
       // Only filter by userId if not a district-level role
-      if (roleName?.trim().toLowerCase() !== 'district' && userId) {
+      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
         data = data.filter(
           (v: any) => v.tal_user_access === userId || v.gram_user_access === userId
         );
