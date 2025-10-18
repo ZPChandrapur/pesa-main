@@ -59,7 +59,8 @@ const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ userId, roleName, all
       const data = await pesaWorkOperations.getAll();
 
       let allowedVillageIds = allVillageData
-        .filter(v => roleName !== 'district' && userId
+        .filter(v => !['district', 'developer', 'super admin'].includes(roleName?.trim().toLowerCase()) && userId
+            ? (v.tal_user_access === userId || v.gram_user_access === userId)
             ? (v.tal_user_access === userId || v.gram_user_access === userId)
             : true
         )
