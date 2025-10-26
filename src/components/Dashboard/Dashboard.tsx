@@ -198,7 +198,7 @@ export function Dashboard() {
         {/* Center Content */}
         <div className="flex-1 flex flex-col items-center justify-center text-center px-2 md:px-8">
           <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 md:mb-4 drop-shadow">
-            {language === 'mr' ? 'पंचायत (सूचित क्षेत्र विस्तार) अधिनियम, 1996' : 'Panchayat (Extension to Scheduled Areas) Act, 1996'}
+            {language === 'mr' ? 'पंचायत (अनुसूचित क्षेत्र विस्तार) अधिनियम, 1996' : 'Panchayat (Extension to Scheduled Areas) Act, 1996'}
           </h1>
           <p className="text-base md:text-xl text-indigo-100 mb-3 md:mb-6 font-medium drop-shadow">
             {language === 'mr'
