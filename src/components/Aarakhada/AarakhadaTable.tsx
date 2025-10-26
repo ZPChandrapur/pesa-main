@@ -105,7 +105,6 @@ export function AarakhadaTable({
     );
 
   // Filter works based on access
-  
   const filteredWorks = ['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase())
     ? works // show all works, skip userId check
     : works.filter(work => {
@@ -126,7 +125,7 @@ export function AarakhadaTable({
 
   return (
     <div>
-      <div className="overflow-x-auto bg-white rounded-2xl shadow-lg mt-6">
+      <div className="table-container overflow-x-auto bg-white rounded-2xl shadow-lg mt-6">
         <table className="w-full text-sm text-left text-gray-600">
           <thead className="bg-gray-100 text-gray-700 text-xs uppercase">
             <tr>

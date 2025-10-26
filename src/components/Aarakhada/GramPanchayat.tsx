@@ -6,6 +6,7 @@ import { AarakhadaTable } from './AarakhadaTable';
 import { AarakhadaWork } from '../../types';
 import { villageService, workService, pesaWorkOperations } from '../../utils/supabase';
 import * as XLSX from 'xlsx';
+import PesaLogo from '../../assets/pesaLogo.png';
 
 interface GramPanchayatProps {
   userId?: string;
@@ -66,98 +67,98 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
     filterWorks();
   }, [allWorks, activeTab, selectedGramPanchayat, selectedVillage, selectedCategory, selectedYear, selectedMonth]);
 
- const handleDownloadExcel = () => {
-  const accessibleVillageNames = new Set(accessibleWorks.map(w => w.village_name));
-  const accessibleCategories = new Set(accessibleWorks.map(w => w.work_category));
+  const handleDownloadExcel = () => {
+    const accessibleVillageNames = new Set(accessibleWorks.map(w => w.village_name));
+    const accessibleCategories = new Set(accessibleWorks.map(w => w.work_category));
 
-  const filteredWorks = allWorks.filter(
-    w => accessibleVillageNames.has(w.village_name) && accessibleCategories.has(w.work_category)
-  );
+    const filteredWorks = allWorks.filter(
+      w => accessibleVillageNames.has(w.village_name) && accessibleCategories.has(w.work_category)
+    );
 
-  if (!filteredWorks.length) {
-    alert('No data available to download');
-    return;
-  }
+    if (!filteredWorks.length) {
+      alert('No data available to download');
+      return;
+    }
 
-  const displayedFinancialWorks = filteredWorks.filter(w => w.work_type === 'financial');
-  const displayedPhysicalWorks = filteredWorks.filter(w => w.work_type === 'physical');
+    const displayedFinancialWorks = filteredWorks.filter(w => w.work_type === 'financial');
+    const displayedPhysicalWorks = filteredWorks.filter(w => w.work_type === 'physical');
 
-  const financialColumns = [
-    'Sr. No',
-    'Village Name',
-    'Work Category',
-    'Year',
-    'Month',
-    'Sanctioned Amount',
-    'Released Amount',
-    'Previous Month Expenditure',
-    'Current Month Expenditure',
-    'Cumulative Expenditure',
-    'Remaining Funds'
-  ];
+    const financialColumns = [
+      'Sr. No',
+      'Village Name',
+      'Work Category',
+      'Year',
+      'Month',
+      'Sanctioned Amount',
+      'Released Amount',
+      'Previous Month Expenditure',
+      'Current Month Expenditure',
+      'Cumulative Expenditure',
+      'Remaining Funds'
+    ];
 
-  const mapFinancialWorks = (worksArray: AarakhadaWork[]) =>
-    worksArray.map((work, index) => [
-      index + 1,
-      work.village_name || '',
-      work.work_category || '',
-      work.year || '',
-      work.added_month || '',
-      Number(work.sanctioned_amount) || 0,
-      Number(work.released_amount) || 0,
-      Number(work.previous_expenditure) || 0,
-      Number(work.current_expenditure) || 0,
-      Number(work.cumulative_expenditure) || 0,
-      Number(work.remaining_funds) || 0,
-    ]);
+    const mapFinancialWorks = (worksArray: AarakhadaWork[]) =>
+      worksArray.map((work, index) => [
+        index + 1,
+        work.village_name || '',
+        work.work_category || '',
+        work.year || '',
+        work.added_month || '',
+        Number(work.sanctioned_amount) || 0,
+        Number(work.released_amount) || 0,
+        Number(work.previous_expenditure) || 0,
+        Number(work.current_expenditure) || 0,
+        Number(work.cumulative_expenditure) || 0,
+        Number(work.remaining_funds) || 0,
+      ]);
 
-  // Physical workbook columns
-  const physicalColumns = [
-    'Sr. No',
-    'Village Name',
-    'Work Category',
-    'Year',
-    'Month',
-    'Sanctioned Works',
-    'Completed Works',
-    'Ongoing Works',
-    'Pending Works'
-  ];
+    // Physical workbook columns
+    const physicalColumns = [
+      'Sr. No',
+      'Village Name',
+      'Work Category',
+      'Year',
+      'Month',
+      'Sanctioned Works',
+      'Completed Works',
+      'Ongoing Works',
+      'Pending Works'
+    ];
 
-  const mapPhysicalWorks = (worksArray: AarakhadaWork[]) =>
-    worksArray.map((work, index) => [
-      index + 1,
-      work.village_name || '',
-      work.work_category || '',
-      work.year || '',
-      work.added_month || '',
-      Number(work.sanctioned_works) || 0,
-      Number(work.completed_works) || 0,
-      Number(work.ongoing_works) || 0,
-      Number(work.pending_works) || 0,
-    ]);
+    const mapPhysicalWorks = (worksArray: AarakhadaWork[]) =>
+      worksArray.map((work, index) => [
+        index + 1,
+        work.village_name || '',
+        work.work_category || '',
+        work.year || '',
+        work.added_month || '',
+        Number(work.sanctioned_works) || 0,
+        Number(work.completed_works) || 0,
+        Number(work.ongoing_works) || 0,
+        Number(work.pending_works) || 0,
+      ]);
 
-  // Generate workbook
-  const wb = XLSX.utils.book_new();
+    // Generate workbook
+    const wb = XLSX.utils.book_new();
 
-  if (displayedPhysicalWorks.length) {
-    const wsPhysical = XLSX.utils.aoa_to_sheet([
-      physicalColumns,
-      ...mapPhysicalWorks(displayedPhysicalWorks),
-    ]);
-    XLSX.utils.book_append_sheet(wb, wsPhysical, 'Physical Works');
-  }
+    if (displayedPhysicalWorks.length) {
+      const wsPhysical = XLSX.utils.aoa_to_sheet([
+        physicalColumns,
+        ...mapPhysicalWorks(displayedPhysicalWorks),
+      ]);
+      XLSX.utils.book_append_sheet(wb, wsPhysical, 'Physical Works');
+    }
 
-  if (displayedFinancialWorks.length) {
-    const wsFinancial = XLSX.utils.aoa_to_sheet([
-      financialColumns,
-      ...mapFinancialWorks(displayedFinancialWorks),
-    ]);
-    XLSX.utils.book_append_sheet(wb, wsFinancial, 'Financial Works');
-  }
+    if (displayedFinancialWorks.length) {
+      const wsFinancial = XLSX.utils.aoa_to_sheet([
+        financialColumns,
+        ...mapFinancialWorks(displayedFinancialWorks),
+      ]);
+      XLSX.utils.book_append_sheet(wb, wsFinancial, 'Financial Works');
+    }
 
-  XLSX.writeFile(wb, 'work_progress_filtered.xlsx');
-};
+    XLSX.writeFile(wb, 'work_progress_filtered.xlsx');
+  };
 
   const loadVillages = async () => {
     try {
@@ -251,11 +252,12 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
 
   // Filter works to only those belonging to filtered villages (accessible by the user)
   const accessibleWorks = ['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase())
-  ? works // all works visible to these roles
-  : (() => {
+    ? works // all works visible to these roles
+    : (() => {
       const accessibleVillageIds = new Set(villages.map(v => v.id));
       return works.filter(w => accessibleVillageIds.has(w.village_id));
     })();
+
 
   const totalVillages = isNoVillages ? 0 : villages.length;
   const totalWorks = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (w.sanctioned_works || 0), 0);
@@ -271,6 +273,12 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
 
   const gramPanchayatNames = Array.from(new Set(villages.map(v => v.gram_panchayat))).filter(Boolean);
 
+  const labelColorsMap = {
+    'from-purple-500 to-pink-600': 'text-pink-600',
+    'from-teal-500 to-emerald-600': 'text-emerald-600',
+    'from-orange-500 to-red-600': 'text-red-600',
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -279,8 +287,12 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
         <div className="relative z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-                <Building2 className="w-8 h-8 text-white" />
+              <div className="w-16 h-16 bg-transparent flex items-center justify-center">
+                <img
+                  src={PesaLogo}
+                  alt="Pesa Logo"
+                  className="w-full h-full object-contain rounded shadow"
+                />
               </div>
               <div>
                 <h1 className="text-4xl font-bold text-white">{t('gramPanchayat')}</h1>
@@ -298,7 +310,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
                 title={'Download Excel'}
               >
                 <Download className="w-5 h-5" />
-                 Download Excel
+                Download Excel
               </button>
               <div className="flex flex-col">
                 <label className="block text-xs font-semibold text-white mb-1">
@@ -322,37 +334,44 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
       </div>
 
       {/* Original Cards below header */}
-      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-3">
-        {[{
-          icon: Building2,
-          label: language === 'mr' ? 'एकूण गाव' : 'Total Villages',
-          value: totalVillages.toString(),
-          color: 'from-purple-500 to-pink-600'
-        }, {
-          icon: DollarSign,
-          label: language === 'mr' ? 'एकूण कामे' : 'Total Works',
-          value: totalWorks.toString(),
-          color: 'from-teal-500 to-emerald-600'
-        }, {
-          icon: DollarSign,
-          label: language === 'mr' ? 'एकूण खर्च' : 'Total Expenditure',
-          value: `₹${totalExpenditure.toLocaleString()}`,
-          color: 'from-orange-500 to-red-600',
-        }].map((item, index) => {
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-3 py-2">
+        {[
+          {
+            icon: Building2,
+            label: language === 'mr' ? 'एकूण गाव' : 'Total Villages',
+            value: totalVillages.toString(),
+            color: 'from-purple-500 to-pink-600'
+          },
+          {
+            icon: DollarSign,
+            label: language === 'mr' ? 'एकूण कामे' : 'Total Works',
+            value: totalWorks.toString(),
+            color: 'from-teal-500 to-emerald-600'
+          },
+          {
+            icon: DollarSign,
+            label: language === 'mr' ? 'एकूण खर्च' : 'Total Expenditure',
+            value: `₹${totalExpenditure.toLocaleString()}`,
+            color: 'from-orange-500 to-red-600',
+          }
+        ].map((item, index) => {
           const Icon = item.icon;
+          const labelColorClass = labelColorsMap[item.color] || 'text-gray-600';
           return (
             <div
               key={index}
-              className="bg-white rounded-2xl shadow p-2 hover:shadow-lg transition-all duration-300"
+              className="bg-white rounded-2xl shadow flex items-center justify-between p-4 hover:shadow-lg transition-all duration-300 card-tribal"
               style={{ minWidth: 0, minHeight: 0 }}
             >
-              <div
-                className={`w-8 h-8 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center mb-1`}
-              >
-                <Icon className="w-4 h-4 text-white" />
+              <div className="flex flex-col text-left">
+                <span className="text-2xl font-bold text-gray-800 mb-0.5">{item.value}</span>
+                <span className={`text-xs font-bold ${labelColorClass}`}>{item.label}</span>
               </div>
-              <p className="text-lg font-bold text-gray-800 mb-0.5">{item.value}</p>
-              <p className="text-xs text-gray-600 font-bold">{item.label}</p>
+              <div
+                className={`w-10 h-10 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center ml-2 shadow-md`}
+              >
+                <Icon className="w-5 h-5 text-white" />
+              </div>
             </div>
           );
         })}

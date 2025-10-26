@@ -3,6 +3,7 @@ import { Clock, MapPin, Camera, CheckCircle, Play, Pause, TrendingUp, Edit, Arro
 import { pesaWorkflowOperations, pesaWorkOperations, storageOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
 import { Village } from '../../types';
+import HeaderLogo from '../../assets/headerLogo.png';
 
 interface WorkflowStep {
   id: string;
@@ -364,20 +365,21 @@ const WorkflowProgress: React.FC<WorkflowProgressProps> = ({ userId, allVillageD
     return Math.round((completedSteps / steps.length) * 100);
   };
 
-const handleDeleteWorkflow = async (workflowId: string) => {debugger
-  if (!window.confirm("Are you sure you want to delete this workflow?")) {
-    return;
-  }
-  try {
-    await pesaWorkflowOperations.deleteWorkflow(workflowId);
-    alert("Workflow deleted successfully!");
-    loadWorkflows(); 
-    setSelectedWorkflow(null); 
-  } catch (error) {
-    console.error('Error deleting workflow:', error);
-    alert("Error deleting workflow. Please try again.");
-  }
-};
+  const handleDeleteWorkflow = async (workflowId: string) => {
+    debugger
+    if (!window.confirm("Are you sure you want to delete this workflow?")) {
+      return;
+    }
+    try {
+      await pesaWorkflowOperations.deleteWorkflow(workflowId);
+      alert("Workflow deleted successfully!");
+      loadWorkflows();
+      setSelectedWorkflow(null);
+    } catch (error) {
+      console.error('Error deleting workflow:', error);
+      alert("Error deleting workflow. Please try again.");
+    }
+  };
 
 
   const getStatusColor = (status: string) => {
@@ -410,27 +412,38 @@ const handleDeleteWorkflow = async (workflowId: string) => {debugger
     return (
       <div className="space-y-6">
         {/* Header with Back Button */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
-          <div className="flex items-center justify-between">
+        <div className="relative bg-gradient-to-r from-green-600 via-emerald-500 to-cyan-400 rounded-3xl p-6 shadow-2xl mb-4 overflow-hidden border border-white/20">
+          {/* BG Pattern Overlay */}
+          <div className="absolute inset-0 bg-[url('/src/assets/tribal_bg.jpg')] bg-cover bg-center opacity-10 pointer-events-none rounded-3xl" />
+          <div className="flex items-center justify-between relative z-10">
+            {/* Logo + Back button + Title */}
             <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-transparent rounded-2xl flex items-center justify-center shadow border border-white/60">
+                <img
+                  src={HeaderLogo}
+                  alt="Header Logo"
+                  className="w-full h-full object-contain rounded shadow"
+                />
+              </div>
               <button
                 onClick={handleBackToList}
-                className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200"
+                className="p-2 text-white hover:bg-gray-100 rounded-lg transition-colors duration-200"
               >
                 <ArrowLeft className="w-6 h-6" />
               </button>
               <div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-white">
                   {selectedWorkflow.title}
                 </h2>
-                <p className="text-gray-600 mt-2">{selectedWorkflow.description}</p>
+                <p className="text-gray-100 mt-2">{selectedWorkflow.description}</p>
                 {selectedWorkflow.work && (
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-200 mt-1">
                     Work: {selectedWorkflow.work.work_name} | Taluka: {selectedWorkflow.work.taluka}
                   </p>
                 )}
               </div>
             </div>
+            {/* Status dropdown */}
             <div className="flex items-center space-x-4">
               <select
                 value={selectedWorkflow.status}
@@ -444,6 +457,7 @@ const handleDeleteWorkflow = async (workflowId: string) => {debugger
             </div>
           </div>
         </div>
+
         {/* Progress Overview */}
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -488,10 +502,10 @@ const handleDeleteWorkflow = async (workflowId: string) => {debugger
             <div
               key={step.id}
               className={`p-6 rounded-2xl border-2 transition-all duration-200 ${step.status === 'completed'
-                  ? 'bg-green-50 border-green-200'
-                  : step.status === 'in_progress'
-                    ? 'bg-blue-50 border-blue-200'
-                    : 'bg-gray-50 border-gray-200'
+                ? 'bg-green-50 border-green-200'
+                : step.status === 'in_progress'
+                  ? 'bg-blue-50 border-blue-200'
+                  : 'bg-gray-50 border-gray-200'
                 }`}
             >
               <div className="flex justify-between items-center">
@@ -747,19 +761,30 @@ const handleDeleteWorkflow = async (workflowId: string) => {debugger
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+      <div className="relative bg-gradient-to-r from-green-600 via-emerald-500 to-cyan-400 rounded-3xl p-6 shadow-2xl mb-4 overflow-hidden border border-white/20">
+        {/* Subtle tribal BG overlay */}
+        <div className="absolute inset-0 bg-[url('/src/assets/tribal_bg.jpg')] bg-cover bg-center opacity-10 pointer-events-none rounded-3xl" />
+        <div className="flex items-center justify-between relative z-10">
+          {/* Header Logo */}
+          <div className="w-16 h-16 bg-transparent rounded-2xl flex items-center justify-center shadow border border-white/60 mr-6">
+            <img
+              src={HeaderLogo}
+              alt="Header Logo"
+              className="w-full h-full object-contain rounded shadow"
+            />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent text-white">
               {t('workflowProgress')}
             </h2>
-            <p className="text-gray-600 mt-2">{t('selectPesaVillageWorkWorkflowToTrackProgressAndManageSteps')}</p>
+            <p className="text-white mt-2">{t('selectPesaVillageWorkWorkflowToTrackProgressAndManageSteps')}</p>
           </div>
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="w-8 h-8 text-green-600" />
+          <div className="flex items-center space-x-2 ml-6">
+            <TrendingUp className="w-8 h-8 text-white" />
           </div>
         </div>
       </div>
+
       {/* Filters */}
       <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-4 border border-white/20">
         <div className="flex flex-col md:flex-row gap-4">

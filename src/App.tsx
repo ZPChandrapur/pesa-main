@@ -19,30 +19,30 @@ function AppContent() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [roleId, setRoleId] = useState<number | null>(() => {
-  const stored = localStorage.getItem('roleId');
-  return stored ? Number(stored) : null;
-});
-const [roleName, setRoleName] = useState<string | null>(() => {
-  return localStorage.getItem('roleName');
-});
+    const stored = localStorage.getItem('roleId');
+    return stored ? Number(stored) : null;
+  });
+  const [roleName, setRoleName] = useState<string | null>(() => {
+    return localStorage.getItem('roleName');
+  });
 
-const [userId, setUserId] = useState<string | null>(() => {
-  return localStorage.getItem('userId');
-});
+  const [userId, setUserId] = useState<string | null>(() => {
+    return localStorage.getItem('userId');
+  });
 
 
   // Update callback for LoginPage: set both roleId and roleName
   const handleRoleFetch = (roleId: number | null, roleName: string | null, userId: string | null) => {
     setRoleId(roleId);
-     if (roleId !== null) {
+    if (roleId !== null) {
       localStorage.setItem("roleId", String(roleId));
       localStorage.setItem("roleName", String(roleName));
       localStorage.setItem("userId", String(userId));
-   }
+    }
     setRoleName(roleName);
     setUserId(userId);
   };
- 
+
   useEffect(() => {
     if (!loading && !user) {
       setRoleId(null);
@@ -71,41 +71,43 @@ const [userId, setUserId] = useState<string | null>(() => {
   }
 
   const renderContent = () => {
-  switch (activeTab) {
-    case 'dashboard':
-      return <Dashboard />;
-    case 'villages':
-      return <VillagesList userId={userId} roleName={roleName} />;
-    case 'gramPanchayat':
-      return <GramPanchayat userId={userId} roleName={roleName} />;
-    case 'taluka':
-      return <Taluka userId={userId} roleName={roleName} />;
-    case 'district':
-      return <District userId={userId} />;
-    // case 'funds':
-    //   return <Funds userId={userId} />;
-    case 'workProgress':
-      return <WorkProgress userId={userId} roleName={roleName}/>;
-    case 'tracking':
-      return <Tracking userId={userId} />;
-    case 'aarakhada':
-      return <Aarakhada userId={userId} roleName={roleName} />;
-    default:
-      return <Dashboard />;
-  }
-};
+    switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard />;
+      case 'villages':
+        return <VillagesList userId={userId} roleName={roleName} />;
+      case 'gramPanchayat':
+        return <GramPanchayat userId={userId} roleName={roleName} />;
+      case 'taluka':
+        return <Taluka userId={userId} roleName={roleName} />;
+      case 'district':
+        return <District userId={userId} />;
+      // case 'funds':
+      //   return <Funds userId={userId} />;
+      case 'workProgress':
+        return <WorkProgress userId={userId} roleName={roleName} />;
+      case 'tracking':
+        return <Tracking userId={userId} />;
+      case 'aarakhada':
+        return <Aarakhada userId={userId} roleName={roleName} />;
+      default:
+        return <Dashboard />;
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       {/* Pass roleId and roleName as props */}
-      <Sidebar 
+      <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
         roleId={roleId}
         roleName={roleName}
         userId={userId}
       />
-      <div className="flex-1 p-8 overflow-auto">
+      <div
+        className={`flex-1 p-8 overflow-auto ml-64 ${activeTab === 'aarakhada' ? 'aarakhadaBG' : ''}`}
+      >
         {renderContent()}
       </div>
     </div>

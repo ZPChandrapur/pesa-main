@@ -187,7 +187,7 @@ export function Aarakhada({ userId }: { userId: string }) {
     );
   }
   return (
-    <div className="bg-white p-6 rounded-3xl shadow-xl max-w-4xl mx-auto">
+    <div className="bg-white p-6 rounded-3xl shadow-xl max-w-4xl mx-auto aarakhadaDiv">
       <Toaster position="top-right" />
       <h3 className="text-2xl font-bold mb-6 text-blue-600">{editingWork ? t('edit') : t('addNewWork')}</h3>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">

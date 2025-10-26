@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { AarakhadaDistrictTable } from './AarakhadaDistrictTable';
 import { villageService, districtWorkService, pesaSupabase, workService } from '../../utils/supabase';
 import * as XLSX from 'xlsx';
+import PesaLogo from '../../assets/pesaLogo.png';
 
 export function District() {
   const { t, language } = useLanguage();
@@ -211,6 +212,12 @@ export function District() {
   const totalOngoingWorks = works.reduce((sum, w) => sum + (w.ongoing_works || 0), 0);
   const totalPendingWorks = works.reduce((sum, w) => sum + (w.pending_works || 0), 0);
 
+  const labelColorsMap = {
+    'from-purple-500 to-indigo-600': 'text-indigo-600',
+    'from-emerald-500 to-teal-600': 'text-emerald-600',
+    'from-orange-500 to-red-600': 'text-red-600',
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -218,8 +225,12 @@ export function District() {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-transparent flex items-center justify-center">
+              <img
+                src={PesaLogo}
+                alt="Pesa Logo"
+                className="w-full h-full object-contain rounded shadow"
+              />
             </div>
             <div>
               <h1 className="text-4xl font-bold text-white">
@@ -267,13 +278,20 @@ export function District() {
           },
         ].map((item, index) => {
           const Icon = item.icon;
+          const labelColorClass = labelColorsMap[item.color] || 'text-gray-600';
           return (
-            <div key={index} className="bg-white rounded-2xl shadow p-3 hover:shadow-lg transition-all duration-300">
-              <div className={`w-8 h-8 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center mb-1`}>
-                <Icon className="w-4 h-4 text-white" />
+            <div
+              key={index}
+              className="bg-white rounded-2xl shadow flex items-center justify-between p-4 hover:shadow-lg transition-all duration-300 card-tribal"
+              style={{ minWidth: 0, minHeight: 0 }}
+            >
+              <div className="flex flex-col text-left">
+                <span className="text-2xl font-bold text-gray-800 mb-0.5">{item.value}</span>
+                <span className={`text-xs font-bold ${labelColorClass}`}>{item.label}</span>
               </div>
-              <p className="text-lg font-bold text-gray-800 mb-0.5">{item.value}</p>
-              <p className="text-xs text-gray-600 font-bold">{item.label}</p>
+              <div className={`w-10 h-10 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center ml-2 shadow-md`}>
+                <Icon className="w-5 h-5 text-white" />
+              </div>
             </div>
           );
         })}

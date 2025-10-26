@@ -3,6 +3,7 @@ import { Building2, Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { supabase } from '../../utils/supabase';
+import TribalBg from '../../assets/tribal_bg.jpg';
 
 interface LoginPageProps {
   onRoleIdFetch: (roleId: number | null, roleName: string | null, userId: string | null) => void;
@@ -69,7 +70,7 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
         if (!accessData) {
           alert(language === 'mr' ? 'आपल्याला PESA ॲप्लिकेशनचा प्रवेश नाही' : 'You do not have access to PESA application');
           await supabase.auth.signOut();
-          return; 
+          return;
         }
       }
 
@@ -121,15 +122,27 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
+      <img
+        src={TribalBg}
+        alt="Login Background"
+        className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none select-none"
+        style={{ filter: 'brightness(0.8) blur(3px)', opacity: 0.3 }}
+      />
+      <div
+        className="w-full max-w-md rounded-3xl border border-white/50 p-8 bg-white/70 shadow-lg"
+        style={{
+          boxShadow: '0 0 25px rgba(0, 0, 0, 0.25)',
+          backdropFilter: 'blur(6px)'
+        }}
+      >
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
             <Building2 className="w-10 h-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
-            {language === 'mr' ? 'पेसा निधी व्यवस्थापन प्रणाली' : 'PESA Fund Management System'}
+            {language === 'mr' ? 'पेसा कायदा कार्य आणि निधी व्यवस्थापन प्रणाली' : 'Pesa Act work and fund Management System'}
           </h1>
           <p className="text-gray-600">
             {language === 'mr'
@@ -140,7 +153,7 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
         </div>
 
         {/* Login Form */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border border-white/50">
+        <div>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email Field */}
             <div className="space-y-2">
@@ -217,8 +230,8 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
           <div className="mt-6 pt-6 border-t border-gray-200 text-center">
             <p className="text-sm text-gray-500">
               {language === 'mr'
-                ? 'पेसा निधी व्यवस्थापन प्रणाली v1.0.0'
-                : 'PESA Fund Management System v1.0.0'
+                ? `© ${new Date().getFullYear()} जिल्हा परिषद चंद्रपूर, महाराष्ट्र शासन. सर्व हक्क राखीव.`
+                : `© ${new Date().getFullYear()} ZP Chandrapur, Govt of Maharashtra. All rights reserved.`
               }
             </p>
           </div>

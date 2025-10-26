@@ -4,6 +4,8 @@ import { Village } from '../../types';
 import { VillageForm } from './VillageForm';
 import { pesaSupabase, villageService } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
+import HeaderLogo from '../../assets/headerLogo.png';
+
 
 export function VillagesList({ userId, roleName }: { userId: string }) {
   const { t, language } = useLanguage();
@@ -34,14 +36,14 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
     ];
 
     const headerHtml = headers.map(h => `
-    <th style="
-      background-color: #10b981; 
-      color: white; 
-      font-weight: bold; 
-      padding: 6px 8px; 
-      text-align: left;
-      border: 1px solid #ddd;
-    ">${h}</th>`).join('');
+      <th style="
+        background-color: #10b981; 
+        color: white; 
+        font-weight: bold; 
+        padding: 6px 8px; 
+        text-align: left;
+        border: 1px solid #ddd;
+      ">${h}</th>`).join('');
 
     const rowsHtml = filteredVillages.map((v: any) => {
       const amtPerHead = Number(v.amount_per_head_st_population) || 0;
@@ -56,24 +58,24 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
       }, 0);
 
       return `<tr>
-      <td style="border: 1px solid #ddd; padding: 4px;">${v.district || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${v.block || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${v.gram_panchayat || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${v.village_name || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${v.village_population || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${v.village_st_population || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${v.amount_per_head_st_population || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${fundAllocatedVillage.toFixed(0)}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${fundAllocatedGp.toFixed(0)}</td>
-    </tr>`;
+        <td style="border: 1px solid #ddd; padding: 4px;">${v.district || ''}</td>
+        <td style="border: 1px solid #ddd; padding: 4px;">${v.block || ''}</td>
+        <td style="border: 1px solid #ddd; padding: 4px;">${v.gram_panchayat || ''}</td>
+        <td style="border: 1px solid #ddd; padding: 4px;">${v.village_name || ''}</td>
+        <td style="border: 1px solid #ddd; padding: 4px;">${v.village_population || ''}</td>
+        <td style="border: 1px solid #ddd; padding: 4px;">${v.village_st_population || ''}</td>
+        <td style="border: 1px solid #ddd; padding: 4px;">${v.amount_per_head_st_population || ''}</td>
+        <td style="border: 1px solid #ddd; padding: 4px;">${fundAllocatedVillage.toFixed(0)}</td>
+        <td style="border: 1px solid #ddd; padding: 4px;">${fundAllocatedGp.toFixed(0)}</td>
+      </tr>`;
     }).join('');
 
     const tableHtml = `
-    <table style="border-collapse: collapse; width: 100%;">
-      <thead><tr>${headerHtml}</tr></thead>
-      <tbody>${rowsHtml}</tbody>
-    </table>
-  `;
+      <table style="border-collapse: collapse; width: 100%;">
+        <thead><tr>${headerHtml}</tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    `;
 
     const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
     const link = document.createElement('a');
@@ -275,8 +277,13 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-transparent rounded-2xl flex items-center justify-center shadow border border-white/60">
+              <img
+                src={HeaderLogo}
+                alt="Header Logo"
+                className="w-full h-full object-contain rounded shadow"
+                style={{ background: 'white', padding: '6px' }}
+              />
             </div>
             <div>
               <h1 className="text-4xl font-bold text-white">{t('villageManagement')}</h1>
@@ -307,7 +314,9 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-3">
+      <div
+        className="relative grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-3 py-4 tribal-bg"
+      >
         {[
           { icon: Building2, label: language === 'mr' ? 'एकूण ग्रामपंचायती' : 'Total GPs', value: totalGP, color: 'from-indigo-500 to-purple-600' },
           { icon: Users, label: language === 'mr' ? 'एकूण गावे' : 'Total Villages', value: totalVillages, color: 'from-blue-500 to-indigo-600' },
@@ -316,21 +325,27 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
         ].map((item, index) => {
           const Icon = item.icon;
           const labelColorClass = labelColorsMap[item.color] || 'text-gray-600';
+
           return (
             <div
               key={index}
-              className="bg-white rounded-2xl shadow p-3 hover:shadow-lg transition-all duration-300"
-              style={{ minWidth: 0, minHeight: 0 }}
+              className="relative bg-white/90 backdrop-blur-sm shadow-md rounded-2xl flex items-center justify-between p-4 hover:scale-105 hover:shadow-lg transform transition-all duration-300 border border-emerald-100 card-tribal"
             >
-              <div className={`w-8 h-8 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center mb-2`}>
-                <Icon className="w-4 h-4 text-white" />
+              <div className="flex flex-col">
+                <span className="text-2xl font-bold text-gray-700 mb-1">{item.value}</span>
+                <span className={`${labelColorClass} text-sm font-semibold tracking-wide`}>{item.label}</span>
               </div>
-              <p className="text-lg font-bold text-gray-800 mb-1">{item.value}</p>
-              <p className={`${labelColorClass} text-xs font-bold`}>{item.label}</p>
+
+              <div
+                className={`w-12 h-12 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-md`}
+              >
+                <Icon className="w-6 h-6 text-white" />
+              </div>
             </div>
           );
         })}
       </div>
+
 
       {/* Main Content */}
       <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
@@ -381,7 +396,7 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto bg-white rounded-2xl shadow-lg">
+        <div className="table-container overflow-x-auto bg-white rounded-2xl shadow-lg">
           <table className="w-full text-sm text-left text-gray-600">
             <thead className="bg-gradient-to-r from-emerald-50 to-teal-50 text-gray-700 text-xs uppercase">
               <tr>

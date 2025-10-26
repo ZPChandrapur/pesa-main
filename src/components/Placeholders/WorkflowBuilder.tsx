@@ -4,6 +4,7 @@ import { Plus, Clock, User, Flag, Calendar, ArrowRight, CheckCircle, Settings } 
 import { pesaWorkOperations, pesaWorkflowOperations } from '../../utils/supabase'; // Import service objects here
 import { useLanguage } from '../../context/LanguageContext';
 import { Village } from '../../types';
+import HeaderLogo from '../../assets/headerLogo.png';
 
 interface PesaWork {
   id: string;
@@ -57,16 +58,16 @@ const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ userId, roleName, all
     try {
       setLoading(true);
       const data = await pesaWorkOperations.getAll();
- 
+
       let allowedVillageIds = allVillageData
         .filter(v =>
           !['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId
             ? (v.tal_user_access === userId || v.gram_user_access === userId)
             : true
- 
+
         )
         .map(v => v.id);
- 
+
       if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
         if (!allowedVillageIds.length) {
           setWorks([]);
@@ -199,15 +200,26 @@ const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ userId, roleName, all
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+      <div className="relative bg-gradient-to-r from-indigo-600 via-blue-500 to-cyan-400 rounded-3xl p-6 shadow-2xl mb-4 overflow-hidden border border-white/20">
+        {/* Subtle tribal BG overlay */}
+        <div className="absolute inset-0 bg-[url('/src/assets/tribal_bg.jpg')] bg-cover bg-center opacity-10 pointer-events-none rounded-3xl" />
+        <div className="flex justify-between items-center relative z-10">
+          {/* Header Logo */}
+          <div className="w-16 h-16 bg-white/80 rounded-2xl flex items-center justify-center shadow border border-white/60 mr-6">
+            <img
+              src={HeaderLogo}
+              alt="Header Logo"
+              className="w-full h-full object-contain rounded shadow"
+              style={{ background: 'white', padding: '6px' }}
+            />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-white">
               {t('workflowBuilder')}
             </h2>
-            <p className="text-gray-600 mt-2">{t('selectPesaVillageWorkAndBuildWorkflow')}</p>
+            <p className="text-white mt-2">{t('selectPesaVillageWorkAndBuildWorkflow')}</p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 ml-6">
             <Settings className="w-8 h-8 text-indigo-600" />
           </div>
         </div>

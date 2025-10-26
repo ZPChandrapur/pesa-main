@@ -43,7 +43,7 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
   );
 
   return (
-    <div className="overflow-x-auto bg-white rounded-2xl shadow-lg">
+    <div className="table-container overflow-x-auto bg-white rounded-2xl shadow-lg">
       <table className="w-full text-sm text-left text-gray-600">
         <thead className="bg-gradient-to-r from-purple-50 to-indigo-50 text-gray-700 text-xs uppercase">
           {workType === 'financial' ? (

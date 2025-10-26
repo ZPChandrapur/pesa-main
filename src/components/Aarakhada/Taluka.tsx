@@ -4,6 +4,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { AarakhadaTalukaTable } from './AarakhadaTalukaTable';
 import { villageService, talukaWorkService } from '../../utils/supabase';
 import * as XLSX from 'xlsx';
+import PesaLogo from '../../assets/pesaLogo.png';
 
 interface TalukaProps {
   userId?: string;
@@ -37,7 +38,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
       try {
         setLoading(true);
         let data = await villageService.getAll();
-        
+
         if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
           data = data.filter(
             (v: any) => v.tal_user_access === userId || v.gram_user_access === userId
@@ -75,102 +76,102 @@ export function Taluka({ userId, roleName }: TalukaProps) {
     fetchTalukasAndGramPanchayats();
   }, [userId]);
 
- const handleDownloadExcel = () => {
-  const accessibleGramPanchayats = new Set(villages.map(v => v.gram_panchayat));
-  const accessibleCategories = new Set(
-    [...talukaAarakhadaFinancial, ...talukaAarakhadaPhysical].map(w => w.work_category)
-  );
+  const handleDownloadExcel = () => {
+    const accessibleGramPanchayats = new Set(villages.map(v => v.gram_panchayat));
+    const accessibleCategories = new Set(
+      [...talukaAarakhadaFinancial, ...talukaAarakhadaPhysical].map(w => w.work_category)
+    );
 
-  const allWorks = [...talukaAarakhadaFinancial, ...talukaAarakhadaPhysical];
+    const allWorks = [...talukaAarakhadaFinancial, ...talukaAarakhadaPhysical];
 
-  const filteredWorks = allWorks.filter(
-    w =>
-      accessibleGramPanchayats.has(w.gram_panchayat) &&
-      accessibleCategories.has(w.work_category)
-  );
+    const filteredWorks = allWorks.filter(
+      w =>
+        accessibleGramPanchayats.has(w.gram_panchayat) &&
+        accessibleCategories.has(w.work_category)
+    );
 
-  if (!filteredWorks.length) {
-    alert('No data available to download');
-    return;
-  }
+    if (!filteredWorks.length) {
+      alert('No data available to download');
+      return;
+    }
 
-  const filteredFinancial = filteredWorks.filter(w => w.work_type === 'financial');
-  const filteredPhysical = filteredWorks.filter(w => w.work_type === 'physical');
+    const filteredFinancial = filteredWorks.filter(w => w.work_type === 'financial');
+    const filteredPhysical = filteredWorks.filter(w => w.work_type === 'physical');
 
-  const financialColumns = [
-    'Sr. No',
-    'Gram Panchayat',
-    'Work Category',
-    'PESA Village Count',
-    'Annual Approved Fund',
-    'Annual Received Fund',
-    'Received Interest',
-    'Total Received Fund',
-    'Previous Expenditure',
-    'Current Expenditure',
-    'Cumulative Expenditure',
-    'Remaining Funds'
-  ];
+    const financialColumns = [
+      'Sr. No',
+      'Gram Panchayat',
+      'Work Category',
+      'PESA Village Count',
+      'Annual Approved Fund',
+      'Annual Received Fund',
+      'Received Interest',
+      'Total Received Fund',
+      'Previous Expenditure',
+      'Current Expenditure',
+      'Cumulative Expenditure',
+      'Remaining Funds'
+    ];
 
-  const physicalColumns = [
-    'Sr. No',
-    'Gram Panchayat',
-    'Work Category',
-    'PESA Village Count',
-    'Sanctioned Works',
-    'Completed Works',
-    'Ongoing Works',
-    'Pending Works'
-  ];
+    const physicalColumns = [
+      'Sr. No',
+      'Gram Panchayat',
+      'Work Category',
+      'PESA Village Count',
+      'Sanctioned Works',
+      'Completed Works',
+      'Ongoing Works',
+      'Pending Works'
+    ];
 
-  const mapFinancialRows = (data: any[]) =>
-    data.map((w, i) => [
-      i + 1,
-      w.gram_panchayat || '',
-      w.work_category || '',
-      w.pesa_village_count || 0,
-      Number(w.annual_approved_fund) || 0,
-      Number(w.annual_received_fund) || 0,
-      Number(w.received_interest) || 0,
-      Number(w.total_received_fund) || 0,
-      Number(w.previous_expenditure) || 0,
-      Number(w.current_expenditure) || 0,
-      Number(w.cumulative_expenditure) || 0,
-      Number(w.remaining_funds) || 0
-    ]);
+    const mapFinancialRows = (data: any[]) =>
+      data.map((w, i) => [
+        i + 1,
+        w.gram_panchayat || '',
+        w.work_category || '',
+        w.pesa_village_count || 0,
+        Number(w.annual_approved_fund) || 0,
+        Number(w.annual_received_fund) || 0,
+        Number(w.received_interest) || 0,
+        Number(w.total_received_fund) || 0,
+        Number(w.previous_expenditure) || 0,
+        Number(w.current_expenditure) || 0,
+        Number(w.cumulative_expenditure) || 0,
+        Number(w.remaining_funds) || 0
+      ]);
 
-  const mapPhysicalRows = (data: any[]) =>
-    data.map((w, i) => [
-      i + 1,
-      w.gram_panchayat || '',
-      w.work_category || '',
-      w.pesa_village_count || 0,
-      Number(w.sanctioned_works) || 0,
-      Number(w.completed_works) || 0,
-      Number(w.ongoing_works) || 0,
-      Number(w.pending_works) || 0
-    ]);
+    const mapPhysicalRows = (data: any[]) =>
+      data.map((w, i) => [
+        i + 1,
+        w.gram_panchayat || '',
+        w.work_category || '',
+        w.pesa_village_count || 0,
+        Number(w.sanctioned_works) || 0,
+        Number(w.completed_works) || 0,
+        Number(w.ongoing_works) || 0,
+        Number(w.pending_works) || 0
+      ]);
 
-  const wb = XLSX.utils.book_new();
+    const wb = XLSX.utils.book_new();
 
-  if (filteredPhysical.length) {
-    const wsPhysical = XLSX.utils.aoa_to_sheet([
-      physicalColumns,
-      ...mapPhysicalRows(filteredPhysical),
-    ]);
-    XLSX.utils.book_append_sheet(wb, wsPhysical, 'Physical Works');
-  }
+    if (filteredPhysical.length) {
+      const wsPhysical = XLSX.utils.aoa_to_sheet([
+        physicalColumns,
+        ...mapPhysicalRows(filteredPhysical),
+      ]);
+      XLSX.utils.book_append_sheet(wb, wsPhysical, 'Physical Works');
+    }
 
-  if (filteredFinancial.length) {
-    const wsFinancial = XLSX.utils.aoa_to_sheet([
-      financialColumns,
-      ...mapFinancialRows(filteredFinancial),
-    ]);
-    XLSX.utils.book_append_sheet(wb, wsFinancial, 'Financial Works');
-  }
+    if (filteredFinancial.length) {
+      const wsFinancial = XLSX.utils.aoa_to_sheet([
+        financialColumns,
+        ...mapFinancialRows(filteredFinancial),
+      ]);
+      XLSX.utils.book_append_sheet(wb, wsFinancial, 'Financial Works');
+    }
 
-  XLSX.writeFile(wb, 'taluka_filtered_work_data.xlsx');
-};
+    XLSX.writeFile(wb, 'taluka_filtered_work_data.xlsx');
+  };
 
   const loadTalukaAarakhadaData = async () => {
     try {
@@ -216,7 +217,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
   const filteredActiveData = activeFilteredData.filter(w =>
     accessibleGramPanchayats.has(w.gram_panchayat)
   );
-  console.log("filteredActiveData",filteredActiveData)
+  console.log("filteredActiveData", filteredActiveData)
 
   const totalGramPanchayatCount = isNoVillages
     ? 0
@@ -259,14 +260,24 @@ export function Taluka({ userId, roleName }: TalukaProps) {
     }
   }, [activeTab, talukaAarakhadaFinancial, talukaAarakhadaPhysical]);
 
+
+  const labelColorsMap = {
+    'from-blue-500 to-indigo-600': 'text-blue-600',
+    'from-emerald-500 to-teal-600': 'text-emerald-600',
+    'from-orange-500 to-red-600': 'text-red-600',
+  };
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
         <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
-              <Building2 className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-transparent flex items-center justify-center">
+              <img
+                src={PesaLogo}
+                alt="Pesa Logo"
+                className="w-full h-full object-contain rounded shadow"
+              />
             </div>
             <div>
               <h1 className="text-4xl font-bold text-white">{t('taluka')}</h1>
@@ -287,7 +298,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-3 gap-3 py-2">
         {[
           {
             icon: Building2,
@@ -309,17 +320,20 @@ export function Taluka({ userId, roleName }: TalukaProps) {
           },
         ].map((item, index) => {
           const Icon = item.icon;
+          const labelColorClass = labelColorsMap[item.color] || 'text-gray-600';
           return (
             <div
               key={index}
-              className="bg-white rounded-2xl shadow p-2 hover:shadow-lg transition-all duration-300"
+              className="bg-white rounded-2xl shadow flex items-center justify-between p-4 hover:shadow-lg transition-all duration-300 card-tribal"
               style={{ minWidth: 0, minHeight: 0 }}
             >
-              <div className={`w-8 h-8 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center mb-1`}>
-                <Icon className="w-4 h-4 text-white" />
+              <div className="flex flex-col text-left">
+                <span className="text-2xl font-bold text-gray-800 mb-0.5">{item.value}</span>
+                <span className={`text-xs font-bold ${labelColorClass}`}>{item.label}</span>
               </div>
-              <p className="text-lg font-bold text-gray-800 mb-0.5">{item.value}</p>
-              <p className="text-xs text-gray-600 font-bold">{item.label}</p>
+              <div className={`w-10 h-10 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center ml-2 shadow-md`}>
+                <Icon className="w-5 h-5 text-white" />
+              </div>
             </div>
           );
         })}
@@ -501,7 +515,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
               return (
                 <div
                   key={index}
-                  className="bg-white rounded-2xl shadow p-4 hover:shadow-lg transition-all duration-300 flex items-center gap-4"
+                  className="rounded-2xl shadow p-4 hover:shadow-lg transition-all duration-300 flex items-center gap-4"
                 >
                   <div className={`w-12 h-12 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center`}>
                     <Icon className="w-6 h-6 text-white" />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Clock, CheckCircle, AlertCircle, Plus, Edit, Trash2, Eye, Copy, Layers, Download } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
@@ -7,6 +6,8 @@ import { useLanguage } from '../../context/LanguageContext';
 import WorkflowBuilder from '../Placeholders/WorkflowBuilder';
 import WorkflowProgress from '../Placeholders/WorkflowProgress';
 import { Village } from '../../types';
+import HeaderLogo from '../../assets/headerLogo.png';
+
 interface PesaWork {
   id: string;
   taluka: string;
@@ -249,7 +250,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     return true;
   };
 
-  const handleWorkClick = async (work: PesaWork) => {
+  const handleWorkClick = async (work: PesaWork) => {debugger
     try {
       const workflowsData = await pesaWorkflowOperations.getAll();
 
@@ -434,6 +435,13 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     currentPage * rowsPerPage
   );
 
+  const labelColorsMap = {
+    'from-green-500 to-emerald-600': 'text-emerald-600',
+    'from-blue-500 to-indigo-600': 'text-blue-600',
+    'from-amber-500 to-orange-600': 'text-orange-600',
+    'from-purple-500 to-pink-600': 'text-pink-600',
+  };
+
 
   return (
     <div className="space-y-6">
@@ -486,72 +494,89 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
       </div>
       {/* Header and Filters replacing Add New Work Button */}
       {activeTab === 'dashboard' && (
-        <div className="bg-white rounded-3xl shadow-xl p-6 flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-3xl font-bold text-emerald-600">{t('workManagement')}</h2>
-            <p className="text-gray-600 mt-2">{t('manageAndTrackAllWorkAssignments')}</p>
-          </div>
-          <div className="flex gap-6">
-            <button
-              onClick={handleDownloadCSV}
-              className="text-teal-600 px-6 py-3 hover transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium"
-              title={'Download Excel'}
-            >
-              <Download className="w-5 h-5" />
-              Download Excel
-            </button>
+        <div className="bg-gradient-to-r from-orange-400 via-fuchsia-500 to-cyan-400 rounded-3xl p-6 shadow-2xl relative mb-4 overflow-hidden">
+          {/* Warli/BG Pattern Overlay */}
+          <div className="absolute inset-0 bg-[url('/src/assets/tribal_bg.jpg')] bg-cover bg-center opacity-10 pointer-events-none rounded-3xl" />
 
-            <div className="flex flex-col">
-              <label className="font-bold text-gray-700">{t('pesaGrampanchayat')}</label>
-              <select
-                value={pesaGrampanchayatFilter}
-                onChange={e => setPesaGrampanchayatFilter(e.target.value)}
-                className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">{t('All')}</option>
-                {pesaGrampanchayats.map(gp => (
-                  <option key={gp} value={gp}>
-                    {gp}
-                  </option>
-                ))}
-              </select>
+          <div className="relative z-10 flex items-center justify-between">
+            {/* Left Logo */}
+            <div className="flex-shrink-0 mr-6">
+              <div className="w-16 h-16 bg-transparent rounded-2xl flex items-center justify-center shadow border border-white/60">
+                <img
+                  src={HeaderLogo}
+                  alt="Header Logo"
+                  className="w-full h-full object-contain rounded shadow"
+                />
+              </div>
             </div>
-            <div className="flex flex-col">
-              <label className="font-bold text-gray-700">{t('village')}</label>
-              <select
-                value={villageFilter}
-                onChange={e => setVillageFilter(e.target.value)}
-                className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+
+            {/* Left-aligned, vertically centered Title/Subtitle */}
+            <div className="flex flex-col items-start justify-center flex-1">
+              <h2 className="text-3xl font-bold text-white drop-shadow">{t('workManagement')}</h2>
+              <p className="text-gray-100 mt-2 font-medium">{t('manageAndTrackAllWorkAssignments')}</p>
+            </div>
+
+            {/* Right Controls */}
+            <div className="flex gap-4 flex-shrink-0">
+              <button
+                className="w-44 h-12 mt-4 bg-white text-cyan-600 rounded-2xl flex items-center justify-center gap-2 font-medium shadow-lg"
               >
-                <option value="all">{t('All')}</option>
-                {villages.map(v => (
-                  <option key={v.id} value={v.village_name}>
-                    {language === 'mr' ? v.village_name_mr || v.village_name : v.village_name}
-                  </option>
-                ))}
-              </select>
+                <Download className="w-5 h-5" />
+                Download Excel
+              </button>
+
+              <div className="flex flex-col">
+                <label className="font-bold text-white">{t('pesaGrampanchayat')}</label>
+                <select
+                  value={pesaGrampanchayatFilter}
+                  onChange={e => setPesaGrampanchayatFilter(e.target.value)}
+                  className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fuchsia-500"
+                >
+                  <option value="all">{t('All')}</option>
+                  {pesaGrampanchayats.map(gp => (
+                    <option key={gp} value={gp}>{gp}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col">
+                <label className="font-bold text-white">{t('village')}</label>
+                <select
+                  value={villageFilter}
+                  onChange={e => setVillageFilter(e.target.value)}
+                  className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fuchsia-500"
+                >
+                  <option value="all">{t('All')}</option>
+                  {villages.map(v => (
+                    <option key={v.id} value={v.village_name}>
+                      {language === 'mr' ? v.village_name_mr || v.village_name : v.village_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>
       )}
       {/* Cards */}
       {activeTab === 'dashboard' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="relative grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-3 py-4 tribal-bg">
           {cards.map((item, index) => {
             const Icon = item.icon;
+            const labelColorClass = labelColorsMap[item.color] || 'text-gray-600';
             return (
               <div
                 key={index}
-                className="bg-white rounded-2xl shadow p-3 hover:shadow-lg transition-all workDuration-300 transform hover:scale-105"
-                style={{ minWidth: 0, minHeight: 0 }}
+                className="relative bg-white/90 backdrop-blur-sm shadow-md rounded-2xl flex items-center justify-between p-4 hover:scale-105 hover:shadow-lg transform transition-all duration-300 border border-emerald-100 card-tribal"
               >
-                <div
-                  className={`w-8 h-8 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center mb-2 shadow-md`}
-                >
-                  <Icon className="w-4 h-4 text-white" />
+                <div className="flex flex-col text-left">
+                  <span className="text-2xl font-bold text-gray-700 mb-1">{item.value}</span>
+                  <span className={`text-sm font-semibold tracking-wide ${labelColorClass}`}>{item.label}</span>
                 </div>
-                <p className="text-lg font-bold text-gray-800 mb-1">{item.value}</p>
-                <p className="text-xs text-gray-600 font-bold">{item.label}</p>
+                <div
+                  className={`w-12 h-12 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-md`}
+                >
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
               </div>
             );
           })}
@@ -605,7 +630,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
       )}
       {/* Works Table */}
       {activeTab === 'dashboard' && (
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+        <div className="table-container rounded-3xl shadow-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">

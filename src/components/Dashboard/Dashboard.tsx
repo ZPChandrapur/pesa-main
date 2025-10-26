@@ -3,6 +3,16 @@ import { MapPin, Building2, Banknote, TrendingUp, Users, CheckCircle, Calendar, 
 import { useLanguage } from '../../context/LanguageContext';
 import { villageService } from '../../utils/supabase';
 import { pesaWorkOperations } from '../../utils/supabase';
+import Banner1 from '../../assets/Banner1.jpg';
+import Banner2 from '../../assets/Banner2.jpg';
+import Banner3 from '../../assets/Banner3.jpg';
+import Banner4 from '../../assets/Banner4.jpg';
+import Banner5 from '../../assets/Banner5.jpg';
+import ImgBanner1 from '../../assets/img-banner-1.png';
+import Img1 from '../../assets/img-1.jpg';
+import GovtLogo from '../../assets/govtMH logo.png';
+import HeaderLogo from '../../assets/headerLogo.png';
+
 
 export function Dashboard() {
   const { t, language } = useLanguage();
@@ -15,6 +25,26 @@ export function Dashboard() {
   const [overallProgress, setOverallProgress] = useState(0);
   const [totalWorksCount, setTotalWorksCount] = useState(0);
   const [recentWorks, setRecentWorks] = useState<any[]>([]);
+
+  // Carousel images for Adiwasi theme (Chandrapur region)
+  const adiwasiImages = [
+    ImgBanner1,
+    Banner1,
+    Banner2,
+    Banner3,
+    Banner4,
+    Banner5,
+    Img1,
+  ];
+
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % adiwasiImages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -48,7 +78,6 @@ export function Dashboard() {
           const progressPercent = (completedCount / allWorks.length) * 100;
           setOverallProgress(progressPercent.toFixed(0));
 
-          // Get recent works (last 5 works sorted by created_at)
           const sortedWorks = allWorks
             .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
             .slice(0, 5);
@@ -155,20 +184,28 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-24 -translate-x-24"></div>
 
-        <div className="relative z-10">
-          <h1 className="text-4xl font-bold text-white mb-4">
-            {language === 'mr' ? 'पेसा कार्य व्यवस्थापन' : 'PESA Work Management'}
+      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden flex items-center justify-between">
+        {/* Left Logo */}
+        <div className="items-center justify-center w-40 h-40 bg-transparent">
+          <img
+            src={GovtLogo}
+            alt="Govt of Maharashtra Logo"
+            className="w-full h-full object-contain"
+          />
+        </div>
+
+        {/* Center Content */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-2 md:px-8">
+          <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 md:mb-4 drop-shadow">
+            {language === 'mr' ? 'पंचायत (सूचित क्षेत्र विस्तार) अधिनियम, 1996' : 'Panchayat (Extension to Scheduled Areas) Act, 1996'}
           </h1>
-          <p className="text-xl text-indigo-100 mb-6">
+          <p className="text-base md:text-xl text-indigo-100 mb-3 md:mb-6 font-medium drop-shadow">
             {language === 'mr'
               ? 'ग्रामीण विकास आणि स्थानीय स्वराज्य संस्थांचे डिजिटल व्यवस्थापन'
               : 'Digital management of rural development and local self-governance institutions'}
           </p>
-          <div className="text-indigo-200">
+          <div className="text-indigo-200 text-xs md:text-base tracking-wide">
             {new Date().toLocaleDateString(language === 'mr' ? 'mr-IN' : 'en-IN', {
               weekday: 'long',
               year: 'numeric',
@@ -176,6 +213,38 @@ export function Dashboard() {
               day: 'numeric'
             })}
           </div>
+        </div>
+
+        {/* Right Logo */}
+        <div className="flex-shrink-0 flex items-center h-full">
+          <img
+            src={HeaderLogo}
+            alt="Header Logo"
+            className="w-16 h-16 md:w-20 md:h-20 bg-white/75 rounded-2xl shadow border-2 border-white/70 object-contain"
+          />
+        </div>
+      </div>
+
+      {/* Adiwasi Image Carousel */}
+      <div className="relative w-full h-64 md:h-96 bg-gray-100 rounded-3xl overflow-hidden shadow-2xl">
+        {adiwasiImages.map((img, index) => (
+          <img
+            key={index}
+            src={img}
+            alt={`Adiwasi scene ${index + 1}`}
+            className={`absolute inset-0 w-full h-full object-cover rounded-3xl transition-opacity duration-1000 ease-in-out ${currentSlide === index ? 'opacity-100' : 'opacity-0'
+              }`}
+          />
+        ))}
+        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+          {adiwasiImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentSlide(index)}
+              className={`w-3 h-3 rounded-full ${currentSlide === index ? 'bg-white shadow-lg scale-110' : 'bg-gray-300'
+                } transition-all duration-300`}
+            ></button>
+          ))}
         </div>
       </div>
 
@@ -281,8 +350,8 @@ export function Dashboard() {
                     {recentWorks.filter(work => {
                       const workDate = new Date(work.created_at || '');
                       const currentDate = new Date();
-                      return workDate.getMonth() === currentDate.getMonth() && 
-                             workDate.getFullYear() === currentDate.getFullYear();
+                      return workDate.getMonth() === currentDate.getMonth() &&
+                        workDate.getFullYear() === currentDate.getFullYear();
                     }).length}
                   </p>
                 </div>
