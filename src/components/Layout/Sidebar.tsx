@@ -75,10 +75,10 @@ export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: Si
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                {language === 'mr' ? 'पेसा कायदा' : 'Pesa Act'}
+                {language === 'mr' ? 'पेसा कायदा १९९६' : 'Pesa Act 1996'}
               </h1>
               <p className="text-sm text-slate-400">
-                {language === 'mr' ? 'कार्य आणि निधी व्यवस्थापन १९९६' : 'Work and Fund Management 1996'}
+                {language === 'mr' ? 'कार्य आणि निधी व्यवस्थापन' : 'Work and Fund Management'}
               </p>
             </div>
 
