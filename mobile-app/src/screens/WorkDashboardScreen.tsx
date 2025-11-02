@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
@@ -11,8 +11,26 @@ import {
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { pesaSupabase } from '../config/supabase';
-import { Work, Village } from '../types';
 import { useAuth } from '../context/AuthContext';
+
+interface Work {
+  id: string;
+  taluka: string;
+  year?: string | number;
+  work_name: string;
+  work_category?: string;
+  current_status?: string;
+  village_id?: string;
+  pesa_grampanchayat?: string;
+  added_month?: string;
+  agreement_approval_amount?: string;
+  contractor_name?: string;
+  created_at?: string;
+  village?: {
+    village_name: string;
+    village_name_mr?: string;
+  };
+}
 
 interface WorkDashboardScreenProps {
   navigation: any;
@@ -21,18 +39,24 @@ interface WorkDashboardScreenProps {
 export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
   const [works, setWorks] = useState<Work[]>([]);
-  const [villages, setVillages] = useState<Village[]>([]);
+  const [villages, setVillages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const [gramPanchayatFilter, setGramPanchayatFilter] = useState<string>('all');
-  const [villageFilter, setVillageFilter] = useState<string>('all');
-  const [talukaFilter, setTalukaFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [pesaGrampanchayatFilter, setPesaGrampanchayatFilter] = useState('all');
+  const [villageFilter, setVillageFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
+  const [workCategoryFilter, setWorkCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const [gramPanchayats, setGramPanchayats] = useState<string[]>([]);
-  const [talukas, setTalukas] = useState<string[]>([]);
+  const [pesaGrampanchayats, setPesaGrampanchayats] = useState<string[]>([]);
+
+  const workCategories = [
+    { id: 'A', name: 'Category A - Infrastructure' },
+    { id: 'B', name: 'Category B - Social Development' },
+    { id: 'C', name: 'Category C - Economic Development' },
+    { id: 'D', name: 'Category D - Environmental' }
+  ];
 
   useEffect(() => {
     loadData();
@@ -41,15 +65,14 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('Loading dashboard data...');
+      console.log('Loading work dashboard data...');
       await Promise.all([loadVillages(), loadWorks()]);
-      console.log('Dashboard data loaded successfully');
+      console.log('Work dashboard data loaded successfully');
     } catch (error: any) {
       console.error('Error loading data:', error);
-      console.error('Error details:', error.message, error.details);
       Alert.alert(
         'Error Loading Data',
-        error.message || 'Failed to load data from database. Please check your connection and try again.',
+        error.message || 'Failed to load data. Please check your connection.',
         [{ text: 'OK' }]
       );
     } finally {
@@ -64,10 +87,7 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
         .select('*')
         .order('village_name');
 
-      if (error) {
-        console.error('Error loading villages:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       console.log('Loaded villages:', data?.length || 0);
       setVillages(data || []);
@@ -79,7 +99,7 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
   const loadWorks = async () => {
     try {
-      let query = pesaSupabase
+      const { data, error } = await pesaSupabase
         .from('works')
         .select(`
           *,
@@ -87,21 +107,13 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
         `)
         .order('created_at', { ascending: false });
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error loading works:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       console.log('Loaded works:', data?.length || 0);
       setWorks(data || []);
 
       const uniqueGPs = Array.from(new Set((data || []).map(w => w.pesa_grampanchayat).filter(Boolean)));
-      const uniqueTalukas = Array.from(new Set((data || []).map(w => w.taluka).filter(Boolean)));
-
-      setGramPanchayats(uniqueGPs as string[]);
-      setTalukas(uniqueTalukas as string[]);
+      setPesaGrampanchayats(uniqueGPs as string[]);
     } catch (error) {
       console.error('Failed to load works:', error);
       throw error;
@@ -114,180 +126,234 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
     setRefreshing(false);
   };
 
-  const filteredWorks = works.filter(work => {
-    const gpMatch = gramPanchayatFilter === 'all' || work.pesa_grampanchayat === gramPanchayatFilter;
-    const villageMatch = villageFilter === 'all' || work.village?.village_name === villageFilter;
-    const talukaMatch = talukaFilter === 'all' || work.taluka === talukaFilter;
-    const categoryMatch = categoryFilter === 'all' || work.work_category === categoryFilter;
-    const statusMatch = statusFilter === 'all' || work.current_status === statusFilter;
-
-    return gpMatch && villageMatch && talukaMatch && categoryMatch && statusMatch;
+  const filteredWorks = works.filter(w => {
+    const statusMatch = statusFilter === 'all' || w.current_status === statusFilter;
+    const yearMatch = yearFilter === 'all' || String(w.year) === yearFilter;
+    const workCategoryMatch = workCategoryFilter === 'all' || w.work_category === workCategoryFilter;
+    const pesaGrampanchayatMatch = pesaGrampanchayatFilter === 'all' || w.pesa_grampanchayat === pesaGrampanchayatFilter;
+    const villageMatch = villageFilter === 'all' || (w.village?.village_name === villageFilter);
+    return statusMatch && yearMatch && workCategoryMatch && pesaGrampanchayatMatch && villageMatch;
   });
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'completed': return '#10b981';
-      case 'in_progress': return '#3b82f6';
-      case 'pending': return '#f59e0b';
-      default: return '#6b7280';
-    }
-  };
+  const completedStages = filteredWorks.filter(w => w.current_status === 'completed').length;
+  const inProgress = filteredWorks.filter(w => w.current_status === 'in_progress').length;
+  const pending = filteredWorks.filter(w => w.current_status === 'pending').length;
+  const overallProgress = filteredWorks.length ? Math.round((completedStages / filteredWorks.length) * 100) : 0;
 
-  const getStatusText = (status?: string) => {
-    switch (status) {
-      case 'completed': return 'Completed';
-      case 'in_progress': return 'In Progress';
-      case 'pending': return 'Pending';
-      default: return 'Unknown';
-    }
-  };
+  const uniqueYears = Array.from(new Set(works.map(w => w.year).filter(Boolean) as (string | number)[])).map(String);
 
   const handleWorkPress = (work: Work) => {
     navigation.navigate('WorkflowProgress', { selectedWorkName: work.work_name });
   };
 
-  const renderWorkItem = ({ item }: { item: Work }) => (
-    <TouchableOpacity
-      style={styles.workCard}
-      onPress={() => handleWorkPress(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.workHeader}>
-        <Text style={styles.workName} numberOfLines={2}>{item.work_name}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.current_status) }]}>
-          <Text style={styles.statusText}>{getStatusText(item.current_status)}</Text>
-        </View>
-      </View>
-
-      <View style={styles.workDetails}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Category:</Text>
-          <Text style={styles.detailValue}>{item.work_category || '-'}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Village:</Text>
-          <Text style={styles.detailValue}>{item.village?.village_name || '-'}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Taluka:</Text>
-          <Text style={styles.detailValue}>{item.taluka || '-'}</Text>
-        </View>
-        {item.contractor_name && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Contractor:</Text>
-            <Text style={styles.detailValue}>{item.contractor_name}</Text>
-          </View>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-
   if (loading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#10b981" />
-        <Text style={styles.loadingText}>Loading works...</Text>
+        <Text style={styles.loadingText}>Loading work dashboard...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.filtersContainer}>
-        <View style={styles.filterRow}>
-          <View style={styles.filterItem}>
-            <Text style={styles.filterLabel}>Gram Panchayat</Text>
-            <Picker
-              selectedValue={gramPanchayatFilter}
-              onValueChange={setGramPanchayatFilter}
-              style={styles.picker}
-            >
-              <Picker.Item label="All" value="all" />
-              {gramPanchayats.map(gp => (
-                <Picker.Item key={gp} label={gp} value={gp} />
-              ))}
-            </Picker>
-          </View>
-
-          <View style={styles.filterItem}>
-            <Text style={styles.filterLabel}>Village</Text>
-            <Picker
-              selectedValue={villageFilter}
-              onValueChange={setVillageFilter}
-              style={styles.picker}
-            >
-              <Picker.Item label="All" value="all" />
-              {villages.map(v => (
-                <Picker.Item key={v.id} label={v.village_name} value={v.village_name} />
-              ))}
-            </Picker>
-          </View>
-        </View>
-
-        <View style={styles.filterRow}>
-          <View style={styles.filterItem}>
-            <Text style={styles.filterLabel}>Taluka</Text>
-            <Picker
-              selectedValue={talukaFilter}
-              onValueChange={setTalukaFilter}
-              style={styles.picker}
-            >
-              <Picker.Item label="All" value="all" />
-              {talukas.map(t => (
-                <Picker.Item key={t} label={t} value={t} />
-              ))}
-            </Picker>
-          </View>
-
-          <View style={styles.filterItem}>
-            <Text style={styles.filterLabel}>Category</Text>
-            <Picker
-              selectedValue={categoryFilter}
-              onValueChange={setCategoryFilter}
-              style={styles.picker}
-            >
-              <Picker.Item label="All" value="all" />
-              <Picker.Item label="Category A" value="A" />
-              <Picker.Item label="Category B" value="B" />
-              <Picker.Item label="Category C" value="C" />
-              <Picker.Item label="Category D" value="D" />
-            </Picker>
-          </View>
-        </View>
-
-        <View style={styles.filterRow}>
-          <View style={styles.filterItem}>
-            <Text style={styles.filterLabel}>Status</Text>
-            <Picker
-              selectedValue={statusFilter}
-              onValueChange={setStatusFilter}
-              style={styles.picker}
-            >
-              <Picker.Item label="All" value="all" />
-              <Picker.Item label="Pending" value="pending" />
-              <Picker.Item label="In Progress" value="in_progress" />
-              <Picker.Item label="Completed" value="completed" />
-            </Picker>
-          </View>
-        </View>
-      </View>
-
-      <FlatList
-        data={filteredWorks}
-        renderItem={renderWorkItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContainer}
+      <ScrollView
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#10b981']} />
         }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No works found</Text>
+      >
+        <View style={styles.headerCard}>
+          <View style={styles.headerFilters}>
+            <View style={styles.headerFilterItem}>
+              <Text style={styles.headerFilterLabel}>Gram Panchayat</Text>
+              <View style={styles.headerPickerContainer}>
+                <Picker
+                  selectedValue={pesaGrampanchayatFilter}
+                  onValueChange={setPesaGrampanchayatFilter}
+                  style={styles.headerPicker}
+                >
+                  <Picker.Item label="All" value="all" />
+                  {pesaGrampanchayats.map(gp => (
+                    <Picker.Item key={gp} label={gp} value={gp} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+
+            <View style={styles.headerFilterItem}>
+              <Text style={styles.headerFilterLabel}>Village</Text>
+              <View style={styles.headerPickerContainer}>
+                <Picker
+                  selectedValue={villageFilter}
+                  onValueChange={setVillageFilter}
+                  style={styles.headerPicker}
+                >
+                  <Picker.Item label="All" value="all" />
+                  {villages.map(v => (
+                    <Picker.Item key={v.id} label={v.village_name} value={v.village_name} />
+                  ))}
+                </Picker>
+              </View>
+            </View>
           </View>
-        }
-      />
+        </View>
+
+        <View style={styles.countCardsContainer}>
+          <View style={[styles.countCard, styles.completedCard]}>
+            <Text style={styles.countValue}>{completedStages}</Text>
+            <Text style={styles.countLabel}>Completed</Text>
+          </View>
+          <View style={[styles.countCard, styles.inProgressCard]}>
+            <Text style={styles.countValue}>{inProgress}</Text>
+            <Text style={styles.countLabel}>In Progress</Text>
+          </View>
+          <View style={[styles.countCard, styles.pendingCard]}>
+            <Text style={styles.countValue}>{pending}</Text>
+            <Text style={styles.countLabel}>Pending</Text>
+          </View>
+          <View style={[styles.countCard, styles.progressCard]}>
+            <Text style={styles.countValue}>{overallProgress}%</Text>
+            <Text style={styles.countLabel}>Overall Progress</Text>
+          </View>
+        </View>
+
+        <View style={styles.filtersCard}>
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Year</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={yearFilter}
+                onValueChange={setYearFilter}
+                style={styles.picker}
+              >
+                <Picker.Item label="All" value="all" />
+                {uniqueYears.map(year => (
+                  <Picker.Item key={year} label={year} value={year} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Work Category</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={workCategoryFilter}
+                onValueChange={setWorkCategoryFilter}
+                style={styles.picker}
+              >
+                <Picker.Item label="All" value="all" />
+                {workCategories.map(cat => (
+                  <Picker.Item key={cat.id} label={cat.name} value={cat.id} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
+          <View style={styles.filterGroup}>
+            <Text style={styles.filterLabel}>Filter by Status</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={statusFilter}
+                onValueChange={setStatusFilter}
+                style={styles.picker}
+              >
+                <Picker.Item label="All" value="all" />
+                <Picker.Item label="Pending" value="pending" />
+                <Picker.Item label="In Progress" value="in_progress" />
+                <Picker.Item label="Completed" value="completed" />
+              </Picker>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.tableCard}>
+          <Text style={styles.tableTitle}>{filteredWorks.length} Works</Text>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.headerCell, styles.srCell]}>Sr</Text>
+                <Text style={[styles.headerCell, styles.talukaCell]}>Taluka</Text>
+                <Text style={[styles.headerCell, styles.yearCell]}>Year</Text>
+                <Text style={[styles.headerCell, styles.gpCell]}>GP</Text>
+                <Text style={[styles.headerCell, styles.villageCell]}>Village</Text>
+                <Text style={[styles.headerCell, styles.catCell]}>Cat</Text>
+                <Text style={[styles.headerCell, styles.workNameCell]}>Work Name</Text>
+                <Text style={[styles.headerCell, styles.monthCell]}>Month</Text>
+                <Text style={[styles.headerCell, styles.amountCell]}>Amount</Text>
+                <Text style={[styles.headerCell, styles.contractorCell]}>Contractor</Text>
+                <Text style={[styles.headerCell, styles.statusCell]}>Status</Text>
+              </View>
+
+              {filteredWorks.length > 0 ? (
+                filteredWorks.map((work, index) => (
+                  <TouchableOpacity
+                    key={work.id}
+                    style={styles.tableRow}
+                    onPress={() => handleWorkPress(work)}
+                  >
+                    <Text style={[styles.cell, styles.srCell]}>{index + 1}</Text>
+                    <Text style={[styles.cell, styles.talukaCell]} numberOfLines={1}>
+                      {work.taluka || '-'}
+                    </Text>
+                    <Text style={[styles.cell, styles.yearCell]}>{work.year || '-'}</Text>
+                    <Text style={[styles.cell, styles.gpCell]} numberOfLines={1}>
+                      {work.pesa_grampanchayat || '-'}
+                    </Text>
+                    <Text style={[styles.cell, styles.villageCell]} numberOfLines={1}>
+                      {work.village?.village_name || '-'}
+                    </Text>
+                    <Text style={[styles.cell, styles.catCell]}>{work.work_category || '-'}</Text>
+                    <Text style={[styles.cell, styles.workNameCell]} numberOfLines={2}>
+                      {work.work_name || '-'}
+                    </Text>
+                    <Text style={[styles.cell, styles.monthCell]} numberOfLines={1}>
+                      {work.added_month || '-'}
+                    </Text>
+                    <Text style={[styles.cell, styles.amountCell]} numberOfLines={1}>
+                      {work.agreement_approval_amount ? `�${Number(work.agreement_approval_amount).toLocaleString()}` : '-'}
+                    </Text>
+                    <Text style={[styles.cell, styles.contractorCell]} numberOfLines={1}>
+                      {work.contractor_name || '-'}
+                    </Text>
+                    <View style={styles.statusCellContainer}>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(work.current_status) }]}>
+                        <Text style={styles.statusText}>{getStatusText(work.current_status)}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No works found</Text>
+                  <Text style={styles.emptySubtext}>Try adjusting your filters</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      </ScrollView>
     </View>
   );
+};
+
+const getStatusColor = (status?: string) => {
+  switch (status) {
+    case 'completed': return '#10b981';
+    case 'in_progress': return '#3b82f6';
+    case 'pending': return '#f59e0b';
+    default: return '#6b7280';
+  }
+};
+
+const getStatusText = (status?: string) => {
+  switch (status) {
+    case 'completed': return 'Completed';
+    case 'in_progress': return 'In Progress';
+    case 'pending': return 'Pending';
+    default: return 'Unknown';
+  }
 };
 
 const styles = StyleSheet.create({
@@ -306,93 +372,217 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
   },
-  filtersContainer: {
+  headerCard: {
     backgroundColor: '#fff',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  filterItem: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  filterLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 4,
-  },
-  picker: {
-    height: 40,
-    backgroundColor: '#f9fafb',
-    borderRadius: 8,
-  },
-  listContainer: {
-    padding: 12,
-  },
-  workCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
+    margin: 12,
     padding: 16,
-    marginBottom: 12,
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  workHeader: {
+  headerFilters: {
+    gap: 12,
+  },
+  headerFilterItem: {
+    marginBottom: 8,
+  },
+  headerFilterLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  headerPickerContainer: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    backgroundColor: '#f9fafb',
+  },
+  headerPicker: {
+    height: 45,
+  },
+  countCardsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    padding: 12,
+    paddingTop: 0,
+    gap: 8,
+  },
+  countCard: {
+    width: '48%',
+    borderRadius: 12,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  completedCard: {
+    backgroundColor: '#d1fae5',
+  },
+  inProgressCard: {
+    backgroundColor: '#dbeafe',
+  },
+  pendingCard: {
+    backgroundColor: '#fef3c7',
+  },
+  progressCard: {
+    backgroundColor: '#f3e8ff',
+  },
+  countValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  countLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  filtersCard: {
+    backgroundColor: '#fff',
+    margin: 12,
+    marginTop: 0,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  filterGroup: {
     marginBottom: 12,
   },
-  workName: {
-    flex: 1,
+  filterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    backgroundColor: '#f9fafb',
+  },
+  picker: {
+    height: 45,
+  },
+  tableCard: {
+    backgroundColor: '#fff',
+    margin: 12,
+    marginTop: 0,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    paddingBottom: 12,
+  },
+  tableTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#111827',
-    marginRight: 8,
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  table: {
+    minWidth: 1200,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#10b981',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  headerCell: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  cell: {
+    fontSize: 11,
+    color: '#111827',
+    textAlign: 'center',
+  },
+  srCell: {
+    width: 40,
+  },
+  talukaCell: {
+    width: 100,
+  },
+  yearCell: {
+    width: 70,
+  },
+  gpCell: {
+    width: 120,
+  },
+  villageCell: {
+    width: 120,
+  },
+  catCell: {
+    width: 50,
+  },
+  workNameCell: {
+    width: 200,
+  },
+  monthCell: {
+    width: 100,
+  },
+  amountCell: {
+    width: 100,
+  },
+  contractorCell: {
+    width: 120,
+  },
+  statusCell: {
+    width: 100,
+  },
+  statusCellContainer: {
+    width: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statusBadge: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    minWidth: 80,
+    alignItems: 'center',
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
     color: '#fff',
   },
-  workDetails: {
-    gap: 6,
-  },
-  detailRow: {
-    flexDirection: 'row',
-  },
-  detailLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#6b7280',
-    width: 90,
-  },
-  detailValue: {
-    flex: 1,
-    fontSize: 13,
-    color: '#111827',
-  },
   emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    padding: 40,
     alignItems: 'center',
-    paddingTop: 60,
   },
   emptyText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 14,
     color: '#9ca3af',
   },
 });
