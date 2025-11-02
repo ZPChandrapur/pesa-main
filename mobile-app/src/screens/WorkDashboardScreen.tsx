@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { pesaSupabase } from '../config/supabase';
@@ -40,43 +41,71 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('Loading dashboard data...');
       await Promise.all([loadVillages(), loadWorks()]);
-    } catch (error) {
+      console.log('Dashboard data loaded successfully');
+    } catch (error: any) {
       console.error('Error loading data:', error);
+      console.error('Error details:', error.message, error.details);
+      Alert.alert(
+        'Error Loading Data',
+        error.message || 'Failed to load data from database. Please check your connection and try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const loadVillages = async () => {
-    const { data, error } = await pesaSupabase
-      .from('villages')
-      .select('*')
-      .order('village_name');
+    try {
+      const { data, error } = await pesaSupabase
+        .from('villages')
+        .select('*')
+        .order('village_name');
 
-    if (error) throw error;
-    setVillages(data || []);
+      if (error) {
+        console.error('Error loading villages:', error);
+        throw error;
+      }
+
+      console.log('Loaded villages:', data?.length || 0);
+      setVillages(data || []);
+    } catch (error) {
+      console.error('Failed to load villages:', error);
+      throw error;
+    }
   };
 
   const loadWorks = async () => {
-    let query = pesaSupabase
-      .from('works')
-      .select(`
-        *,
-        village:villages!village_id(village_name, village_name_mr)
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      let query = pesaSupabase
+        .from('works')
+        .select(`
+          *,
+          village:villages!village_id(village_name, village_name_mr)
+        `)
+        .order('created_at', { ascending: false });
 
-    const { data, error } = await query;
-    if (error) throw error;
+      const { data, error } = await query;
 
-    setWorks(data || []);
+      if (error) {
+        console.error('Error loading works:', error);
+        throw error;
+      }
 
-    const uniqueGPs = Array.from(new Set((data || []).map(w => w.pesa_grampanchayat).filter(Boolean)));
-    const uniqueTalukas = Array.from(new Set((data || []).map(w => w.taluka).filter(Boolean)));
+      console.log('Loaded works:', data?.length || 0);
+      setWorks(data || []);
 
-    setGramPanchayats(uniqueGPs as string[]);
-    setTalukas(uniqueTalukas as string[]);
+      const uniqueGPs = Array.from(new Set((data || []).map(w => w.pesa_grampanchayat).filter(Boolean)));
+      const uniqueTalukas = Array.from(new Set((data || []).map(w => w.taluka).filter(Boolean)));
+
+      setGramPanchayats(uniqueGPs as string[]);
+      setTalukas(uniqueTalukas as string[]);
+    } catch (error) {
+      console.error('Failed to load works:', error);
+      throw error;
+    }
   };
 
   const onRefresh = async () => {

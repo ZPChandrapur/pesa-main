@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { pesaSupabase } from '../config/supabase';
 import { Workflow } from '../types';
@@ -32,6 +33,7 @@ export const WorkflowProgressScreen: React.FC<WorkflowProgressScreenProps> = ({ 
   const loadWorkflows = async () => {
     try {
       setLoading(true);
+      console.log('Loading workflows...');
       const { data, error } = await pesaSupabase
         .from('workflows')
         .select(`
@@ -42,10 +44,21 @@ export const WorkflowProgressScreen: React.FC<WorkflowProgressScreenProps> = ({ 
         .in('status', ['active', 'completed'])
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading workflows:', error);
+        throw error;
+      }
+
+      console.log('Loaded workflows:', data?.length || 0);
       setWorkflows(data || []);
-    } catch (error) {
-      console.error('Error loading workflows:', error);
+    } catch (error: any) {
+      console.error('Failed to load workflows:', error);
+      console.error('Error details:', error.message, error.details);
+      Alert.alert(
+        'Error Loading Workflows',
+        error.message || 'Failed to load workflows from database. Please check your connection and try again.',
+        [{ text: 'OK' }]
+      );
     } finally {
       setLoading(false);
     }

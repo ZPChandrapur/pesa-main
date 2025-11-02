@@ -3,16 +3,27 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { LoginScreen } from './src/screens/LoginScreen';
 import { WorkDashboardScreen } from './src/screens/WorkDashboardScreen';
 import { WorkflowProgressScreen } from './src/screens/WorkflowProgressScreen';
 import { WorkflowStepsScreen } from './src/screens/WorkflowStepsScreen';
 import { StepEditScreen } from './src/screens/StepEditScreen';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function TabNavigator() {
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -41,6 +52,14 @@ function TabNavigator() {
           headerTitleStyle: {
             fontWeight: '700',
           },
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={{ marginRight: 16, padding: 8 }}
+            >
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Logout</Text>
+            </TouchableOpacity>
+          ),
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 24, color }}>📊</Text>,
         }}
       />
@@ -56,6 +75,14 @@ function TabNavigator() {
           headerTitleStyle: {
             fontWeight: '700',
           },
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={{ marginRight: 16, padding: 8 }}
+            >
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Logout</Text>
+            </TouchableOpacity>
+          ),
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 24, color }}>📈</Text>,
         }}
       />
@@ -117,7 +144,7 @@ function AppContent() {
 
   return (
     <NavigationContainer>
-      <MainNavigator />
+      {user ? <MainNavigator /> : <LoginScreen />}
     </NavigationContainer>
   );
 }
