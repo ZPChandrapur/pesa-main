@@ -28,7 +28,6 @@ interface Work {
   created_at?: string;
   village?: {
     village_name: string;
-    village_name_mr?: string;
   };
 }
 
@@ -103,7 +102,7 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
         .from('works')
         .select(`
           *,
-          village:villages!village_id(village_name, village_name_mr)
+          village:villages!village_id(village_name)
         `)
         .order('created_at', { ascending: false });
 
