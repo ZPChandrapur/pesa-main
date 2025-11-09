@@ -57,8 +57,10 @@ export const LoginScreen: React.FC = () => {
               resizeMode="contain"
             />
           </View>
-          <Text style={styles.title}>PESA Work Tracking</Text>
-          <Text style={styles.subtitle}>Login to continue</Text>
+          <Text style={styles.title}>PESA Work Tracking </Text>
+          <Text style={styles.subtitle}>Zilla Parishad, Chandrapur</Text>
+          <Text style={styles.helper}>Login to continue</Text>
+
         </View>
 
         <View style={styles.form}>
