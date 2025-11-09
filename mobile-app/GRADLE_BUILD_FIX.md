@@ -268,7 +268,7 @@ eas build --platform android --profile preview
 4. ✅ Added EAS project configuration placeholder
 5. ✅ Verified TypeScript configuration
 6. ✅ Verified source file imports are correct
-7. ✅ All asset paths are correct (`../assets/tribalbg.png`)
+7. ✅ All asset paths are correct (`../../assets/tribalbg.png`)
 
 ---
 
