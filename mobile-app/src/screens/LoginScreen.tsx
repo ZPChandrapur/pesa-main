@@ -114,7 +114,6 @@ export const LoginScreen: React.FC = () => {
           </Text>
           <Text style={styles.copyright}>© 2025 ZP Chandrapur, Govt of Maharashtra. All rights reserved.</Text>
         </View>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
