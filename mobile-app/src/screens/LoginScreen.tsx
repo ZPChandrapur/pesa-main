@@ -113,8 +113,7 @@ export const LoginScreen: React.FC = () => {
             For authorized users only
           </Text>
           <Text style={styles.copyright}>© 2025 ZP Chandrapur, Govt of Maharashtra. All rights reserved.</Text>
-</View>
-
+        </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
