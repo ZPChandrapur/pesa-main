@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { pesaSupabase } from '../config/supabase';
+import { useAuth } from '../context/AuthContext';
 import { Workflow } from '../types';
 
 interface WorkflowProgressScreenProps {
@@ -18,22 +19,67 @@ interface WorkflowProgressScreenProps {
 }
 
 export const WorkflowProgressScreen: React.FC<WorkflowProgressScreenProps> = ({ navigation, route }) => {
+  const { user, userId, roleName } = useAuth();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    loadWorkflows();
+    if (user && userId && roleName) {
+      loadWorkflows();
 
-    if (route.params?.selectedWorkName) {
-      findAndNavigateToWorkflow(route.params.selectedWorkName);
+      if (route.params?.selectedWorkName) {
+        findAndNavigateToWorkflow(route.params.selectedWorkName);
+      }
     }
-  }, [route.params?.selectedWorkName]);
+  }, [user, userId, roleName, route.params?.selectedWorkName]);
 
   const loadWorkflows = async () => {
     try {
       setLoading(true);
       console.log('Loading workflows...');
+      console.log('Current userId:', userId);
+      console.log('Current roleName:', roleName);
+
+      // Load all villages first to determine access
+      const { data: villagesData, error: villagesError } = await pesaSupabase
+        .from('villages')
+        .select('*');
+
+      if (villagesError) throw villagesError;
+
+      console.log('Loaded all villages:', villagesData?.length || 0);
+
+      // Determine allowed village IDs based on role
+      let allowedVillageIds: string[] = [];
+
+      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
+        console.log('Filtering workflows for non-admin user');
+        allowedVillageIds = (villagesData || [])
+          .filter((v: any) => {
+            if (v.tal_user_access === null && v.gram_user_access === null) {
+              return false;
+            }
+            const hasAccess = v.tal_user_access === userId || v.gram_user_access === userId;
+            if (hasAccess) {
+              console.log('User has access to village:', v.village_name);
+            }
+            return hasAccess;
+          })
+          .map((v: any) => v.id);
+
+        console.log('Allowed village IDs:', allowedVillageIds.length);
+
+        if (allowedVillageIds.length === 0) {
+          console.log('No allowed villages, showing no workflows');
+          setWorkflows([]);
+          return;
+        }
+      } else {
+        console.log('User is admin, showing all workflows');
+      }
+
+      // Load workflows
       const { data, error } = await pesaSupabase
         .from('workflows')
         .select(`
@@ -49,8 +95,20 @@ export const WorkflowProgressScreen: React.FC<WorkflowProgressScreenProps> = ({ 
         throw error;
       }
 
-      console.log('Loaded workflows:', data?.length || 0);
-      setWorkflows(data || []);
+      console.log('Loaded all workflows:', data?.length || 0);
+
+      // Filter workflows based on allowed village IDs
+      let filteredWorkflows = data || [];
+
+      if (allowedVillageIds.length > 0) {
+        filteredWorkflows = (data || []).filter((w: any) => {
+          const workVillageId = w.work?.village_id;
+          return workVillageId && allowedVillageIds.includes(workVillageId);
+        });
+      }
+
+      console.log('Filtered workflows for user:', filteredWorkflows.length);
+      setWorkflows(filteredWorkflows);
     } catch (error: any) {
       console.error('Failed to load workflows:', error);
       console.error('Error details:', error.message, error.details);
