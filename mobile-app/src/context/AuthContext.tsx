@@ -42,44 +42,67 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
+      console.log('Attempting login...');
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
       if (data.user) {
         const uid = data.user.id;
+        console.log('User authenticated, userId:', uid);
         setUserId(uid);
 
-        const { data: roleData } = await supabase
+        console.log('Fetching user role...');
+        const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
           .select('role_id')
           .eq('user_id', uid)
           .single();
 
+        if (roleError) {
+          console.error('Error fetching role:', roleError);
+        }
+
         const rid = roleData?.role_id ?? null;
+        console.log('Role ID:', rid);
         setRoleId(rid);
 
         if (rid !== null) {
-          const { data: accessData } = await supabase
+          console.log('Checking PESA permission...');
+          const { data: accessData, error: accessError } = await supabase
             .from('application_permissions')
             .select('id')
             .eq('role_id', rid)
             .eq('application_name', 'pesa')
             .maybeSingle();
 
+          if (accessError) {
+            console.error('Error checking permission:', accessError);
+          }
+
+          console.log('PESA access:', accessData ? 'YES' : 'NO');
+
           if (!accessData) {
             await supabase.auth.signOut();
             throw new Error('You do not have access to PESA application');
           }
 
-          const { data: rolesData } = await supabase
+          console.log('Fetching role name...');
+          const { data: rolesData, error: rolesError } = await supabase
             .from('roles')
             .select('name')
             .eq('id', rid)
             .single();
 
+          if (rolesError) {
+            console.error('Error fetching role name:', rolesError);
+          }
+
           const rname = rolesData?.name ?? null;
+          console.log('Role name:', rname);
           setRoleName(rname);
         }
+
+        console.log('Login complete - userId:', uid, 'roleId:', rid, 'roleName:', roleData?.name);
       }
     } finally {
       setLoading(false);

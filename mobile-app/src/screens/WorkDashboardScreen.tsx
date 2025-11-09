@@ -59,8 +59,10 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
   ];
 
   useEffect(() => {
-    loadData();
-  }, [user]);
+    if (user && userId && roleName) {
+      loadData();
+    }
+  }, [user, userId, roleName]);
 
   const loadData = async () => {
     try {
@@ -91,17 +93,26 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
       if (error) throw error;
 
       console.log('Loaded all villages:', data?.length || 0);
+      console.log('Current userId:', userId);
+      console.log('Current roleName:', roleName);
       setAllVillages(data || []);
 
       let filteredVillages = data || [];
 
       if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
+        console.log('Filtering villages for non-admin user');
         filteredVillages = (data || []).filter((v: any) => {
           if (v.tal_user_access === null && v.gram_user_access === null) {
             return false;
           }
-          return v.tal_user_access === userId || v.gram_user_access === userId;
+          const hasAccess = v.tal_user_access === userId || v.gram_user_access === userId;
+          if (hasAccess) {
+            console.log('User has access to village:', v.village_name);
+          }
+          return hasAccess;
         });
+      } else {
+        console.log('User is admin, showing all villages');
       }
 
       console.log('Filtered villages for user:', filteredVillages.length);
@@ -129,6 +140,7 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
       let filteredWorks = data || [];
 
       if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
+        console.log('Filtering works for non-admin user');
         const allowedVillageIds = allVillages
           .filter((v: any) => {
             if (v.tal_user_access === null && v.gram_user_access === null) {
@@ -138,11 +150,16 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
           })
           .map((v: any) => v.id);
 
+        console.log('Allowed village IDs:', allowedVillageIds.length);
+
         if (allowedVillageIds.length > 0) {
           filteredWorks = (data || []).filter((w: any) => allowedVillageIds.includes(w.village_id));
         } else {
+          console.log('No allowed villages, showing no works');
           filteredWorks = [];
         }
+      } else {
+        console.log('User is admin, showing all works');
       }
 
       console.log('Filtered works for user:', filteredWorks.length);
