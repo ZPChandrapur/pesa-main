@@ -11,6 +11,7 @@ import {
   Platform,
   ScrollView,
   Image,
+  ImageBackground,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
@@ -41,14 +42,20 @@ export const LoginScreen: React.FC = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <ImageBackground
+      source={require('../../assets/tribal_bg.jpg')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContainer}
-        keyboardShouldPersistTaps="handled"
+      <View style={styles.overlay} />
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <Image
@@ -114,15 +121,24 @@ export const LoginScreen: React.FC = () => {
           </Text>
           <Text style={styles.copyright}>© 2025 ZP Chandrapur, Govt of Maharashtra. All rights reserved.</Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 };
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -134,23 +150,16 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   logoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#fff',
+    width: 140,
+    height: 140,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-    padding: 10,
+    marginBottom: 20,
   },
   logoImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'contain',
   },
   title: {
     fontSize: 28,
@@ -163,9 +172,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
     textAlign: 'center',
+    marginBottom: 4,
+  },
+  helper: {
+    fontSize: 14,
+    color: '#9ca3af',
+    textAlign: 'center',
   },
   form: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 16,
     padding: 24,
     shadowColor: '#000',
@@ -173,6 +188,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(229, 231, 235, 0.5)',
   },
   inputContainer: {
     marginBottom: 20,
@@ -224,5 +241,11 @@ const styles = StyleSheet.create({
   footerSubtext: {
     fontSize: 12,
     color: '#9ca3af',
+    marginBottom: 4,
+  },
+  copyright: {
+    fontSize: 11,
+    color: '#9ca3af',
+    textAlign: 'center',
   },
 });
