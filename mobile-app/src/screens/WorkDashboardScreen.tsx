@@ -36,8 +36,9 @@ interface WorkDashboardScreenProps {
 }
 
 export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, userId, roleName } = useAuth();
   const [works, setWorks] = useState<Work[]>([]);
+  const [allVillages, setAllVillages] = useState<any[]>([]);
   const [villages, setVillages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -65,7 +66,8 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
     try {
       setLoading(true);
       console.log('Loading work dashboard data...');
-      await Promise.all([loadVillages(), loadWorks()]);
+      await loadVillages();
+      await loadWorks();
       console.log('Work dashboard data loaded successfully');
     } catch (error: any) {
       console.error('Error loading data:', error);
@@ -88,8 +90,22 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
       if (error) throw error;
 
-      console.log('Loaded villages:', data?.length || 0);
-      setVillages(data || []);
+      console.log('Loaded all villages:', data?.length || 0);
+      setAllVillages(data || []);
+
+      let filteredVillages = data || [];
+
+      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
+        filteredVillages = (data || []).filter((v: any) => {
+          if (v.tal_user_access === null && v.gram_user_access === null) {
+            return false;
+          }
+          return v.tal_user_access === userId || v.gram_user_access === userId;
+        });
+      }
+
+      console.log('Filtered villages for user:', filteredVillages.length);
+      setVillages(filteredVillages);
     } catch (error) {
       console.error('Failed to load villages:', error);
       throw error;
@@ -108,10 +124,31 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
       if (error) throw error;
 
-      console.log('Loaded works:', data?.length || 0);
-      setWorks(data || []);
+      console.log('Loaded all works:', data?.length || 0);
 
-      const uniqueGPs = Array.from(new Set((data || []).map(w => w.pesa_grampanchayat).filter(Boolean)));
+      let filteredWorks = data || [];
+
+      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
+        const allowedVillageIds = allVillages
+          .filter((v: any) => {
+            if (v.tal_user_access === null && v.gram_user_access === null) {
+              return false;
+            }
+            return v.tal_user_access === userId || v.gram_user_access === userId;
+          })
+          .map((v: any) => v.id);
+
+        if (allowedVillageIds.length > 0) {
+          filteredWorks = (data || []).filter((w: any) => allowedVillageIds.includes(w.village_id));
+        } else {
+          filteredWorks = [];
+        }
+      }
+
+      console.log('Filtered works for user:', filteredWorks.length);
+      setWorks(filteredWorks);
+
+      const uniqueGPs = Array.from(new Set(filteredWorks.map(w => w.pesa_grampanchayat).filter(Boolean)));
       setPesaGrampanchayats(uniqueGPs as string[]);
     } catch (error) {
       console.error('Failed to load works:', error);

@@ -6,6 +6,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  userId: string | null;
+  roleId: number | null;
+  roleName: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -16,6 +19,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [roleId, setRoleId] = useState<number | null>(null);
+  const [roleName, setRoleName] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -36,8 +42,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+
+      if (data.user) {
+        const uid = data.user.id;
+        setUserId(uid);
+
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role_id')
+          .eq('user_id', uid)
+          .single();
+
+        const rid = roleData?.role_id ?? null;
+        setRoleId(rid);
+
+        if (rid !== null) {
+          const { data: accessData } = await supabase
+            .from('application_permissions')
+            .select('id')
+            .eq('role_id', rid)
+            .eq('application_name', 'pesa')
+            .maybeSingle();
+
+          if (!accessData) {
+            await supabase.auth.signOut();
+            throw new Error('You do not have access to PESA application');
+          }
+
+          const { data: rolesData } = await supabase
+            .from('roles')
+            .select('name')
+            .eq('id', rid)
+            .single();
+
+          const rname = rolesData?.name ?? null;
+          setRoleName(rname);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -48,13 +91,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      setUserId(null);
+      setRoleId(null);
+      setRoleName(null);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, userId, roleId, roleName, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
