@@ -9,7 +9,7 @@
 - adaptive-icon.png: 1.4MB (1024x1024 PNG)
 - splash.png: 1.4MB (1024x1024 PNG)
 - favicon.png: 1.4MB (1024x1024 PNG)
-- tribal_bg.jpg: 161KB (WebP format)
+- tribalbg.png: 161KB (WebP format)
 
 ### ✅ 2. Missing Android Configuration
 **Fixed**: Added to `app.json`:
@@ -103,7 +103,7 @@ Expected output:
 -rw-r--r-- 1.4M icon.png
 -rw-r--r-- 1.4M logo.png
 -rw-r--r-- 1.4M splash.png
--rw-r--r-- 161K tribal_bg.jpg
+-rw-r--r-- 161K tribalbg.png
 ```
 
 ### 2. Verify TypeScript
