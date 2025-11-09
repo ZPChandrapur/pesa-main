@@ -210,7 +210,7 @@ export const WorkflowProgressScreen: React.FC<WorkflowProgressScreenProps> = ({ 
   if (loading) {
     return (
       <ImageBackground
-        source={require('../assets/tribalbg.png')}
+        source={require('../../assets/tribalbg.png')}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
@@ -225,7 +225,7 @@ export const WorkflowProgressScreen: React.FC<WorkflowProgressScreenProps> = ({ 
 
   return (
     <ImageBackground
-      source={require('../assets/tribalbg.png')}
+      source={require('../../assets/tribalbg.png')}
       style={styles.backgroundImage}
       resizeMode="cover"
     >
