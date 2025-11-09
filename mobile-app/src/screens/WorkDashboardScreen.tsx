@@ -203,7 +203,7 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
   if (loading) {
     return (
       <ImageBackground
-        source={require('../assets/tribalbg.png')}
+        source={require('../../assets/tribalbg.png')}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
@@ -218,7 +218,7 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
   return (
     <ImageBackground
-      source={require('../assets/tribalbg.png')}
+      source={require('../../assets/tribalbg.png')}
       style={styles.backgroundImage}
       resizeMode="cover"
     >
