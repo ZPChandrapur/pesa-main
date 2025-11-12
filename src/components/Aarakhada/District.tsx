@@ -49,7 +49,7 @@ export function District() {
   };
 
   const handleDownloadExcel = async () => {
-    debugger
+    
     // Utility
     const parseNumeric = (val) => val == null ? 0 : Number(String(val).replace(/[^\d.-]/g, "")) || 0;
 
