@@ -250,7 +250,8 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     return true;
   };
 
-  const handleWorkClick = async (work: PesaWork) => {debugger
+  const handleWorkClick = async (work: PesaWork) => {
+    
     try {
       const workflowsData = await pesaWorkflowOperations.getAll();
 
@@ -702,11 +703,14 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                         {/* <button onClick={() => handleDuplicate(work.id)} className="p-1 text-green-600 hover:bg-green-50 rounded-lg" title="Duplicate work">
                           <Copy className="w-4 h-4" />
                         </button> */}
-                        <button onClick={() => handleDelete(work.id)} className="p-1 text-red-600 hover:bg-red-50 rounded-lg" title="Delete work">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {roleName?.trim().toLowerCase() !== 'grampanchayat' && (
+                          <button onClick={() => handleDelete(work.id)} className="p-1 text-red-600 hover:bg-red-50 rounded-lg" title="Delete work">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -763,14 +767,15 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
             <div className="p-6">
               <h3 className="text-2xl font-bold mb-6 text-blue-600">{editingWork ? t('edit') : t('addNewWork')}</h3>
               <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Removed Select Gram Panchayat Physical Work */}
                 {/* Added pesaGrampanchayat Dropdown */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('pesaGrampanchayat')}</label>
                   <select
                     value={formData.pesa_grampanchayat}
                     onChange={(e) => setFormData({ ...formData, pesa_grampanchayat: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
+                      }`}
+                    disabled={roleName?.trim().toLowerCase() === 'grampanchayat'}
                   >
                     <option value="">{t('selectPesaGrampanchayat')}</option>
                     {pesaGrampanchayats.map((gp) => (
@@ -786,7 +791,9 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                   <select
                     value={formData.work_category}
                     onChange={(e) => setFormData({ ...formData, work_category: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
+                      }`}
+                    disabled={roleName?.trim().toLowerCase() === 'grampanchayat'}
                   >
                     <option value="">{t('selectOption')}</option>
                     {workCategories.map((category) => (
@@ -803,8 +810,10 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                     type="text"
                     value={formData.added_month}
                     onChange={(e) => setFormData({ ...formData, added_month: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
+                      }`}
                     placeholder="e.g. September-2025"
+                    readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
                   />
                 </div>
                 {/* Top fields now placed here in order */}
@@ -814,8 +823,10 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                     type="text"
                     value={formData.taluka}
                     onChange={(e) => setFormData({ ...formData, taluka: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
+                      }`}
                     required
+                    readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
                   />
                 </div>
                 <div>
@@ -824,8 +835,10 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                     type="text"
                     value={formData.year}
                     onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
+                      }`}
                     required
+                    readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
                   />
                 </div>
                 <div>
@@ -834,8 +847,10 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                     type="text"
                     value={formData.work_name}
                     onChange={(e) => setFormData({ ...formData, work_name: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
+                      }`}
                     required
+                    readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
                   />
                 </div>
                 <div>
@@ -877,7 +892,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                     ].includes(field)
                   )
                     return null;
-                  const isRequired = false; // admin_approval_no and admin_approval_date not required now
+                  const isRequired = field === 'agreement_approval_amount'; 
                   return (
                     <div key={field}>
                       <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -907,7 +922,6 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                         onKeyDown={(e) => ['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key) && e.preventDefault()}
                         onFocus={e => e.target.addEventListener('wheel', function (ev) { ev.preventDefault(); }, { passive: false })}
                         onBlur={e => e.target.removeEventListener('wheel', function (ev) { ev.preventDefault(); })}
-
                       />
                     </div>
                   );
@@ -933,6 +947,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
           </div>
         </div>
       )}
+
       {/* View Modal structured like form fields */}
       {viewingWork && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
