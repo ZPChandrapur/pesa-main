@@ -42,7 +42,7 @@ export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: Si
     ];
   } else if (roleName === "taluka") {
     allowedNavs = [
-      "dashboard", "villages", "aarakhada", "workProgress", "taluka"
+      "dashboard", "villages", "aarakhada", "workProgress","gramPanchayat", "taluka"
     ];
   } else if (roleName === "district") {
     allowedNavs = [
@@ -75,7 +75,7 @@ export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: Si
             </div>
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-teal-400 bg-clip-text text-transparent">
-                {language === 'mr' ? 'पेसा कायदा १९९६' : 'Pesa Act 1996'}
+                {language === 'mr' ? 'पेसा कायदा 1996' : 'Pesa Act 1996 '}
               </h1>
               <p className="text-sm text-slate-400">
                 {language === 'mr' ? 'कार्य आणि निधी व्यवस्थापन' : 'Work and Fund Management'}
