@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { pesaWorkOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
-export function Aarakhada({ userId }: { userId: string }) {
+export function Aarakhada({ userId, roleName }: { userId: string; roleName: string  }) {
   const { t, language } = useLanguage();
   const [formData, setFormData] = useState({
     taluka: '' as string,
@@ -85,33 +85,50 @@ export function Aarakhada({ userId }: { userId: string }) {
       console.error('Error loading available work names:', error);
     }
   };
-  const loadVillages = async () => {
-    try {
-      const { villageService } = await import('../../utils/supabase');
-      let data = await villageService.getAll();
 
-      // ✅ Filter based on userId prop
-      if (userId) {
-        data = data.filter(
-          (v: any) => v.tal_user_access === userId || v.gram_user_access === userId
-        );
-      }
+const loadVillages = async () => {
+  try {
+    const { villageService } = await import('../../utils/supabase');
+    let data = await villageService.getAll();
 
+    // ✅ If roleName is 'district', set all data as it is
+    if (roleName?.trim().toLowerCase() === 'district') {
       setVillages(data);
+    } else {
+      // ✅ For other roles, filter based on userId
+      if (userId) {
+        const allowedVillageIds = data
+          .filter((v: any) => {
+            if (v.tal_user_access === null && v.gram_user_access === null) {
+              return false;
+            }
+            return v.tal_user_access === userId || v.gram_user_access === userId;
+          })
+          .map((v: any) => v.id);
 
-      // ✅ Extract only VALID Gram Panchayat values for dropdown
-      const uniqueGramPanchayats = Array.from(
-        new Set(data.map((v: any) => v.gram_panchayat).filter(Boolean))
-      ).map((gp) => ({
-        id: gp,
-        gram_panchayat: gp,
-      }));
+        if (!allowedVillageIds.length) {
+          setWorks([]);
+          return;
+        }
 
-      setPesaGramPanchayats(uniqueGramPanchayats);
-    } catch (error) {
-      console.error('Error loading villages:', error);
+        data = data.filter((v: any) => allowedVillageIds.includes(v.id));
+      }
+      setVillages(data);
     }
-  };
+
+    // ✅ Extract only VALID Gram Panchayat values for dropdown
+    const uniqueGramPanchayats = Array.from(
+      new Set(data.map((v: any) => v.gram_panchayat).filter(Boolean))
+    ).map((gp) => ({
+      id: gp,
+      gram_panchayat: gp,
+    }));
+
+    setPesaGramPanchayats(uniqueGramPanchayats);
+  } catch (error) {
+    console.error('Error loading villages:', error);
+  }
+};
 
   const validateForm = () => {
     const requiredFields = [
@@ -122,7 +139,6 @@ export function Aarakhada({ userId }: { userId: string }) {
       'village_id',
       'work_category',
       'current_status',
-      'agreement_approval_amount'
     ];
     for (let field of requiredFields) {
       if (!(formData as any)[field]) {
@@ -332,7 +348,7 @@ export function Aarakhada({ userId }: { userId: string }) {
           </select>
         </div>
 
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">
             {t('agreement_approval_amount')}
             <span className="text-red-500 ml-1">*</span>
@@ -345,10 +361,10 @@ export function Aarakhada({ userId }: { userId: string }) {
             className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
             required
           />
-        </div>
+        </div> */}
         {/* Remaining Inputs */}
         {Object.keys(formData).map((field) => {
-          if (['village_id', 'work_category', 'work_name', 'pesa_grampanchayat', 'taluka', 'year', 'added_month', 'current_status', 'agreement_approval_amount'].includes(field))
+          if (['village_id', 'work_category', 'work_name', 'pesa_grampanchayat', 'taluka', 'year', 'added_month', 'current_status'].includes(field))
             return null;
           const removedFields = [
             'priority',
