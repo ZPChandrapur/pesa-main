@@ -173,7 +173,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
     XLSX.writeFile(wb, 'taluka_filtered_work_data.xlsx');
   };
 
-  const loadTalukaAarakhadaData = async () => {
+  const loadTalukaAarakhadaData = async () => {debugger;
     try {
       setLoading(true);
       const financial = await talukaWorkService.getByTalukaAndCategory({
