@@ -13,8 +13,7 @@ import Img1 from '../../assets/img-1.jpg';
 import GovtLogo from '../../assets/govtMH logo.png';
 import HeaderLogo from '../../assets/headerLogo.png';
 
-
-export function Dashboard() {
+export function Dashboard({ userId, roleName }: { userId: string; roleName: string }) {
   const { t, language } = useLanguage();
 
   const [totalVillages, setTotalVillages] = useState(0);
@@ -49,7 +48,19 @@ export function Dashboard() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const villages = await villageService.getAll();
+        let villages = await villageService.getAll();
+        let allWorks = await pesaWorkOperations.getAll();
+
+        // If roleName is not 'district', filter data by user access
+        if (roleName?.trim().toLowerCase() !== 'district' && userId) {
+          villages = villages.filter(
+            (v) => v.tal_user_access === userId || v.gram_user_access === userId
+          );
+
+          const allowedVillageIds = villages.map((v) => v.id);
+          allWorks = allWorks.filter((work) => allowedVillageIds.includes(work.village_id));
+        }
+
         setTotalVillages(villages.length);
 
         const populationSum = villages.reduce(
@@ -58,7 +69,6 @@ export function Dashboard() {
         );
         setTotalPopulation(populationSum);
 
-        const allWorks = await pesaWorkOperations.getAll();
         if (allWorks && allWorks.length > 0) {
           setTotalWorksCount(allWorks.length);
 
@@ -96,7 +106,7 @@ export function Dashboard() {
     }
 
     fetchData();
-  }, []);
+  }, [userId, roleName]);
 
   const stats = [
     {
@@ -184,9 +194,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8">
-
       <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden flex items-center justify-between">
-        {/* Left Logo */}
         <div className="items-center justify-center w-40 h-40 bg-transparent">
           <img
             src={GovtLogo}
@@ -194,11 +202,9 @@ export function Dashboard() {
             className="w-full h-full object-contain"
           />
         </div>
-
-        {/* Center Content */}
         <div className="flex-1 flex flex-col items-center justify-center text-center px-2 md:px-8">
           <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 md:mb-4 drop-shadow">
-            {language === 'mr' ? 'पंचायत (अनुसूचित क्षेत्र विस्तार) अधिनियम, 1996' : 'Panchayat (Extension to Scheduled Areas) Act, 1996'}
+            {language === 'mr' ? 'पंचायत (अनूसूचित क्षेत्र विस्तार) अधिनियम, 1996' : 'Panchayat (Extension to Scheduled Areas) Act, 1996'}
           </h1>
           <p className="text-base md:text-xl text-indigo-100 mb-3 md:mb-6 font-medium drop-shadow">
             {language === 'mr'
@@ -214,8 +220,6 @@ export function Dashboard() {
             })}
           </div>
         </div>
-
-        {/* Right Logo */}
         <div className="flex-shrink-0 flex items-center h-full">
           <img
             src={HeaderLogo}
@@ -225,7 +229,6 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Adiwasi Image Carousel */}
       <div className="relative w-full h-64 md:h-96 bg-gray-100 rounded-3xl overflow-hidden shadow-2xl">
         {adiwasiImages.map((img, index) => (
           <img
@@ -357,7 +360,7 @@ export function Dashboard() {
                 </div>
               </div>
             </div>
-
+            
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
