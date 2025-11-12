@@ -390,7 +390,9 @@ export function AarakhadaWorkForm({
 
                 {/* Received Fund */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">{t('releasedAmount')}</label>
+                  <label className="block text-sm font-semibold text-gray-700">
+                    {t('releasedAmount')} <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     value={formData.released_amount ?? ''}
@@ -401,6 +403,7 @@ export function AarakhadaWorkForm({
                     className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
                     onWheel={(e) => e.currentTarget.blur()}
                     onKeyDown={(e) => (e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.preventDefault()}
+                    required
                   />
                 </div>
 
