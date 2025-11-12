@@ -366,7 +366,6 @@ const WorkflowProgress: React.FC<WorkflowProgressProps> = ({ userId, allVillageD
   };
 
   const handleDeleteWorkflow = async (workflowId: string) => {
-    debugger
     if (!window.confirm("Are you sure you want to delete this workflow?")) {
       return;
     }
@@ -465,7 +464,7 @@ const WorkflowProgress: React.FC<WorkflowProgressProps> = ({ userId, allVillageD
               <div className="text-3xl font-bold text-green-600">
                 {getProgressPercentage(selectedWorkflow.workflow_steps)}%
               </div>
-              <div className="text-gray-600">Progress</div>
+              <div className="text-gray-600">Completion</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-blue-600">
