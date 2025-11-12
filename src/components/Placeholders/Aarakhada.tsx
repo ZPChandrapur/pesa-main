@@ -92,7 +92,7 @@ const loadVillages = async () => {
     let data = await villageService.getAll();
 
     // ✅ If roleName is 'district', set all data as it is
-    if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
+    if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) ) {
       setVillages(data);
     } else {
       // ✅ For other roles, filter based on userId
