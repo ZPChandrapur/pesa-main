@@ -73,7 +73,7 @@ function AppContent() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard userId={userId} roleName={roleName}  />;
       case 'villages':
         return <VillagesList userId={userId} roleName={roleName} />;
       case 'gramPanchayat':
