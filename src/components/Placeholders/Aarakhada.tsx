@@ -86,7 +86,7 @@ export function Aarakhada({ userId, roleName }: { userId: string; roleName: stri
     }
   };
 
-const loadVillages = async () => {debugger;
+const loadVillages = async () => {
   try {
     const { villageService } = await import('../../utils/supabase');
     let data = await villageService.getAll();
