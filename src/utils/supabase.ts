@@ -1129,8 +1129,7 @@ export const pesaWorkOperations = {
         .select("*")
         .eq("village_id", currentWork.village_id)
         .eq("work_category", currentWork.work_category)
-        .single();
-
+        
       if (fetchVillageFinError && fetchVillageFinError.code !== "PGRST116") {
         throw fetchVillageFinError;
       }
@@ -1739,7 +1738,7 @@ export const pesaWorkflowOperations = {
     return data;
   },
 
-async deleteWorkflow(id: string) {debugger
+async deleteWorkflow(id: string) {
     const { error } = await pesaSupabase.from("workflows").delete().eq("id", id);
     if (error) {
       console.error('Error deleting workflow:', error);
