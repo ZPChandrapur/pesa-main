@@ -17,6 +17,7 @@ import { WorkflowStep, Workflow } from '../types';
 import { pesaSupabase } from '../config/supabase';
 import { syncService } from '../utils/syncService';
 import { offlineStorage } from '../utils/offlineStorage';
+import { storageService } from '../utils/storageService';
 
 interface StepEditScreenProps {
   navigation: any;
@@ -33,6 +34,7 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
   const [photos, setPhotos] = useState<string[]>(step.completion_photos || []);
   const [loading, setLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     requestPermissions();
@@ -102,8 +104,24 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
       });
 
       if (!result.canceled && result.assets[0]) {
-        const newPhoto = result.assets[0].uri;
-        setPhotos([...photos, newPhoto]);
+        const localUri = result.assets[0].uri;
+
+        setUploading(true);
+        try {
+          const publicUrl = await storageService.uploadWorkflowPhoto(
+            localUri,
+            workflow.id,
+            step.id
+          );
+          setPhotos([...photos, publicUrl]);
+          Alert.alert('Success', 'Photo uploaded successfully');
+        } catch (uploadError) {
+          console.error('Error uploading photo:', uploadError);
+          Alert.alert('Upload Failed', 'Photo will be saved locally and uploaded when online');
+          setPhotos([...photos, localUri]);
+        } finally {
+          setUploading(false);
+        }
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -120,8 +138,31 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
       });
 
       if (!result.canceled && result.assets.length > 0) {
-        const newPhotos = result.assets.map(asset => asset.uri);
-        setPhotos([...photos, ...newPhotos]);
+        setUploading(true);
+        const uploadedUrls: string[] = [];
+
+        try {
+          for (const asset of result.assets) {
+            try {
+              const publicUrl = await storageService.uploadWorkflowPhoto(
+                asset.uri,
+                workflow.id,
+                step.id
+              );
+              uploadedUrls.push(publicUrl);
+            } catch (uploadError) {
+              console.error('Error uploading photo:', uploadError);
+              uploadedUrls.push(asset.uri);
+            }
+          }
+
+          setPhotos([...photos, ...uploadedUrls]);
+          Alert.alert('Success', `${uploadedUrls.length} photo(s) uploaded successfully`);
+        } catch (error) {
+          console.error('Error during upload process:', error);
+        } finally {
+          setUploading(false);
+        }
       }
     } catch (error) {
       console.error('Error picking image:', error);
@@ -138,9 +179,18 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            const photoUrl = photos[index];
             const updated = photos.filter((_, i) => i !== index);
             setPhotos(updated);
+
+            if (photoUrl.startsWith('http')) {
+              try {
+                await storageService.removeWorkflowPhoto(photoUrl);
+              } catch (error) {
+                console.error('Error removing photo from storage:', error);
+              }
+            }
           },
         },
       ]
@@ -252,13 +302,28 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Completion Photos</Text>
 
+        {uploading && (
+          <View style={styles.uploadingBanner}>
+            <ActivityIndicator color="#3b82f6" />
+            <Text style={styles.uploadingText}>Uploading photos...</Text>
+          </View>
+        )}
+
         <View style={styles.photoButtons}>
-          <TouchableOpacity style={styles.photoButton} onPress={takePhoto}>
+          <TouchableOpacity
+            style={styles.photoButton}
+            onPress={takePhoto}
+            disabled={uploading}
+          >
             <Text style={styles.photoButtonIcon}>📷</Text>
             <Text style={styles.photoButtonText}>Take Photo</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.photoButton, styles.photoButtonSecondary]} onPress={pickImage}>
+          <TouchableOpacity
+            style={[styles.photoButton, styles.photoButtonSecondary]}
+            onPress={pickImage}
+            disabled={uploading}
+          >
             <Text style={styles.photoButtonIcon}>🖼️</Text>
             <Text style={styles.photoButtonText}>Pick from Gallery</Text>
           </TouchableOpacity>
@@ -466,6 +531,20 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  uploadingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#dbeafe',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  uploadingText: {
+    fontSize: 14,
+    color: '#1e40af',
+    fontWeight: '600',
   },
   helpText: {
     fontSize: 11,
