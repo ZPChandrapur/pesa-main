@@ -510,101 +510,34 @@ export const pesaWorkOperations = {
             await workService.insert(physicalData);
           }
 
-          // ✅ Create work for Grampanchayat: aarakhada_financial table
-          const { data: existingFinancial, error: financialFetchError } = await pesaSupabase
-            .from('aarakhada_financial')
-            .select('*')
-            .eq('village_name', village.village_name)
-            .eq('work_category', data.work_category)
-            .single();
+          const sanctionedAmount = Number(data.admin_approval_amount) || 0;
+          const releasedAmount = Number(data.agreement_approval_amount) || 0;
+          const previousExpenditure = Number(data.previous_expenditure) || 0;
+          const currentExpenditure = Number(data.current_expenditure) || 0;
+          const cumulativeExpenditure = previousExpenditure + currentExpenditure;
+          const remainingFunds = releasedAmount - cumulativeExpenditure;
 
-          if (financialFetchError && financialFetchError.code !== 'PGRST116') {
-            throw financialFetchError;
-          }
+          const financialData = {
+            village_id: data.village_id,
+            village_name: village.village_name,
+            gram_panchayat: village.gram_panchayat,
+            taluka: village.block,
+            district: village.district,
+            work_category: data.work_category,
+            sanctioned_amount: sanctionedAmount,
+            released_amount: releasedAmount,
+            previous_expenditure: previousExpenditure,
+            current_expenditure: currentExpenditure,
+            cumulative_expenditure: cumulativeExpenditure,
+            remaining_funds: remainingFunds,
+            year: data.year || null,
+            added_month: data.added_month || null,
+            work_name: data.work_name,
+            work_type: "financial",
+            created_at: new Date().toISOString(),
+          };
 
-          if (existingFinancial) {
-            // 🔄 Aggregate financial from works table
-            const { data: worksFinancial, error: fetchWorksError } = await pesaSupabase
-              .from("works")
-              .select("admin_approval_amount, agreement_approval_amount")
-              .eq('village_id', data.village_id)
-              .eq("work_category", data.work_category);
-
-            if (fetchWorksError) throw fetchWorksError;
-
-            const aggregatedFinancial = (worksFinancial || []).reduce(
-              (acc, w) => {
-                acc.sanctioned_amount += Number(w.admin_approval_amount) || 0;
-                acc.released_amount += Number(w.agreement_approval_amount) || 0;
-                return acc;
-              },
-              { sanctioned_amount: 0, released_amount: 0 }
-            );
-
-            // calculate using incoming work (data)
-            const calculatedCumulative = (existingFinancial.previous_expenditure || 0) + (existingFinancial.current_expenditure || 0);
-            const villageReleasedAmount = aggregatedFinancial.released_amount ?? existingFinancial.released_amount ?? 0;
-            const calculatedRemaining = villageReleasedAmount - calculatedCumulative;
-
-            await pesaSupabase
-              .from('aarakhada_financial')
-              .update({
-                sanctioned_amount: aggregatedFinancial.sanctioned_amount,
-                released_amount: aggregatedFinancial.released_amount,
-                previous_expenditure: data.previous_expenditure ?? existingFinancial.previous_expenditure ?? 0,
-                current_expenditure: data.current_expenditure ?? existingFinancial.current_expenditure ?? 0,
-                cumulative_expenditure: calculatedCumulative,
-                remaining_funds: calculatedRemaining,
-                updated_at: new Date().toISOString(),
-              })
-              .eq('village_id', data.village_id)
-              .eq('work_category', data.work_category);
-
-          } else {
-            // Insert new financial row
-            const { data: worksFinancial, error: fetchWorksError } = await pesaSupabase
-              .from("works")
-              .select("admin_approval_amount, agreement_approval_amount")
-              .eq("village_id", data.village_id)
-              .eq("work_category", data.work_category);
-
-            if (fetchWorksError) throw fetchWorksError;
-
-            const aggregatedFinancial = (worksFinancial || []).reduce(
-              (acc, w) => {
-                acc.sanctioned_amount += Number(w.admin_approval_amount) || 0;
-                acc.released_amount += Number(w.agreement_approval_amount) || 0;
-                return acc;
-              },
-              { sanctioned_amount: 0, released_amount: 0 }
-            );
-
-            // calculate using new data
-            const calculatedCumulative = (data.previous_expenditure || 0) + (data.current_expenditure || 0);
-            const calculatedRemaining = aggregatedFinancial.released_amount - calculatedCumulative;
-
-            const financialData = {
-              village_id: data.village_id,
-              village_name: village.village_name,
-              gram_panchayat: village.gram_panchayat,
-              taluka: village.block,
-              district: village.district,
-              work_category: data.work_category,
-              sanctioned_amount: aggregatedFinancial.sanctioned_amount,
-              released_amount: aggregatedFinancial.released_amount,
-              previous_expenditure: data.previous_expenditure ?? 0,
-              current_expenditure: data.current_expenditure ?? 0,
-              cumulative_expenditure: calculatedCumulative,
-              remaining_funds: calculatedRemaining,
-              year: data.year || null,
-              added_month: data.added_month || null,
-              work_name: data.work_name,
-              work_type: "financial",
-              created_at: new Date().toISOString(),
-            };
-
-            await workService.insert(financialData);
-          }
+          await workService.insert(financialData);
 
 
           // ✅ Create work for Taluka: taluka_aarakhada_physical table
@@ -1103,76 +1036,72 @@ export const pesaWorkOperations = {
           .eq("work_category", currentWork.work_category);
       }
 
-      // ---------- VILLAGE level (aarakhada_financial) ----------
-      // compute aggregated sanctioned/released (keep this so sanctioned/released are current)
-      const { data: villageWorksFinancial, error: fetchVillageWorksError } = await pesaSupabase
-        .from("works")
-        .select("admin_approval_amount, agreement_approval_amount")
-        .eq("village_id", currentWork.village_id)
-        .eq("work_category", currentWork.work_category);
+      const sanctionedAmount = Number(work.admin_approval_amount ?? currentWork.admin_approval_amount) || 0;
+      const releasedAmount = Number(work.agreement_approval_amount ?? currentWork.agreement_approval_amount) || 0;
 
-      if (fetchVillageWorksError) throw fetchVillageWorksError;
-
-      const aggregatedVillageFinancial = villageWorksFinancial?.reduce(
-        (acc, w) => {
-          acc.sanctioned_amount += Number(w.admin_approval_amount) || 0;
-          acc.released_amount += Number(w.agreement_approval_amount) || 0;
-          return acc;
-        },
-        { sanctioned_amount: 0, released_amount: 0 }
-      ) ?? { sanctioned_amount: 0, released_amount: 0 };
-
-      // fetch existing village row (if any)
-      // fetch existing village row (if any)
       const { data: existingVillageFinancial, error: fetchVillageFinError } = await pesaSupabase
         .from("aarakhada_financial")
         .select("*")
         .eq("village_id", currentWork.village_id)
         .eq("work_category", currentWork.work_category)
-        
+        .eq("work_name", currentWork.work_name)
+        .single();
+
       if (fetchVillageFinError && fetchVillageFinError.code !== "PGRST116") {
         throw fetchVillageFinError;
       }
 
-      // compute cumulative safely (use 0 if row does not exist)
-      const calculatedVillageCumulative =
-        (existingVillageFinancial?.previous_expenditure ?? 0) +
-        (existingVillageFinancial?.current_expenditure ?? 0);
-
-      // use aggregated released_amount (annual received) to compute remaining_funds
-      const villageAnnualReceived = aggregatedVillageFinancial.released_amount || 0;
-      const calculatedVillageRemaining = villageAnnualReceived - calculatedVillageCumulative;
-
       if (existingVillageFinancial) {
-        // update existing
+        const previousExpenditure = Number(work.previous_expenditure ?? existingVillageFinancial.previous_expenditure ?? 0);
+        const currentExpenditure = Number(work.current_expenditure ?? existingVillageFinancial.current_expenditure ?? 0);
+        const cumulativeExpenditure = previousExpenditure + currentExpenditure;
+        const remainingFunds = releasedAmount - cumulativeExpenditure;
+
         await pesaSupabase
           .from("aarakhada_financial")
           .update({
             status: work.current_status ?? existingVillageFinancial.status,
-            sanctioned_amount: aggregatedVillageFinancial.sanctioned_amount,
-            released_amount: aggregatedVillageFinancial.released_amount,
-            expenditure: work.expenditure ?? existingVillageFinancial.expenditure ?? 0,
-            previous_expenditure: work.previous_expenditure ?? existingVillageFinancial.previous_expenditure ?? 0,
-            current_expenditure: work.current_expenditure ?? existingVillageFinancial.current_expenditure ?? 0,
-            cumulative_expenditure: calculatedVillageCumulative,
-            remaining_funds: calculatedVillageRemaining,
+            sanctioned_amount: sanctionedAmount,
+            released_amount: releasedAmount,
+            previous_expenditure: previousExpenditure,
+            current_expenditure: currentExpenditure,
+            cumulative_expenditure: cumulativeExpenditure,
+            remaining_funds: remainingFunds,
             updated_at: new Date().toISOString(),
           })
-          .eq("village_id", currentWork.village_id)
-          .eq("work_category", currentWork.work_category);
+          .eq("id", existingVillageFinancial.id);
       } else {
-        // insert new row
+        const { data: village, error: vError } = await pesaSupabase
+          .from("villages")
+          .select("*")
+          .eq("id", currentWork.village_id)
+          .single();
+        if (vError) throw vError;
+
+        const previousExpenditure = Number(work.previous_expenditure) || 0;
+        const currentExpenditure = Number(work.current_expenditure) || 0;
+        const cumulativeExpenditure = previousExpenditure + currentExpenditure;
+        const remainingFunds = releasedAmount - cumulativeExpenditure;
+
         await pesaSupabase
           .from("aarakhada_financial")
           .insert({
             village_id: currentWork.village_id,
+            village_name: village.village_name,
+            gram_panchayat: village.gram_panchayat,
+            taluka: village.block,
+            district: village.district,
             work_category: currentWork.work_category,
-            previous_expenditure: work.previous_expenditure || 0,
-            current_expenditure: work.current_expenditure || 0,
-            cumulative_expenditure:
-              work.cumulative_expenditure ??
-              (work.previous_expenditure || 0) + (work.current_expenditure || 0),
-            remaining_funds: work.remaining_funds ?? calculatedVillageRemaining,
+            sanctioned_amount: sanctionedAmount,
+            released_amount: releasedAmount,
+            previous_expenditure: previousExpenditure,
+            current_expenditure: currentExpenditure,
+            cumulative_expenditure: cumulativeExpenditure,
+            remaining_funds: remainingFunds,
+            year: currentWork.year || null,
+            added_month: currentWork.added_month || null,
+            work_name: currentWork.work_name,
+            work_type: "financial",
             created_at: new Date().toISOString(),
           });
       }
