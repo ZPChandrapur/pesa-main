@@ -107,14 +107,21 @@ export function AarakhadaTable({
   // Filter works based on access
   const filteredWorks = ['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase())
     ? works // show all works, skip userId check
-    : works.filter(work => {
-      if (!userId) return true;
-      const allowed = villages.some(v =>
-        (v.gram_user_access && v.gram_user_access === userId && work.gram_panchayat === v.gram_panchayat) ||
-        (v.tal_user_access && v.tal_user_access === userId && work.taluka === v.taluka)
-      );
-      return allowed;
-    });
+    : ['taluka'].includes(roleName?.trim().toLowerCase())
+      ? works.filter(work => {
+        if (!userId) return true;
+        return villages.some(v => v.gram_panchayat === work.gram_panchayat);
+      })
+      : works.filter(work => {
+        debugger; // Add this line for debugging
+        if (!userId) return true;
+        const allowed = villages.some(v =>
+          (v.gram_user_access && v.gram_user_access === userId && work.gram_panchayat === v.gram_panchayat) ||
+          (v.tal_user_access && v.tal_user_access === userId && work.taluka === v.taluka)
+        );
+        return allowed;
+      });
+
 
   // PAGINATION:
   const totalPages = Math.ceil(filteredWorks.length / rowsPerPage);
