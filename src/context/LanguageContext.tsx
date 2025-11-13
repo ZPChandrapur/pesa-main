@@ -306,7 +306,7 @@ const translations: Record<Language, Record<string, string>> = {
     addNewWork: 'Add New Work',
     serial_no: 'Serial No',
     workFlowTaluka: 'Taluka',
-    year: 'Year (format:2024-25)',
+    year: 'Year',
     work_name: 'Work Name',
     department: 'Department',
     approval_amount : 'Approval Amount',
