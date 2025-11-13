@@ -69,8 +69,8 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
     try {
       setLoading(true);
       console.log('Loading work dashboard data...');
-      await loadVillages();
-      await loadWorks();
+      const villagesData = await loadVillages();
+      await loadWorks(villagesData);
       console.log('Work dashboard data loaded successfully');
     } catch (error: any) {
       console.error('Error loading data:', error);
@@ -118,13 +118,14 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
       console.log('Filtered villages for user:', filteredVillages.length);
       setVillages(filteredVillages);
+      return data || [];
     } catch (error) {
       console.error('Failed to load villages:', error);
       throw error;
     }
   };
 
-  const loadWorks = async () => {
+  const loadWorks = async (villagesData: any[]) => {
     try {
       const { data, error } = await pesaSupabase
         .from('works')
@@ -142,7 +143,7 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
       if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
         console.log('Filtering works for non-admin user');
-        const allowedVillageIds = allVillages
+        const allowedVillageIds = villagesData
           .filter((v: any) => {
             if (v.tal_user_access === null && v.gram_user_access === null) {
               return false;
