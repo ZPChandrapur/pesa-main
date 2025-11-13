@@ -10,7 +10,7 @@ export function Aarakhada({ userId, roleName }: { userId: string; roleName: stri
     work_name: '',
     work_category: '',
     department: '',
-    tech_approval_no: '',
+     tech_approval_no: '',
     tech_approval_date: '',
     tech_approval_amount: null as number | null,
     admin_approval_no: '',
@@ -182,6 +182,7 @@ const loadVillages = async () => {
       agreement_approval_no: null,
       agreement_approval_date: '',
       agreement_approval_amount: null,
+
       duration: '',
       contractor_name: '',
       village_id: '',
@@ -303,7 +304,7 @@ const loadVillages = async () => {
         {/* Year */}
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">
-            {t('year')}
+            {t('year')} (Format: 2024-25)
             <span className="text-red-500 ml-1">*</span>
           </label>
           <input
