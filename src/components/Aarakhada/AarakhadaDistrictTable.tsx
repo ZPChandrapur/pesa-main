@@ -57,7 +57,7 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
               <th className="px-4 py-3">{t('annualReceivedFund')}</th>
               <th className="px-4 py-3">{t('receivedInterest')}</th>
               <th className="px-4 py-3">{t('remainingFunds')}</th>
-              <th className="px-4 py-3">{t('actions')}</th>
+              {/* <th className="px-4 py-3">{t('actions')}</th> */}
             </tr>
           ) : (
             <tr>
@@ -70,7 +70,7 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
               <th className="px-4 py-3">{t('completedWorks')}</th>
               <th className="px-4 py-3">{t('ongoingWorks')}</th>
               <th className="px-4 py-3">{t('pendingWorks')}</th>
-              <th className="px-4 py-3">{t('actions')}</th>
+              {/* <th className="px-4 py-3">{t('actions')}</th> */}
             </tr>
           )}
         </thead>
@@ -160,11 +160,11 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
                       </td>
                     </>
                   )}
-                  <td className="px-4 py-3 flex gap-2">
+                  {/* <td className="px-4 py-3 flex gap-2">
                     <button className="text-blue-500 hover:text-blue-700" title={t('view')}>
                       <Eye size={18} />
                     </button>
-                  </td>
+                  </td> */}
                 </tr>
               );
             })
