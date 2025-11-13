@@ -39,7 +39,6 @@ export function AarakhadaTable({
   const [editingWork, setEditingWork] = useState<AarakhadaWork | null>(null);
   const [currentMonth, setCurrentMonth] = useState<string>("");
   const [allWorks, setAllWorks] = useState<AarakhadaWork[]>([]);
-
   // Pagination state
   const rowsPerPage = 10; // adjust as needed
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -143,6 +142,7 @@ export function AarakhadaTable({
               <th className="px-4 py-3">{t("month")}</th>
               {workType === "financial" && (
                 <>
+                  <th className="px-4 py-3">{t("workName")}</th>
                   <th className="px-4 py-3">{t("sanctionedAmount")}</th>
                   <th className="px-4 py-3">{t("releasedAmount")}</th>
                   <th className="px-4 py-3">{t("previousMonthExpenditure")}</th>
@@ -212,6 +212,7 @@ export function AarakhadaTable({
                     <td className="px-4 py-3">{getDisplayMonth(work.added_month)}</td>
                     {workType === "financial" ? (
                       <>
+                        <td className="px-4 py-3 text-xs">{work.work_name}</td>
                         <td className="px-4 py-3">{work.sanctioned_amount?.toLocaleString() ?? 0}</td>
                         <td className="px-4 py-3">{work.released_amount?.toLocaleString() ?? 0}</td>
                         <td className="px-4 py-3">{work.previous_expenditure?.toLocaleString() ?? 0}</td>
@@ -222,10 +223,16 @@ export function AarakhadaTable({
                           <button
                             className="text-purple-600 hover:text-purple-800"
                             onClick={() => handleAddClick(work)}
-                            title={t("addWork")}
+                            title={
+                              work.added_month === currentMonth || work.released_amount === 0
+                                ? t("youHaveToUpdateValueFirstOnEditButton")
+                                : t("addWork")
+                            }
+                            disabled={work.added_month === currentMonth || work.released_amount === 0}
                           >
                             <Plus size={18} />
                           </button>
+
                           <button
                             className="text-green-500 hover:text-green-700"
                             onClick={() => onEdit(work)}
