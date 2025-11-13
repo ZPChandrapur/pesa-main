@@ -86,21 +86,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signOut = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-      // Session and user will be cleared by the auth state change listener
-    } catch (error) {
-      console.error('Sign out error:', error);
+ const signOut = async () => {
+  if (!session) {
+    // No session to sign out, just clear state.
+    setUser(null);
+    setSession(null);
+    setLoading(false);
+    return;
+  }
+  setLoading(true);
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error && error.name !== "AuthSessionMissingError") {
       throw error;
-    } finally {
-      setLoading(false);
     }
-  };
+    // Even on 'AuthSessionMissingError', clear user/session
+    setUser(null);
+    setSession(null);
+  } catch (error) {
+    console.error('Sign out error:', error);
+    throw error;
+  } finally {
+    setLoading(false);
+  }
+};
 
   const value = {
     user,
