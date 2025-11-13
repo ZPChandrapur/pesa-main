@@ -117,7 +117,7 @@ const translations: Record<Language, Record<string, string>> = {
     addNewWork: 'नवीन कार्य जोडा',
     serial_no: 'अनुक्रमांक',
     workFlowTaluka: 'तालुका',
-    year: 'वर्ष (format:2024-25)',
+    year: 'वर्ष',
     work_name: 'कामाचे नाव',
     department: 'विभाग',
     approval_amount : 'मंजुरी रक्कम',
