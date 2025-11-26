@@ -9,10 +9,10 @@ export function Aarakhada({ userId, roleName }: { userId: string; roleName: stri
     year: null as string | number | null,
     work_name: '',
     work_category: '',
-    department: '',
-     tech_approval_no: '',
-    tech_approval_date: '',
-    tech_approval_amount: null as number | null,
+    //department: '',
+    // tech_approval_no: '',
+    // tech_approval_date: '',
+    // tech_approval_amount: null as number | null,
     admin_approval_no: '',
     admin_approval_date: '',
     admin_approval_amount: '',
@@ -32,9 +32,9 @@ export function Aarakhada({ userId, roleName }: { userId: string; roleName: stri
   const [pesaGramPanchayats, setPesaGramPanchayats] = useState<any[]>([]);
   const [workCategories] = useState<any[]>([
     { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
-    { id: 'B', name: 'Category B - Social Development', name_mr: 'प्रकार ब - सामाजिक विकास' },
-    { id: 'C', name: 'Category C - Economic Development', name_mr: 'प्रकार क - आर्थिक विकास' },
-    { id: 'D', name: 'Category D - Environmental', name_mr: 'प्रकार ड - पर्यावरण' },
+    { id: 'B', name: 'Category B - Forest Rights Act (FRA) and PESA Implementation', name_mr: 'प्रकार ब - वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी' },
+    { id: 'C', name: 'Category C - Health, Sanitation, and Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता व शिक्षण' },
+    { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation, Water Conservation, Forest Ponds, Wildlife Tourism, and Forest Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
   ]);
   const [editingWork, setEditingWork] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -172,10 +172,10 @@ const loadVillages = async () => {
       year: null,
       work_name: '',
       work_category: '',
-      department: '',
-      tech_approval_no: '',
-      tech_approval_date: '',
-      tech_approval_amount: null,
+      //department: '',
+      // tech_approval_no: '',
+      // tech_approval_date: '',
+      // tech_approval_amount: null,
       admin_approval_no: '',
       admin_approval_date: '',
       admin_approval_amount: '',
