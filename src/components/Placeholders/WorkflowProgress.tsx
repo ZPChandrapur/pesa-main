@@ -740,7 +740,16 @@ const WorkflowProgress: React.FC<WorkflowProgressProps> = ({ userId, allVillageD
                   {!viewMode && (
                     <button
                       type="button"
-                      onClick={handleSaveStep}
+                      onClick={() => {
+                        // Conditional validation: location and photos required only if status is "completed"
+                        if (stepForm.status === 'completed') {
+                          if (!stepForm.location_data || stepForm.completion_photos.length === 0) {
+                            alert('Location and at least one photo are required when status is "Completed".');
+                            return;
+                          }
+                        }
+                        handleSaveStep();
+                      }}
                       className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
                     >
                       <Save className="w-4 h-4" />
