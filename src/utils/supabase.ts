@@ -140,6 +140,21 @@ export const workService = {
 
     // 🔹 Additional logic for financial updates
     if (workData.work_type === "financial") {
+      const worksUpdate: any = {};
+      if (workData.sanctioned_amount !== undefined && workData.sanctioned_amount !== null) {
+        worksUpdate.admin_approval_amount = workData.sanctioned_amount;
+      }
+      if (workData.released_amount !== undefined && workData.released_amount !== null) {
+        worksUpdate.agreement_approval_amount = workData.released_amount;
+      }
+      if (Object.keys(worksUpdate).length) {
+        await pesaSupabase
+          .from("works")
+          .update(worksUpdate)
+          .eq("village_id", workData.village_id)
+          .eq("work_category", workData.work_category)
+          .eq("work_name", workData.work_name);
+      }
       // Fetch village details
       const { data: village, error: vError } = await pesaSupabase
         .from("villages")
@@ -234,6 +249,21 @@ export const workService = {
 
     // 🔹 Additional logic for financial updates
     if (workData.work_type === "financial") {
+      const worksUpdate: any = {};
+      if (workData.sanctioned_amount !== undefined && workData.sanctioned_amount !== null) {
+        worksUpdate.admin_approval_amount = workData.sanctioned_amount;
+      }
+      if (workData.released_amount !== undefined && workData.released_amount !== null) {
+        worksUpdate.agreement_approval_amount = workData.released_amount;
+      }
+      if (Object.keys(worksUpdate).length) {
+        await pesaSupabase
+          .from("works")
+          .update(worksUpdate)
+          .eq("village_id", workData.village_id)
+          .eq("work_category", workData.work_category)
+          .eq("work_name", workData.work_name);
+      }
       // Fetch village details
       const { data: village, error: vError } = await pesaSupabase
         .from("villages")
@@ -526,6 +556,7 @@ export const pesaWorkOperations = {
             work_category: data.work_category,
             sanctioned_amount: sanctionedAmount,
             released_amount: releasedAmount,
+            status: status,
             previous_expenditure: previousExpenditure,
             current_expenditure: currentExpenditure,
             cumulative_expenditure: cumulativeExpenditure,
@@ -1045,7 +1076,6 @@ export const pesaWorkOperations = {
         .eq("village_id", currentWork.village_id)
         .eq("work_category", currentWork.work_category)
         .eq("work_name", currentWork.work_name)
-        .single();
 
       if (fetchVillageFinError && fetchVillageFinError.code !== "PGRST116") {
         throw fetchVillageFinError;
@@ -1069,7 +1099,9 @@ export const pesaWorkOperations = {
             remaining_funds: remainingFunds,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", existingVillageFinancial.id);
+          .eq("village_id", currentWork.village_id)
+          .eq("work_category", currentWork.work_category)
+          .eq("work_name", currentWork.work_name);
       } else {
         const { data: village, error: vError } = await pesaSupabase
           .from("villages")
@@ -1091,6 +1123,7 @@ export const pesaWorkOperations = {
             gram_panchayat: village.gram_panchayat,
             taluka: village.block,
             district: village.district,
+            status: work.current_status,
             work_category: currentWork.work_category,
             sanctioned_amount: sanctionedAmount,
             released_amount: releasedAmount,
@@ -1595,6 +1628,19 @@ export const pesaWorkflowOperations = {
       console.error('Error fetching PESA workflows:', error);
       throw error;
     }
+
+    if (data && Array.isArray(data)) {
+      for (const workflow of data) {
+        if (workflow.status === 'completed' && workflow.work_id) {
+          await pesaSupabase
+            .from("aarakhada_financial")
+            .update({ status: 'completed' })
+          .eq("village_id", workflow.work.village_id)
+          .eq("work_name", workflow.work.work_name);
+        }
+      }
+    }
+
     return data ?? [];
   },
   async create(workflow: any) {
@@ -1622,36 +1668,53 @@ export const pesaWorkflowOperations = {
     return data;
   },
 
-  async updateWorkflow(id: string, updates: any) {
-    const { data, error } = await pesaSupabase
-      .from("workflows")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .select()
+ async updateWorkflow(id: string, updates: any) {
+  const { data, error } = await pesaSupabase
+    .from("workflows")
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating PESA workflow:', error);
+    throw error;
+  }
+
+  if (updates.status === 'completed' && data?.work_id) {
+    const { data: workRow, error: workError } = await pesaSupabase
+      .from("works")
+      .select("work_name, work_category, village_id")
+      .eq("id", data.work_id)
       .single();
-
-    if (error) {
-      console.error('Error updating PESA workflow:', error);
-      throw error;
+    if (workError) {
+      console.error('Error updating work current_status:', workError);
+      throw workError;
     }
 
-    // ✅ Update current_status in works table if workflow is completed
-    if (updates.status === 'completed' && data?.work_id) {
-      const { error: workError } = await pesaSupabase
-        .from("works")
-        .update({ current_status: 'completed' })
-        .eq("id", data.work_id);
-      if (workError) {
-        console.error('Error updating work current_status:', workError);
-        throw workError;
-      }
+    const { error: workStatusError } = await pesaSupabase
+      .from("works")
+      .update({ current_status: 'completed' })
+      .eq("id", data.work_id);
+    if (workStatusError) {
+      console.error('Error updating work current_status:', workStatusError);
+      throw workStatusError;
     }
 
-    return data;
-  },
+    const { error: financialError } = await pesaSupabase
+      .from("aarakhada_financial")
+      .update({ status: 'completed' })
+      .eq("village_id", workRow.village_id)
+    if (financialError) {
+      console.error('Error updating aarakhada_financial status:', financialError);
+      throw financialError;
+    }
+  }
+  return data;
+},
 
   async updateStep(id: string, updates: any) {
     const { data, error } = await pesaSupabase
