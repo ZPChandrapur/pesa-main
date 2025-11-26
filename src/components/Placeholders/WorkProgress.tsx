@@ -13,13 +13,13 @@ interface PesaWork {
   taluka: string;
   year?: string | number;
   work_name: string;
-  department: string;
+  //department: string;
   admin_approval_no: string;
   admin_approval_date: string;
   admin_approval_amount?: string;
-  tech_approval_no?: string;
-  tech_approval_date?: string;
-  tech_approval_amount?: number;
+  // tech_approval_no?: string;
+  // tech_approval_date?: string;
+  // tech_approval_amount?: number;
   agreement_approval_no?: number;
   agreement_approval_date?: string;
   agreement_approval_amount?: string;
@@ -44,11 +44,11 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
   const [works, setWorks] = useState<PesaWork[]>([]);
   const [availableWorkNames, setAvailableWorkNames] = useState<any[]>([]);
   const [pesaGrampanchayats, setPesaGrampanchayats] = useState<string[]>([]);
-  const [workCategories, setWorkCategories] = useState([
+  const [workCategories, setWorkCategories] = useState( [
     { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
-    { id: 'B', name: 'Category B - Social Development', name_mr: 'प्रकार ब - सामाजिक विकास' },
-    { id: 'C', name: 'Category C - Economic Development', name_mr: 'प्रकार क - आर्थिक विकास' },
-    { id: 'D', name: 'Category D - Environmental', name_mr: 'प्रकार ड - पर्यावरण' },
+    { id: 'B', name: 'Category B - Forest Rights Act (FRA) and PESA Implementation', name_mr: 'प्रकार ब - वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी' },
+    { id: 'C', name: 'Category C - Health, Sanitation, and Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता व शिक्षण' },
+    { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation, Water Conservation, Forest Ponds, Wildlife Tourism, and Forest Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
   ]);
   const [villages, setVillages] = useState<{ id: string; village_name: string; village_name_mr?: string }[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -78,14 +78,14 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     taluka: '',
     year: '',
     work_name: '',
-    department: '',
+    //department: '',
     current_status: '',
     admin_approval_no: '',
     admin_approval_date: '',
     admin_approval_amount: '',
-    tech_approval_no: '',
-    tech_approval_date: '',
-    tech_approval_amount: '',
+    // tech_approval_no: '',
+    // tech_approval_date: '',
+    // tech_approval_amount: '',
     agreement_approval_no: '',
     agreement_approval_date: '',
     agreement_approval_amount: '',
@@ -315,14 +315,14 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
       taluka: work.taluka || '',
       year: work.year !== undefined && work.year !== null ? String(work.year) : '',
       work_name: work.work_name || '',
-      department: work.department || '',
+      //department: work.department || '',
       current_status: work.current_status || '',
       admin_approval_no: work.admin_approval_no || '',
       admin_approval_date: work.admin_approval_date || '',
       admin_approval_amount: work.admin_approval_amount ? String(work.admin_approval_amount) : '',
-      tech_approval_no: work.tech_approval_no || '',
-      tech_approval_date: work.tech_approval_date || '',
-      tech_approval_amount: work.tech_approval_amount ? String(work.tech_approval_amount) : '',
+      // tech_approval_no: work.tech_approval_no || '',
+      // tech_approval_date: work.tech_approval_date || '',
+      // tech_approval_amount: work.tech_approval_amount ? String(work.tech_approval_amount) : '',
       agreement_approval_no: work.agreement_approval_no ? String(work.agreement_approval_no) : '',
       agreement_approval_date: work.agreement_approval_date || '',
       agreement_approval_amount: work.agreement_approval_amount ? String(work.agreement_approval_amount) : '',
@@ -368,14 +368,14 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
       taluka: '',
       year: '',
       work_name: '',
-      department: '',
+      //department: '',
       current_status: '',
       admin_approval_no: '',
       admin_approval_date: '',
       admin_approval_amount: '',
-      tech_approval_no: '',
-      tech_approval_date: '',
-      tech_approval_amount: '',
+      // tech_approval_no: '',
+      // tech_approval_date: '',
+      // tech_approval_amount: '',
       agreement_approval_no: '',
       agreement_approval_date: '',
       agreement_approval_amount: '',
@@ -853,7 +853,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                     readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
                   />
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('department')}</label>
                   <input
                     type="text"
@@ -861,7 +861,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                   />
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('status')}</label>
                   <select
@@ -887,7 +887,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                       'taluka',
                       'year',
                       'work_name',
-                      'department',
+                      //'department',
                       'current_status',
                     ].includes(field)
                   )
