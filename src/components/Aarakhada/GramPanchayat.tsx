@@ -30,11 +30,11 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
   const [editingWork, setEditingWork] = useState<AarakhadaWork | null>(null);
   const [viewMode, setViewMode] = useState(false);
 
-  const workCategories = [
+   const workCategories = [
     { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
-    { id: 'B', name: 'Category B - Social Development', name_mr: 'प्रकार ब - सामाजिक विकास' },
-    { id: 'C', name: 'Category C - Economic Development', name_mr: 'प्रकार क - आर्थिक विकास' },
-    { id: 'D', name: 'Category D - Environmental', name_mr: 'प्रकार ड - पर्यावरण' }
+    { id: 'B', name: 'Category B - Forest Rights Act (FRA) and PESA Implementation', name_mr: 'प्रकार ब - वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी' },
+    { id: 'C', name: 'Category C - Health, Sanitation, and Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता व शिक्षण' },
+    { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation, Water Conservation, Forest Ponds, Wildlife Tourism, and Forest Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
   ];
 
   const years = ['2022-23', '2023-24', '2024-25', '2025-26'];
