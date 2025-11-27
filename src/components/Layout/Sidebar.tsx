@@ -27,7 +27,7 @@ const navItems: NavItem[] = [
   { id: 'gramPanchayat', icon: Building2, labelKey: 'gramPanchayat' },
   { id: 'taluka', icon: Building2, labelKey: 'taluka' },
   { id: 'district', icon: Building2, labelKey: 'district' },
-  // { id: 'funds', icon: Banknote, labelKey: 'distributedFunds' },
+  { id: 'funds', icon: Banknote, labelKey: 'distributedFunds' },
 ];
 
 export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: SidebarProps) {
@@ -44,7 +44,7 @@ export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: Si
     allowedNavs = [
       "dashboard", "villages", "aarakhada", "workProgress","gramPanchayat", "taluka"
     ];
-  } else if (roleName === "district"&& roleName === "developer" && roleName === "super_admin") {
+  } else if (roleName === "district") {
     allowedNavs = [
       "dashboard", "villages", "aarakhada", "workProgress", "gramPanchayat", "taluka", "district"
     ];
@@ -67,7 +67,7 @@ export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: Si
             "linear-gradient(180deg, rgba(16,24,39,0.9) 0%, rgba(20,36,56,0.94) 75%, rgba(16,24,39,0.97) 100%)"
         }}
       />
-      <div className="relative z-20 h-full flex flex-col p-5">
+      <div className="relative z-20 h-full max-h-screen flex flex-col p-5 overflow-y-auto">
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-2xl flex items-center justify-center shadow-lg">

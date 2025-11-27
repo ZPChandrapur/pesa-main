@@ -30,11 +30,11 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
   const [editingWork, setEditingWork] = useState<AarakhadaWork | null>(null);
   const [viewMode, setViewMode] = useState(false);
 
-  const workCategories = [
+   const workCategories = [
     { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
-    { id: 'B', name: 'Category B - Social Development', name_mr: 'प्रकार ब - सामाजिक विकास' },
-    { id: 'C', name: 'Category C - Economic Development', name_mr: 'प्रकार क - आर्थिक विकास' },
-    { id: 'D', name: 'Category D - Environmental', name_mr: 'प्रकार ड - पर्यावरण' }
+    { id: 'B', name: 'Category B - Forest Rights Act (FRA) and PESA Implementation', name_mr: 'प्रकार ब - वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी' },
+    { id: 'C', name: 'Category C - Health, Sanitation, and Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता व शिक्षण' },
+    { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation, Water Conservation, Forest Ponds, Wildlife Tourism, and Forest Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
   ];
 
   const years = ['2022-23', '2023-24', '2024-25', '2025-26'];
@@ -257,20 +257,49 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
       const accessibleVillageIds = new Set(villages.map(v => v.id));
       return works.filter(w => accessibleVillageIds.has(w.village_id));
     })();
+const getUniqueWorkSum = (
+  works: AarakhadaWork[],
+  valueKey: keyof AarakhadaWork
+): number => {
+  if (isNoVillages || !works.length) return 0;
 
+  // Map for each key, select the record with latest month/year
+  const uniqueWorksMap = new Map<string, AarakhadaWork>();
+  for (const work of works) {
+    if (!work.work_name || !work.work_category || !work.village_id) continue;
+    const key = `${work.work_name}-${work.work_category}-${work.village_id}`;
+    const existing = uniqueWorksMap.get(key);
+    // If no existing, or this work is later, replace
+    if (
+      !existing ||
+      (work.added_month && existing.added_month &&
+        new Date(work.added_month) > new Date(existing.added_month))
+    ) {
+      uniqueWorksMap.set(key, work);
+    }
+  }
+
+  let sum = 0;
+  for (const work of uniqueWorksMap.values()) {
+    const value = work[valueKey];
+    if (typeof value === 'number' && !isNaN(value)) {
+      sum += value;
+    }
+  }
+  return sum;
+};
 
   const totalVillages = isNoVillages ? 0 : villages.length;
-  const totalWorks = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (w.sanctioned_works || 0), 0);
-  const totalExpenditure = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (Number(w.current_expenditure) || 0), 0);
-  const totalSanctionedWorks = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (w.sanctioned_works || 0), 0);
-  const totalCompletedWorks = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (w.completed_works || 0), 0);
-  const totalOngoingWorks = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (w.ongoing_works || 0), 0);
-  const totalPendingWorks = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (w.pending_works || 0), 0);
-  const totalReleasedAmount = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (Number(w.released_amount) || 0), 0);
-  const totalPreviousMonthExpenditure = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (Number(w.previous_expenditure) || 0), 0);
-  const totalCurrentMonthExpenditure = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (Number(w.current_expenditure) || 0), 0);
-  const totalCumulativeExpenditure = isNoVillages ? 0 : accessibleWorks.reduce((sum, w) => sum + (Number(w.cumulative_expenditure) || 0), 0);
-
+  const totalWorks = getUniqueWorkSum(accessibleWorks, 'sanctioned_works');
+  const totalExpenditure = getUniqueWorkSum(accessibleWorks, 'current_expenditure');
+  const totalSanctionedWorks = getUniqueWorkSum(accessibleWorks, 'sanctioned_works');
+  const totalCompletedWorks = getUniqueWorkSum(accessibleWorks, 'completed_works');
+  const totalOngoingWorks = getUniqueWorkSum(accessibleWorks, 'ongoing_works');
+  const totalPendingWorks = getUniqueWorkSum(accessibleWorks, 'pending_works');
+  const totalReleasedAmount = getUniqueWorkSum(accessibleWorks, 'released_amount');
+  const totalPreviousMonthExpenditure = getUniqueWorkSum(accessibleWorks, 'previous_expenditure');
+  const totalCurrentMonthExpenditure = getUniqueWorkSum(accessibleWorks, 'current_expenditure');
+  const totalCumulativeExpenditure = getUniqueWorkSum(accessibleWorks, 'cumulative_expenditure');
   const gramPanchayatNames = Array.from(new Set(villages.map(v => v.gram_panchayat))).filter(Boolean);
 
   const labelColorsMap = {

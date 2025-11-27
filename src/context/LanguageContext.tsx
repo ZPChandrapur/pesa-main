@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { Language } from '../types';
+import { release } from 'process';
 
 interface LanguageContextType {
   language: Language;
@@ -121,12 +122,12 @@ const translations: Record<Language, Record<string, string>> = {
     work_name: 'कामाचे नाव',
     department: 'विभाग',
     approval_amount : 'मंजुरी रक्कम',
-    admin_approval_no: 'प्रशासकीय मंजुरी क्रमांक',
-    admin_approval_date: 'प्रशासकीय मंजुरी दिनांक',
-    admin_approval_amount: 'प्रशासकीय मंजुरी रक्कम',
-    tech_approval_no: 'तांत्रिक मंजुरी क्रमांक',
-    tech_approval_date: 'तांत्रिक मंजुरी दिनांक',
-    tech_approval_amount: 'तांत्रिक मंजुरी रक्कम',
+    admin_approval_no: 'तांत्रिक/प्रशासकीय मंजुरी क्रमांक',
+    admin_approval_date: 'तांत्रिक/प्रशासकीय मंजुरी दिनांक',
+    admin_approval_amount: 'तांत्रिक/प्रशासकीय मंजुरी रक्कम',
+   // tech_approval_no: 'तांत्रिक मंजुरी क्रमांक',
+    // tech_approval_date: 'तांत्रिक मंजुरी दिनांक',
+    // tech_approval_amount: 'तांत्रिक मंजुरी रक्कम',
     agreement_approval_no: 'कार्य आरंभ आदेश क्रमांक',
     agreement_approval_date: 'कार्य आरंभ आदेश दिनांक',
     agreement_approval_amount: 'प्राप्त निधी',
@@ -193,7 +194,10 @@ const translations: Record<Language, Record<string, string>> = {
     selectPesaVillageWorkAndBuildWorkflow: 'पेसा गाव काम निवडा आणि सानुकूल टप्प्यांसह वर्कफ्लो तयार करा',
     selectWorkToStartBuildingWorkflow: 'वर्कफ्लो तयार करण्यासाठी काम निवडा',
     selectPesaVillageWorkWorkflowToTrackProgressAndManageSteps: 'प्रगती ट्रॅक करण्यासाठी आणि टप्पे व्यवस्थापित करण्यासाठी पेसा गाव काम वर्कफ्लो निवडा',
-    
+    progressTitle: 'काम सुरू आहे, तुम्ही रक्कम संपादित करू शकत नाही',
+    releaseAmountTitle: 'प्राप्त निधी नाही, तुम्ही काम जोडू शकत नाही',
+    sameMonthEntryTitle: 'या महिन्यासाठी नोंद आधीच अस्तित्वात आहे',
+
     // Authentication
     signIn: 'प्रवेश करा',
     signOut: 'बाहेर पडा',
@@ -310,12 +314,12 @@ const translations: Record<Language, Record<string, string>> = {
     work_name: 'Work Name',
     department: 'Department',
     approval_amount : 'Approval Amount',
-    admin_approval_no: 'Admin Approval No',
-    admin_approval_date: 'Admin Approval Date',
-    admin_approval_amount: 'Admin Approval Amount',
-    tech_approval_no: 'Tech Approval No',
-    tech_approval_date: 'Tech Approval Date',
-    tech_approval_amount: 'Tech Approval Amount',
+    admin_approval_no: 'Tech/Admin Approval No',
+    admin_approval_date: 'Tech/Admin Approval Date',
+    admin_approval_amount: 'Tech/Admin Approval Amount',
+    // tech_approval_no: 'Tech Approval No',
+    // tech_approval_date: 'Tech Approval Date',
+    // tech_approval_amount: 'Tech Approval Amount',
     agreement_approval_no: 'Work Commencement Order No',
     agreement_approval_date: 'Work Commencement Order Date',
     agreement_approval_amount: 'Released Amount',
@@ -381,6 +385,9 @@ const translations: Record<Language, Record<string, string>> = {
     selectPesaVillageWorkAndBuildWorkflow: 'Select PESA village work and build workflow with custom steps',
     selectWorkToStartBuildingWorkflow: 'Select a work to start building workflow',
     selectPesaVillageWorkWorkflowToTrackProgressAndManageSteps: 'Select a PESA village work workflow to track progress and manage steps',
+    progressTitle: 'Work is in progress, you cannot edit amount',
+    releaseAmountTitle: 'No released amount, you cannot add work',
+    sameMonthEntryTitle: 'Entry for the same month already exists',
 
     // Authentication
     signIn: 'Sign In',

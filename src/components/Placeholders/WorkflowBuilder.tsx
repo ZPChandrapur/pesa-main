@@ -10,7 +10,7 @@ interface PesaWork {
   id: string;
   taluka: string;
   work_name: string;
-  department: string;
+  //department: string;
   current_status?: string;
   priority?: string;
   contractor_name?: string;
@@ -255,7 +255,7 @@ const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ userId, roleName, all
                 </button>
               </div>
               <p className="text-emerald-700 text-xs mb-2 line-clamp-2">{selectedWork.note}</p>
-              <div className="flex flex-wrap gap-2">
+              {/* <div className="flex flex-wrap gap-2">
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getRoleColor(selectedWork.department ?? '')}`}>
                   {t(selectedWork.department ?? '')}
                 </span>
@@ -266,7 +266,7 @@ const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ userId, roleName, all
                   <Flag className="w-2 h-2 mr-1" />
                   {t(selectedWork.priority ?? 'medium')}
                 </span>
-              </div>
+              </div> */}
               <div className="flex items-center mt-2 text-xs text-emerald-600">
                 <User className="w-3 h-3 mr-1" />
                 {selectedWork.contractor_name || '-'}
@@ -297,14 +297,14 @@ const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ userId, roleName, all
                     <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
                   </div>
                   <p className="text-xs text-gray-600 mb-2 line-clamp-2">{work.note}</p>
-                  <div className="flex items-center space-x-2">
+                  {/* <div className="flex items-center space-x-2">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getRoleColor(work.department ?? '')}`}>
                       {t(work.department ?? '')}
                     </span>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white ${getPriorityColor(work.priority ?? 'medium')}`}>
                       {t(work.priority ?? 'medium')}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
               ))}
 

@@ -39,7 +39,6 @@ export function AarakhadaTable({
   const [editingWork, setEditingWork] = useState<AarakhadaWork | null>(null);
   const [currentMonth, setCurrentMonth] = useState<string>("");
   const [allWorks, setAllWorks] = useState<AarakhadaWork[]>([]);
-
   // Pagination state
   const rowsPerPage = 10; // adjust as needed
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -64,6 +63,16 @@ export function AarakhadaTable({
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
     const cm = `${months[now.getMonth()]}-${now.getFullYear()}`;
+    const duplicateExists = works.some(w =>
+      w.work_type === 'financial' &&
+      (w.village_name || '').trim() === (work.village_name || '').trim() &&
+      w.work_category === work.work_category &&
+      (w.work_name || '').trim() === (work.work_name || '').trim() &&
+      w.added_month === cm
+    );
+    if (duplicateExists) {
+      return;
+    }
     setEditingWork({
       ...work,
       added_month: cm,
@@ -113,7 +122,6 @@ export function AarakhadaTable({
         return villages.some(v => v.gram_panchayat === work.gram_panchayat);
       })
       : works.filter(work => {
-        debugger; // Add this line for debugging
         if (!userId) return true;
         const allowed = villages.some(v =>
           (v.gram_user_access && v.gram_user_access === userId && work.gram_panchayat === v.gram_panchayat) ||
@@ -143,6 +151,7 @@ export function AarakhadaTable({
               <th className="px-4 py-3">{t("month")}</th>
               {workType === "financial" && (
                 <>
+                  <th className="px-4 py-3">{t("workName")}</th>
                   <th className="px-4 py-3">{t("sanctionedAmount")}</th>
                   <th className="px-4 py-3">{t("releasedAmount")}</th>
                   <th className="px-4 py-3">{t("previousMonthExpenditure")}</th>
@@ -212,6 +221,7 @@ export function AarakhadaTable({
                     <td className="px-4 py-3">{getDisplayMonth(work.added_month)}</td>
                     {workType === "financial" ? (
                       <>
+                        <td className="px-4 py-3 text-xs">{work.work_name}</td>
                         <td className="px-4 py-3">{work.sanctioned_amount?.toLocaleString() ?? 0}</td>
                         <td className="px-4 py-3">{work.released_amount?.toLocaleString() ?? 0}</td>
                         <td className="px-4 py-3">{work.previous_expenditure?.toLocaleString() ?? 0}</td>
@@ -222,17 +232,48 @@ export function AarakhadaTable({
                           <button
                             className="text-purple-600 hover:text-purple-800"
                             onClick={() => handleAddClick(work)}
-                            title={t("addWork")}
+                            title={
+                              work.released_amount === 0
+                                ? t('releaseAmountTitle')
+                                : (() => {
+                                    const now = new Date();
+                                    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                                    const cm = `${months[now.getMonth()]}-${now.getFullYear()}`;
+                                    const exists = works.some(w => w.work_type === 'financial' && (w.village_name || '').trim() === (work.village_name || '').trim() && w.work_category === work.work_category && (w.work_name || '').trim() === (work.work_name || '').trim() && w.added_month === cm);
+                                    return exists ? t('sameMonthEntryTitle') : t('addWork');
+                                  })()
+                            }
+                            disabled={
+                              work.released_amount === 0 || (() => {
+                                const now = new Date();
+                                const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                                const cm = `${months[now.getMonth()]}-${now.getFullYear()}`;
+                                const exists = works.some(w => w.work_type === 'financial' && (w.village_name || '').trim() === (work.village_name || '').trim() && w.work_category === work.work_category && (w.work_name || '').trim() === (work.work_name || '').trim() && w.added_month === cm);
+                                return exists;
+                              })()
+                            }
                           >
                             <Plus size={18} />
                           </button>
+
                           <button
                             className="text-green-500 hover:text-green-700"
-                            onClick={() => onEdit(work)}
-                            title={t("edit")}
+                            onClick={() => {
+                              const status = (work.status || '').trim();
+                              if (status === 'in_progress') {
+                                return; 
+                              }
+                              onEdit(work);
+                            }}
+                            title={((work.status || '').trim() === 'in_progress' || (work.status || '').trim() === 'pending')
+                              ? t('progressTitle')
+                              : t('edit')}
+                            disabled={(work.status || '').trim() === 'in_progress' || (work.status || '').trim() === 'pending'}
                           >
                             <Edit size={18} />
                           </button>
+
+
                           <button
                             className="text-blue-500 hover:text-blue-700"
                             onClick={() => onView(work)}
