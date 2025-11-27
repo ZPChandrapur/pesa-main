@@ -25,7 +25,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs camera access to capture work progress photos.",
         "NSLocationWhenInUseUsageDescription": "This app needs location access to track work site locations.",
-        "NSPhotoLibraryUsageDescription": "This app needs photo library access to select work photos."
+        "NSPhotoLibraryUsageDescription": "This app needs photo library access to select work photos.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -42,7 +43,9 @@
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.INTERNET",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.DETECT_SCREEN_CAPTURE"
       ]
     },
     "web": {
