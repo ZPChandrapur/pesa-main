@@ -10,8 +10,8 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
-  const { t, language } = useLanguage();
-  const { signIn, loading } = useAuth();
+  const { language } = useLanguage();
+  const { loading } = useAuth();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -32,17 +32,15 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
         password: formData.password,
       });
 
-      if (signInError) {
-        throw signInError;
-      }
+      if (signInError) throw signInError;
 
       if (!data.user) {
         setError(language === 'mr' ? 'लॉगिन अयशस्वी' : 'Login failed');
         return;
       }
 
-      // Fetch role_id from user_roles table based on authenticated user id
-      const { data: roleData, error: roleError } = await supabase
+      // Fetch role_id
+      let { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role_id')
         .eq('user_id', data.user.id)
@@ -55,12 +53,29 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
         return;
       }
 
-      const roleId = roleData?.role_id ?? null;
+      let roleId = roleData?.role_id ?? null;
       let roleName: string | null = null;
 
-      // ✅ ACCESS CHECK - BLOCK LOGIN IF NO PERMISSION FOR 'pesa'
-      if (roleId !== null) {
-        const { data: accessData, error: accessError } = await supabase
+      // === TALUKA EMAILS (SPECIAL BYPASS) ===
+      const talukaEmails = [
+        'bdopskorpana@gmail.com',
+        'bdopsrajura@gmail.com',
+        'bdopsjiwati@gmail.com'
+      ];
+
+      const isTalukaEmail = talukaEmails.includes(
+        formData.email.trim().toLowerCase()
+      );
+
+      // If taluka email => force roleId + roleName override
+      if (isTalukaEmail) {
+        roleId = 7;            // ← Your required taluka roleId
+        roleName = 'taluka';   // ← Your required roleName
+      }
+
+      // === ACCESS CHECK — SKIP if taluka email ===
+      if (roleId !== null && !isTalukaEmail) {
+        const { data: accessData } = await supabase
           .from('application_permissions')
           .select('id')
           .eq('role_id', roleId)
@@ -68,43 +83,36 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
           .maybeSingle();
 
         if (!accessData) {
-          alert(language === 'mr' ? 'आपल्याला PESA ॲप्लिकेशनचा प्रवेश नाही' : 'You do not have access to PESA application');
+          alert(language === 'mr'
+            ? 'आपल्याला PESA ॲप्लिकेशनचा प्रवेश नाही'
+            : 'You do not have access to PESA application');
           await supabase.auth.signOut();
           return;
         }
       }
 
-      if (roleId !== null) {
-        // Now fetch the role name from roles table
+      // Fetch roleName normally ONLY if not taluka email
+      if (!isTalukaEmail && roleId !== null) {
         const { data: rolesData, error: rolesError } = await supabase
           .from('roles')
           .select('name')
           .eq('id', roleId)
           .single();
 
-        if (rolesError) {
-          console.error('Role name fetch error:', rolesError);
-          setError(language === 'mr' ? 'भूमिका नाव मिळवण्यात त्रुटी' : 'Error fetching role name');
-          roleName = null;
-        } else {
+        if (!rolesError) {
           roleName = rolesData?.name ?? null;
         }
       }
 
-      // Pass roleId, roleName, and userId up
+      // Pass roleId, roleName, userId
       onRoleIdFetch(roleId, roleName, data.user.id);
 
-      // Persist role info in localStorage
-      if (roleId !== null) {
-        localStorage.setItem('roleId', String(roleId));
-      } else {
-        localStorage.removeItem('roleId');
-      }
-      if (roleName !== null) {
-        localStorage.setItem('roleName', roleName);
-      } else {
-        localStorage.removeItem('roleName');
-      }
+      // Persist
+      if (roleId !== null) localStorage.setItem('roleId', String(roleId));
+      else localStorage.removeItem('roleId');
+
+      if (roleName !== null) localStorage.setItem('roleName', roleName);
+      else localStorage.removeItem('roleName');
 
     } catch (err: any) {
       console.error('Login error:', err);
@@ -155,7 +163,7 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
         {/* Login Form */}
         <div>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Field */}
+            {/* Email */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">
                 {language === 'mr' ? 'ईमेल पत्ता' : 'Email Address'}
@@ -174,7 +182,7 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
               </div>
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-gray-700">
                 {language === 'mr' ? 'पासवर्ड' : 'Password'}
@@ -201,14 +209,14 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
               </div>
             </div>
 
-            {/* Error Message */}
+            {/* Error */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
                 <p className="text-red-600 text-sm font-medium">{error}</p>
               </div>
             )}
 
-            {/* Login Button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={loading}
@@ -231,8 +239,7 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
             <p className="text-sm text-gray-500">
               {language === 'mr'
                 ? `© ${new Date().getFullYear()} जिल्हा परिषद चंद्रपूर, महाराष्ट्र शासन. सर्व हक्क राखीव.`
-                : `© ${new Date().getFullYear()} ZP Chandrapur, Govt of Maharashtra. All rights reserved.`
-              }
+                : `© ${new Date().getFullYear()} ZP Chandrapur, Govt of Maharashtra. All rights reserved.`}
             </p>
           </div>
         </div>
