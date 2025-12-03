@@ -44,7 +44,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
   const [works, setWorks] = useState<PesaWork[]>([]);
   const [availableWorkNames, setAvailableWorkNames] = useState<any[]>([]);
   const [pesaGrampanchayats, setPesaGrampanchayats] = useState<string[]>([]);
-  const [workCategories, setWorkCategories] = useState( [
+  const [workCategories, setWorkCategories] = useState([
     { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
     { id: 'B', name: 'Category B - Forest Rights Act (FRA) and PESA Implementation', name_mr: 'प्रकार ब - वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी' },
     { id: 'C', name: 'Category C - Health, Sanitation, and Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता व शिक्षण' },
@@ -251,7 +251,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
   };
 
   const handleWorkClick = async (work: PesaWork) => {
-    
+
     try {
       const workflowsData = await pesaWorkflowOperations.getAll();
 
@@ -585,13 +585,15 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
       )}
       {/* Filters */}
       {activeTab === 'dashboard' && (
-        <div className="flex flex-wrap items-center gap-6 mb-4">
-          <div className="flex flex-col">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
+
+          {/* Year Filter */}
+          <div className="flex flex-col w-full">
             <label className="font-bold text-gray-700">{t('year')}</label>
             <select
               value={yearFilter}
               onChange={e => setYearFilter(e.target.value)}
-              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 w-full"
             >
               <option value="all">{t('All')}</option>
               {uniqueYears.map(year => (
@@ -599,12 +601,14 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
               ))}
             </select>
           </div>
-          <div className="flex flex-col">
+
+          {/* Work Category Filter */}
+          <div className="flex flex-col w-full">
             <label className="font-bold text-gray-700">{t('workCategory')}</label>
             <select
               value={workCategoryFilter}
               onChange={e => setWorkCategoryFilter(e.target.value)}
-              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 w-full"
             >
               <option value="all">{t('All')}</option>
               {workCategories.map(cat => (
@@ -614,12 +618,14 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
               ))}
             </select>
           </div>
-          <div className="flex flex-col">
+
+          {/* Status Filter */}
+          <div className="flex flex-col w-full">
             <label className="font-bold text-gray-700">{t('Filter by Status')}</label>
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value as any)}
-              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
+              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 w-full"
             >
               <option value="all">{t('All')}</option>
               <option value="pending">{t('pending')}</option>
@@ -627,6 +633,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
               <option value="completed">{t('completed')}</option>
             </select>
           </div>
+
         </div>
       )}
       {/* Works Table */}
@@ -892,7 +899,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                     ].includes(field)
                   )
                     return null;
-                  const isRequired = field === 'agreement_approval_amount'; 
+                  const isRequired = field === 'agreement_approval_amount';
                   return (
                     <div key={field}>
                       <label className="block text-sm font-bold text-gray-700 mb-2">
