@@ -65,7 +65,6 @@ export const LoginScreen: React.FC = () => {
             />
           </View>
           <Text style={styles.title}>PESA Work Tracking </Text>
-          <Text style={styles.subtitle}>Zilla Parishad, Chandrapur</Text>
           <Text style={styles.helper}>Login to continue</Text>
 
         </View>
@@ -119,7 +118,7 @@ export const LoginScreen: React.FC = () => {
           <Text style={styles.footerSubtext}>
             For authorized users only
           </Text>
-          <Text style={styles.copyright}>© 2025 ZP Chandrapur, Govt of Maharashtra. All rights reserved.</Text>
+          {/* <Text style={styles.copyright}>© 2025 Dpulseai All rights reserved.</Text> */}
         </View>
         </ScrollView>
       </KeyboardAvoidingView>
