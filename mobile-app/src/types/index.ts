@@ -12,10 +12,15 @@ export interface WorkflowStep {
     longitude: number;
     address: string;
     location_name: string;
-  };
+  } | null;
   location_name?: string;
   completed_at?: string;
   created_at?: string;
+  photo_metas?: Array<{
+    latitude?: number;
+    longitude?: number;
+    accuracy?: number;
+  }>;
 }
 
 export interface Workflow {

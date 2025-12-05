@@ -32,6 +32,7 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
   const [locationName, setLocationName] = useState(step.location_name || step.location_data?.location_name || '');
   const [locationData, setLocationData] = useState(step.location_data || null);
   const [photos, setPhotos] = useState<string[]>(step.completion_photos || []);
+  const [photoMetas, setPhotoMetas] = useState<Array<{ latitude?: number; longitude?: number; accuracy?: number }>>(step.photo_metas || []);
   const [loading, setLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -99,7 +100,6 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [4, 3],
         quality: 0.7,
       });
 
@@ -114,6 +114,18 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
             step.id
           );
           setPhotos([...photos, publicUrl]);
+
+          // Capture location metadata
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.High,
+          });
+          const newMeta = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            accuracy: location.coords.accuracy || undefined, // Ensure accuracy is undefined if null
+          };
+          setPhotoMetas([...photoMetas, newMeta]);
+
           Alert.alert('Success', 'Photo uploaded successfully');
         } catch (uploadError) {
           console.error('Error uploading photo:', uploadError);
@@ -204,6 +216,7 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
       const updates: Partial<WorkflowStep> = {
         status,
         completion_photos: photos,
+        photo_metas: photoMetas, // Include photo metadata
         location_data: locationData ? {
           ...locationData,
           location_name: locationName,
@@ -319,14 +332,14 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
             <Text style={styles.photoButtonText}>Take Photo</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={[styles.photoButton, styles.photoButtonSecondary]}
             onPress={pickImage}
             disabled={uploading}
           >
             <Text style={styles.photoButtonIcon}>🖼️</Text>
             <Text style={styles.photoButtonText}>Pick from Gallery</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         {photos.length > 0 && (
@@ -340,14 +353,29 @@ export const StepEditScreen: React.FC<StepEditScreenProps> = ({ navigation, rout
                 >
                   <Text style={styles.photoRemoveText}>✕</Text>
                 </TouchableOpacity>
+                {photoMetas[index] && (
+                  <View style={styles.photoMeta}>
+                    <Text style={styles.photoMetaText}>
+                      Lat: {photoMetas[index].latitude?.toFixed(6)}
+                    </Text>
+                    <Text style={styles.photoMetaText}>
+                      Lng: {photoMetas[index].longitude?.toFixed(6)}
+                    </Text>
+                    <Text style={styles.photoMetaText}>
+                      Accuracy: {photoMetas[index].accuracy?.toFixed(2)}m
+                    </Text>
+                  </View>
+                )}
               </View>
             ))}
           </View>
         )}
 
-        <Text style={styles.helpText}>
-          Supported formats: PNG, JPEG, JPG (Max 5MB per file)
-        </Text>
+        <View style={{ marginTop: 16 }}>
+          <Text style={styles.helpText}>
+            Supported formats: PNG, JPEG, JPG (Only 5 photos allowed)
+          </Text>
+        </View>
       </View>
 
       <View style={styles.actions}>
@@ -585,5 +613,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  photoMeta: {
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    marginTop: 8,
+  },
+  photoMetaText: {
+    fontSize: 8,
+    color: '#374151',
   },
 });

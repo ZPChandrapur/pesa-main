@@ -24,19 +24,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [roleName, setRoleName] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    let mounted = true;
+    let timeoutId: NodeJS.Timeout;
+
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (err) {
+        console.error('Error retrieving initial session:', err);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    // Safety timeout: if loading hasn't cleared after 5 seconds, force it off
+    timeoutId = setTimeout(() => {
+      if (mounted) {
+        console.warn('Session check timeout after 5s, forcing loading off');
+        setLoading(false);
+      }
+    }, 5000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      try { subscription.unsubscribe(); } catch (e) { /* ignore */ }
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -60,6 +87,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (roleError) {
           console.error('Error fetching role:', roleError);
+          throw roleError;
         }
 
         const rid = roleData?.role_id ?? null;
@@ -77,6 +105,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (accessError) {
             console.error('Error checking permission:', accessError);
+            throw accessError;
           }
 
           console.log('PESA access:', accessData ? 'YES' : 'NO');
@@ -95,6 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (rolesError) {
             console.error('Error fetching role name:', rolesError);
+            throw rolesError;
           }
 
           const rname = rolesData?.name ?? null;
@@ -102,8 +132,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setRoleName(rname);
         }
 
-        console.log('Login complete - userId:', uid, 'roleId:', rid, 'roleName:', roleData?.name);
+        console.log('Login complete - userId:', uid, 'roleId:', rid, 'roleName:', roleName);
       }
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
     } finally {
       setLoading(false);
     }
@@ -112,11 +145,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     setLoading(true);
     try {
+      // If there is no session locally, just clear state and return.
+      if (!session) {
+        setUserId(null);
+        setRoleId(null);
+        setRoleName(null);
+        return;
+      }
+
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        // Supabase may throw AuthSessionMissingError when the client has no session stored.
+        // Treat that as a successful sign-out (clear local state) rather than a hard error.
+        // Error object from supabase-js may have `name` or `message` fields.
+        // Handle both shapes defensively.
+        const name = (error as any)?.name || (error as any)?.message || '';
+        if (String(name).includes('AuthSessionMissing')) {
+          console.warn('Auth session missing during signOut; clearing local state.');
+        } else {
+          throw error;
+        }
+      }
+
       setUserId(null);
       setRoleId(null);
       setRoleName(null);
+    } catch (err) {
+      console.error('Sign out error (handled):', err);
     } finally {
       setLoading(false);
     }

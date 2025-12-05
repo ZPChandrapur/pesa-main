@@ -3,67 +3,71 @@
     "name": "PESA Work Tracking",
     "slug": "pesa-work-tracking",
     "version": "1.0.0",
+    "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#10b981"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "d9219131-2e25-4f2d-96a9-db10bbd550e9"
-      }
+      "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.pesa.worktracking",
+      "bundleIdentifier": "com.zpchandrapur.pesaworktracking",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app needs camera access to capture work progress photos.",
-        "NSLocationWhenInUseUsageDescription": "This app needs location access to track work site locations.",
-        "NSPhotoLibraryUsageDescription": "This app needs photo library access to select work photos.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "PESA needs access to your camera to take inspection photos.",
+        "NSPhotoLibraryUsageDescription": "PESA needs access to your photo library to select inspection photos.",
+        "NSLocationWhenInUseUsageDescription": "PESA needs access to your location to record inspection locations.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "PESA needs access to your location to record inspection locations."
       }
     },
-    "android": {
+     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#10b981"
+        "backgroundColor": "#ffffff"
       },
-      "package": "com.pesa.worktracking",
-      "versionCode": 1,
+      "package": "com.zpchandrapur.pesaworktracking",
+      "versionCode": 4,
+      "targetSdkVersion": 35,
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.INTERNET",
-        "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.DETECT_SCREEN_CAPTURE"
-      ]
+        "CAMERA",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAjFLdphP7tlo99o3L6IgxbeSOHPsla9-Y"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withHermesEnabled",
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access camera for capturing work photos"
+          "cameraPermission": "Allow PESA to access your camera to take inspection photos.",
+          "recordAudioAndroid": false
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location for work tracking"
+          "locationAlwaysAndWhenInUsePermission": "Allow PESA to use your location for inspection tracking."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d9219131-2e25-4f2d-96a9-db10bbd550e9"
+      }
+    }
   }
 }
