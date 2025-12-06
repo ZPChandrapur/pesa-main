@@ -100,7 +100,7 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
   useEffect(() => {
     filterVillages();
     setCurrentPage(1);
-  }, [villages, searchTerm, selectedDistrict, selectedBlock, language]);
+  }, [villages, searchTerm, selectedDistrict, selectedGramPanchayat, selectedBlock, language]);
 
   const loadVillages = async () => {
     try {
