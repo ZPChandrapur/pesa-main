@@ -28,6 +28,10 @@ const translations: Record<Language, Record<string, string>> = {
     funds: 'वितरित केलेला फंड',
     workProgress: 'कामाची प्रगती',
     tracking: 'ट्रॅकिंग',
+    grampanchayatAccess: 'ग्राम पंचायत ऍक्सेस',
+    accessNote: 'जर ईमेल आयडी सिस्टीममध्ये आधीपासून सेव्ह/नोंदणीकृत असेल, तरच तिथे तुमच्या ग्राम पंचायतसाठी प्रवेश दिला जाईल.',
+    selectBlock: 'तालुका निवडा',
+    selectAccess: 'ऍक्सेस निवडा',
 
     // Villages
     villageManagement: 'गाव व्यवस्थापन',
@@ -219,6 +223,10 @@ const translations: Record<Language, Record<string, string>> = {
     funds: 'Distributed Funds',
     workProgress: 'Work Tracking',
     tracking: 'Tracking',
+    grampanchayatAccess: 'Gram Panchayat Access',
+    accessNote: 'Access to your Gram Panchayat will be granted only if the email ID is already saved/registered in the system.',
+    selectBlock: 'Select Block',
+    selectAccess: 'Select Access',
 
     // Villages
     villageManagement: 'Village Management',
