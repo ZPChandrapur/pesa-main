@@ -59,67 +59,48 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
   useEffect(() => {
     const fetchAccessUsers = async () => {
       try {
-        // Step 1 → Load users with role_id = 6
+        // Step 1 → Load all users with role_id = 6
         const { data: roleUsers, error: roleError } = await supabase
           .from("user_roles")
-          .select("user_id, role_id")
+          .select("user_id, role_id, name")
           .eq("role_id", 6);
 
-        if (roleError || !roleUsers) {
+        if (roleError) {
           console.error("Error loading role users:", roleError);
           return;
         }
 
-        const userIds = roleUsers
-          .filter(u => u.user_id)
-          .map(u => u.user_id);
-
-        if (userIds.length === 0) {
+        if (!roleUsers || roleUsers.length === 0) {
           setAccessUsers([]);
           return;
         }
 
-        // ✔ Step 1.5 → Fetch email from auth.users (admin API)
-        const { data: authData, error: authError } =
-          await supabase.auth.admin.listUsers();
+        // Get all user IDs
+        const userIds = roleUsers.map(u => u.user_id);
 
-        if (authError) {
-          console.error("Error loading auth users:", authError);
-        }
-
-        // Map emails by id → { userId: email }
-        const emailMap = {};
-        authData?.users?.forEach(u => {
-          emailMap[u.id] = u.email;
-        });
-
-        // Step 2 → Fetch villages with gp access + gp name
+        // Step 2 → Fetch village access rows (only for marking access, NOT filtering)
         const { data: villages, error: villageError } = await pesaSupabase
           .from("villages")
-          .select("gram_panchayat, gram_user_access")
-          .in("gram_user_access", userIds);
+          .select("gram_user_access");
 
-        if (villageError || !villages) {
-          console.error("Error loading GP access names:", villageError);
+        if (villageError) {
+          console.error("Error loading villages:", villageError);
           return;
         }
 
-        // Step 3 → Remove duplicates
-        const uniqueMap = new Map();
+        // Extract user IDs with GP access
+        const accessUserIds = villages
+          ?.filter(v => v.gram_user_access)
+          .map(v => v.gram_user_access) || [];
 
-        villages.forEach(v => {
-          if (!uniqueMap.has(v.gram_user_access)) {
-            uniqueMap.set(v.gram_user_access, {
-              user_id: v.gram_user_access,
-              gp_name: v.gram_panchayat,
-              email: emailMap[v.gram_user_access] || "No Email"
-            });
-          }
-        });
+        // Step 3 → Build final list of all roleUsers but keep track of who has access
+        const finalList = roleUsers.map(u => ({
+          user_id: u.user_id,
+          name: u.name,
+          has_access: accessUserIds.includes(u.user_id) // optional flag
+        }));
 
-        const uniqueAccessList = Array.from(uniqueMap.values());
-
-        setAccessUsers(uniqueAccessList);
+        setAccessUsers(finalList);
 
       } catch (err) {
         console.error("Error loading access users:", err);
@@ -139,11 +120,16 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
     e.preventDefault();
     const dataToSave = {
       ...formData,
+      gram_user_access:
+        formData.gram_user_access === "" ? null : formData.gram_user_access,
       gram_panchayat_population: formData.gram_panchayat_population ?? 0,
       gram_panchayat_st_population: formData.gram_panchayat_st_population ?? 0,
       village_population: formData.village_population ?? 0,
       village_st_population: formData.village_st_population ?? 0,
-      amount_per_head_st_population: formData.amount_per_head_st_population === '' ? 0 : parseFloat(formData.amount_per_head_st_population),
+      amount_per_head_st_population:
+        formData.amount_per_head_st_population === ''
+          ? 0
+          : parseFloat(formData.amount_per_head_st_population),
       is_pesa: !!formData.is_pesa,
     };
     onSave(dataToSave);
@@ -310,6 +296,7 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
               <label className="block text-sm font-semibold text-gray-700">
                 {t('grampanchayatAccess')}
               </label>
+
               <select
                 value={(formData as any).gram_user_access || ""}
                 onChange={(e) => !readonly && handleChange('gram_user_access', e.target.value)}
@@ -319,15 +306,14 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
                 <option value="">{t('selectAccess')}</option>
                 {accessUsers.map(user => (
                   <option key={user.user_id} value={user.user_id}>
-                    {user.gp_name}
+                    {user.name}
                   </option>
                 ))}
               </select>
-               <span className="text-xs text-gray-500">
+              <span className="text-xs text-gray-500">
                 {t('accessNote')}
               </span>
             </div>
-
 
             {/* PESA Flag */}
             <div>
