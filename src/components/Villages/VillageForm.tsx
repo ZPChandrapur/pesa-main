@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, MapPin } from 'lucide-react';
 import { Village } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
+import { pesaSupabase, supabase } from '../../utils/supabase';
 interface VillageFormProps {
   village?: Village | null;
   onSave: (village: Omit<Village, 'id' | 'created_at' | 'updated_at'>) => void;
@@ -11,6 +12,7 @@ interface VillageFormProps {
 }
 export function VillageForm({ village, onSave, onCancel, isOpen, readonly = false }: VillageFormProps) {
   const { t } = useLanguage();
+  const [accessUsers, setAccessUsers] = useState<{ user_id: string }[]>([]);
   const initialFormData: Omit<Village, 'id' | 'created_at' | 'updated_at'> & {
     gram_panchayat_population?: number | null;
     gram_panchayat_st_population?: number | null;
@@ -20,7 +22,7 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
     is_pesa?: boolean;
   } = {
     village_name: '',
-    district: '',
+    district: 'Chandrapur',
     block: '',
     gram_panchayat: '',
     gram_panchayat_population: null,
@@ -28,6 +30,7 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
     village_population: null,
     village_st_population: null,
     amount_per_head_st_population: '',
+    gram_user_access: '',
     village_code: '',
     is_pesa: false,
   };
@@ -46,16 +49,93 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
         amount_per_head_st_population: (village as any).amount_per_head_st_population != null ? (village as any).amount_per_head_st_population.toString() : '',
         village_code: village.village_code || '',
         is_pesa: village.is_pesa ?? false,
+        gram_user_access: (village as any).gram_user_access || '',
       });
     } else {
       setFormData(initialFormData);
     }
   }, [village]);
+
+  useEffect(() => {
+    const fetchAccessUsers = async () => {
+      try {
+        // Step 1 → Load users with role_id = 6
+        const { data: roleUsers, error: roleError } = await supabase
+          .from("user_roles")
+          .select("user_id, role_id")
+          .eq("role_id", 6);
+
+        if (roleError || !roleUsers) {
+          console.error("Error loading role users:", roleError);
+          return;
+        }
+
+        const userIds = roleUsers
+          .filter(u => u.user_id)
+          .map(u => u.user_id);
+
+        if (userIds.length === 0) {
+          setAccessUsers([]);
+          return;
+        }
+
+        // ✔ Step 1.5 → Fetch email from auth.users (admin API)
+        const { data: authData, error: authError } =
+          await supabase.auth.admin.listUsers();
+
+        if (authError) {
+          console.error("Error loading auth users:", authError);
+        }
+
+        // Map emails by id → { userId: email }
+        const emailMap = {};
+        authData?.users?.forEach(u => {
+          emailMap[u.id] = u.email;
+        });
+
+        // Step 2 → Fetch villages with gp access + gp name
+        const { data: villages, error: villageError } = await pesaSupabase
+          .from("villages")
+          .select("gram_panchayat, gram_user_access")
+          .in("gram_user_access", userIds);
+
+        if (villageError || !villages) {
+          console.error("Error loading GP access names:", villageError);
+          return;
+        }
+
+        // Step 3 → Remove duplicates
+        const uniqueMap = new Map();
+
+        villages.forEach(v => {
+          if (!uniqueMap.has(v.gram_user_access)) {
+            uniqueMap.set(v.gram_user_access, {
+              user_id: v.gram_user_access,
+              gp_name: v.gram_panchayat,
+              email: emailMap[v.gram_user_access] || "No Email"
+            });
+          }
+        });
+
+        const uniqueAccessList = Array.from(uniqueMap.values());
+
+        setAccessUsers(uniqueAccessList);
+
+      } catch (err) {
+        console.error("Error loading access users:", err);
+      }
+    };
+
+    fetchAccessUsers();
+  }, []);
+
+
   // Reset form fields to initial state
   const resetData = () => {
     setFormData(initialFormData);
   };
   const handleSubmit = (e: React.FormEvent) => {
+    debugger
     e.preventDefault();
     const dataToSave = {
       ...formData,
@@ -88,8 +168,8 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
                 {readonly
                   ? t('viewVillage')
                   : village
-                  ? t('editVillage')
-                  : t('addVillage')}
+                    ? t('editVillage')
+                    : t('addVillage')}
               </h2>
             </div>
             <button
@@ -130,15 +210,20 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
             {/* Block */}
             <div>
               <label className="block text-sm font-semibold text-gray-700">{t('block')}</label>
-              <input
-                type="text"
+              <select
                 value={formData.block}
                 onChange={(e) => !readonly && handleChange('block', e.target.value)}
                 required
-                readOnly={readonly}
-                className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
-              />
+                disabled={readonly}
+                className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-white"
+              >
+                <option value="">{t('selectBlock')}</option>
+                <option value="Jiwati">Jiwati</option>
+                <option value="Rajura">Rajura</option>
+                <option value="Korpana">Korpana</option>
+              </select>
             </div>
+
             {/* Gram Panchayat */}
             <div>
               <label className="block text-sm font-semibold text-gray-700">{t('gramPanchayat')}</label>
@@ -220,6 +305,30 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
                 }}
               />
             </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700">
+                {t('grampanchayatAccess')}
+              </label>
+              <select
+                value={(formData as any).gram_user_access || ""}
+                onChange={(e) => !readonly && handleChange('gram_user_access', e.target.value)}
+                disabled={readonly}
+                className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-white mt-1"
+              >
+                <option value="">{t('selectAccess')}</option>
+                {accessUsers.map(user => (
+                  <option key={user.user_id} value={user.user_id}>
+                    {user.gp_name}
+                  </option>
+                ))}
+              </select>
+               <span className="text-xs text-gray-500">
+                {t('accessNote')}
+              </span>
+            </div>
+
+
             {/* PESA Flag */}
             <div>
               <label className="block text-sm font-semibold text-gray-700">PESA गाव</label>
