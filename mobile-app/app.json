@@ -2,7 +2,7 @@
   "expo": {
     "name": "PESA Work Tracking",
     "slug": "pesa-work-tracking",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,7 +28,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.zpchandrapur.pesaworktracking",
-      "versionCode": 4,
+      "versionCode": 5,
       "targetSdkVersion": 35,
       "permissions": [
         "CAMERA",
