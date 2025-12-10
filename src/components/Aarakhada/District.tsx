@@ -5,6 +5,7 @@ import { AarakhadaDistrictTable } from './AarakhadaDistrictTable';
 import { villageService, districtWorkService, pesaSupabase, workService } from '../../utils/supabase';
 import * as XLSX from 'xlsx';
 import PesaLogo from '../../assets/pesaLogo.png';
+import { handleDownloadPhysicalExcel } from './DownloadPhysicalReport';
 
 export function District() {
   const { t, language } = useLanguage();
@@ -49,42 +50,52 @@ export function District() {
   };
 
   const handleDownloadExcel = async () => {
-    
-    // Utility
+    if (activeTab === 'physical') {
+      await handleDownloadPhysicalExcel({
+        selectedDistrict,
+        selectedTaluka,
+        selectedCategory,
+        language: language as 'en' | 'mr',
+      });
+      return;
+    }
+
     const parseNumeric = (val) => val == null ? 0 : Number(String(val).replace(/[^\d.-]/g, "")) || 0;
 
-    // Define columns for sheet export
-    const financialColumns = [
-      'Sr. No',
-      'District Name',
-      'Taluka Name',
-      'Work Category',
-      'PESA Gram Panchayat Count',
-      'PESA Village Count',
-      'Annual Approved Fund',
-      'Annual Received Fund',
-      'Received Interest',
-      'Total Received Fund',
-      'Previous Expenditure',
-      'Current Expenditure',
-      'Cumulative Expenditure',
-      'Remaining Funds'
-    ];
-    const physicalColumns = [
-      'Sr. No',
-      'District Name',
-      'Taluka Name',
-      'Work Category',
-      'PESA Gram Panchayat Count',
-      'PESA Village Count',
-      'Sanctioned Works',
-      'Approved Works',
-      'Completed Works',
-      'Ongoing Works',
-      'Pending Works'
-    ];
+    const financialColumns = language === 'mr'
+      ? [
+          'अ.क्र.',
+          'जिल्हा नाव',
+          'तालुका नाव',
+          'कार्य प्रकार',
+          'पेसा ग्रा.पं. संख्या',
+          'पेसा गावे संख्या',
+          'वार्षिक मंजूर निधी',
+          'वार्षिक प्राप्त निधी',
+          'प्राप्त व्याज',
+          'एकूण प्राप्त निधी',
+          'मागील खर्च',
+          'चालू खर्च',
+          'एकुण खर्च',
+          'उर्वरित निधी'
+        ]
+      : [
+          'Sr. No',
+          'District Name',
+          'Taluka Name',
+          'Work Category',
+          'PESA Gram Panchayat Count',
+          'PESA Village Count',
+          'Annual Approved Fund',
+          'Annual Received Fund',
+          'Received Interest',
+          'Total Received Fund',
+          'Previous Expenditure',
+          'Current Expenditure',
+          'Cumulative Expenditure',
+          'Remaining Funds'
+        ];
 
-    // Fetch financial summary directly
     let financialQuery = pesaSupabase
       .from('district_aarakhada_financial')
       .select('*');
@@ -97,20 +108,6 @@ export function District() {
       return;
     }
 
-    // Fetch physical summary directly
-    let physicalQuery = pesaSupabase
-      .from('district_aarakhada_physical')
-      .select('*');
-    if (selectedDistrict) physicalQuery = physicalQuery.eq('district_name', selectedDistrict);
-    if (selectedTaluka) physicalQuery = physicalQuery.eq('taluka_name', selectedTaluka);
-    if (selectedCategory) physicalQuery = physicalQuery.eq('work_category', selectedCategory);
-    const { data: physicalWorks, error: physicalError } = await physicalQuery;
-    if (physicalError) {
-      alert('Failed to fetch physical summary');
-      return;
-    }
-
-    // Prepare sheet rows
     const financialSheetRows = (financialWorks || []).map((w, i) => [
       i + 1,
       w.district_name || '',
@@ -128,27 +125,17 @@ export function District() {
       parseNumeric(w.remaining_funds)
     ]);
 
-    const physicalSheetRows = (physicalWorks || []).map((w, i) => [
-      i + 1,
-      w.district_name || '',
-      w.taluka_name || '',
-      w.work_category || '',
-      parseNumeric(w.pesa_gram_panchayat_count),
-      parseNumeric(w.pesa_village_count),
-      parseNumeric(w.sanctioned_works),
-      parseNumeric(w.approved_works),
-      parseNumeric(w.completed_works),
-      parseNumeric(w.ongoing_works),
-      parseNumeric(w.pending_works)
-    ]);
-
-    // Export
     const wb = XLSX.utils.book_new();
-    const wsPhysical = XLSX.utils.aoa_to_sheet([physicalColumns, ...physicalSheetRows]);
-    XLSX.utils.book_append_sheet(wb, wsPhysical, 'Physical Works');
     const wsFinancial = XLSX.utils.aoa_to_sheet([financialColumns, ...financialSheetRows]);
     XLSX.utils.book_append_sheet(wb, wsFinancial, 'Financial Works');
-    XLSX.writeFile(wb, 'district_work_data.xlsx');
+    const fileName = `Financial_Works_Report_${
+      selectedDistrict ? `${selectedDistrict}_` : ''
+    }${
+      selectedTaluka ? `${selectedTaluka}_` : ''
+    }${
+      selectedCategory ? `Category_${selectedCategory}_` : ''
+    }${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
   };
 
 
