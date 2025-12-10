@@ -103,6 +103,11 @@ export const handleDownloadPhysicalExcel = async ({
       }
     });
 
+    if (!selectedCategory) {
+      headerRow1.push(language === 'mr' ? 'एकूण' : 'Total');
+      headerRow1.push('', '', '', '');
+    }
+
     wsData.push(headerRow1);
 
     const headerRow2 = ['', '', '', '', ''];
@@ -111,6 +116,10 @@ export const handleDownloadPhysicalExcel = async ({
         workStatusLabels.forEach(label => headerRow2.push(label));
       }
     });
+
+    if (!selectedCategory) {
+      workStatusLabels.forEach(label => headerRow2.push(label));
+    }
 
     wsData.push(headerRow2);
 
@@ -124,17 +133,35 @@ export const handleDownloadPhysicalExcel = async ({
         parseNumeric(entry.get('pesa_village_count')),
       ];
 
+      let totalSanctioned = 0;
+      let totalApproved = 0;
+      let totalCompleted = 0;
+      let totalOngoing = 0;
+      let totalPending = 0;
+
       ['A', 'B', 'C', 'D'].forEach(cat => {
         if (!selectedCategory || selectedCategory === cat) {
-          row.push(
-            entry.get(`${cat}_sanctioned`) || 0,
-            entry.get(`${cat}_approved`) || 0,
-            entry.get(`${cat}_completed`) || 0,
-            entry.get(`${cat}_ongoing`) || 0,
-            entry.get(`${cat}_pending`) || 0
-          );
+          const sanctioned = entry.get(`${cat}_sanctioned`) || 0;
+          const approved = entry.get(`${cat}_approved`) || 0;
+          const completed = entry.get(`${cat}_completed`) || 0;
+          const ongoing = entry.get(`${cat}_ongoing`) || 0;
+          const pending = entry.get(`${cat}_pending`) || 0;
+
+          row.push(sanctioned, approved, completed, ongoing, pending);
+
+          if (!selectedCategory) {
+            totalSanctioned += sanctioned;
+            totalApproved += approved;
+            totalCompleted += completed;
+            totalOngoing += ongoing;
+            totalPending += pending;
+          }
         }
       });
+
+      if (!selectedCategory) {
+        row.push(totalSanctioned, totalApproved, totalCompleted, totalOngoing, totalPending);
+      }
 
       wsData.push(row);
     });
@@ -146,17 +173,35 @@ export const handleDownloadPhysicalExcel = async ({
       dataRowsArray.reduce((sum, entry) => sum + parseNumeric(entry.get('pesa_village_count')), 0),
     ];
 
+    let grandTotalSanctioned = 0;
+    let grandTotalApproved = 0;
+    let grandTotalCompleted = 0;
+    let grandTotalOngoing = 0;
+    let grandTotalPending = 0;
+
     ['A', 'B', 'C', 'D'].forEach(cat => {
       if (!selectedCategory || selectedCategory === cat) {
-        totalRow.push(
-          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_sanctioned`) || 0), 0),
-          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_approved`) || 0), 0),
-          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_completed`) || 0), 0),
-          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_ongoing`) || 0), 0),
-          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_pending`) || 0), 0)
-        );
+        const catSanctioned = dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_sanctioned`) || 0), 0);
+        const catApproved = dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_approved`) || 0), 0);
+        const catCompleted = dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_completed`) || 0), 0);
+        const catOngoing = dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_ongoing`) || 0), 0);
+        const catPending = dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_pending`) || 0), 0);
+
+        totalRow.push(catSanctioned, catApproved, catCompleted, catOngoing, catPending);
+
+        if (!selectedCategory) {
+          grandTotalSanctioned += catSanctioned;
+          grandTotalApproved += catApproved;
+          grandTotalCompleted += catCompleted;
+          grandTotalOngoing += catOngoing;
+          grandTotalPending += catPending;
+        }
       }
     });
+
+    if (!selectedCategory) {
+      totalRow.push(grandTotalSanctioned, grandTotalApproved, grandTotalCompleted, grandTotalOngoing, grandTotalPending);
+    }
 
     wsData.push(totalRow);
 
@@ -173,6 +218,10 @@ export const handleDownloadPhysicalExcel = async ({
         colIndex += 5;
       }
     });
+
+    if (!selectedCategory) {
+      merges.push({ s: { r: 2, c: colIndex }, e: { r: 2, c: colIndex + 4 } });
+    }
 
     merges.push({ s: { r: 3, c: 0 }, e: { r: 3, c: 0 } });
     merges.push({ s: { r: 3, c: 1 }, e: { r: 3, c: 1 } });
@@ -195,6 +244,12 @@ export const handleDownloadPhysicalExcel = async ({
     const numCategories = selectedCategory ? 1 : 4;
     for (let i = 0; i < numCategories * 5; i++) {
       columnWidths.push({ wch: 12 });
+    }
+
+    if (!selectedCategory) {
+      for (let i = 0; i < 5; i++) {
+        columnWidths.push({ wch: 12 });
+      }
     }
 
     ws['!cols'] = columnWidths;
