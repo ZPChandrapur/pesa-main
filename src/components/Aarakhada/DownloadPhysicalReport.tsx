@@ -42,138 +42,246 @@ export const handleDownloadPhysicalExcel = async ({
       return Number(numStr) || 0;
     };
 
+    const currentDate = new Date();
+    const monthNames = language === 'mr'
+      ? ['जानेवारी', 'फेब्रुवारी', 'मार्च', 'एप्रिल', 'मे', 'जून', 'जुलै', 'ऑगस्ट', 'सप्टेंबर', 'ऑक्टोबर', 'नोव्हेंबर', 'डिसेंबर']
+      : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthName = monthNames[currentDate.getMonth()];
+    const year = currentDate.getFullYear();
+
+    const districtsByTaluka = new Map<string, Map<string, any>>();
+
+    physicalWorks.forEach(work => {
+      const key = `${work.district_name}|${work.taluka_name}`;
+      if (!districtsByTaluka.has(key)) {
+        districtsByTaluka.set(key, new Map([
+          ['district_name', work.district_name],
+          ['taluka_name', work.taluka_name],
+          ['pesa_gram_panchayat_count', work.pesa_gram_panchayat_count],
+          ['pesa_village_count', work.pesa_village_count],
+        ]));
+      }
+      const entry = districtsByTaluka.get(key)!;
+      const category = work.work_category;
+      entry.set(`${category}_sanctioned`, parseNumeric(work.sanctioned_works));
+      entry.set(`${category}_approved`, parseNumeric(work.approved_works));
+      entry.set(`${category}_completed`, parseNumeric(work.completed_works));
+      entry.set(`${category}_ongoing`, parseNumeric(work.ongoing_works));
+      entry.set(`${category}_pending`, parseNumeric(work.pending_works));
+    });
+
     const wb = XLSX.utils.book_new();
+    const wsData: any[][] = [];
 
-    const headers = language === 'mr'
-      ? [
-          'अ.क्र.',
-          'जिल्हा नाव',
-          'तालुका नाव',
-          'कार्य प्रकार',
-          'पेसा ग्रा.पं. संख्या',
-          'पेसा गावे संख्या',
-          'मंजूर कामे',
-          'चालू मंजूर कामे',
-          'पूर्ण झालेली कामे',
-          'प्रगतीपथावरील कामे',
-          'प्रलंबित कामे'
-        ]
-      : [
-          'Sr. No.',
-          'District Name',
-          'Taluka Name',
-          'Work Category',
-          'PESA Gram Panchayat Count',
-          'PESA Village Count',
-          'Sanctioned Works',
-          'Approved Works',
-          'Completed Works',
-          'Ongoing Works',
-          'Pending Works'
-        ];
+    const titleText = language === 'mr'
+      ? `पेसा कामांचा भौतिक अहवाल - ${monthName} ${year}`
+      : `PESA Physical Works Report - ${monthName} ${year}`;
 
-    const dataRows = physicalWorks.map((work, index) => [
-      index + 1,
-      work.district_name || '',
-      work.taluka_name || '',
-      work.work_category || '',
-      parseNumeric(work.pesa_gram_panchayat_count),
-      parseNumeric(work.pesa_village_count),
-      parseNumeric(work.sanctioned_works),
-      parseNumeric(work.approved_works),
-      parseNumeric(work.completed_works),
-      parseNumeric(work.ongoing_works),
-      parseNumeric(work.pending_works)
-    ]);
+    wsData.push([titleText]);
+    wsData.push([]);
 
-    const totals = [
-      language === 'mr' ? 'एकूण' : 'Total',
-      '',
-      '',
-      '',
-      physicalWorks.reduce((sum, w) => sum + parseNumeric(w.pesa_gram_panchayat_count), 0),
-      physicalWorks.reduce((sum, w) => sum + parseNumeric(w.pesa_village_count), 0),
-      physicalWorks.reduce((sum, w) => sum + parseNumeric(w.sanctioned_works), 0),
-      physicalWorks.reduce((sum, w) => sum + parseNumeric(w.approved_works), 0),
-      physicalWorks.reduce((sum, w) => sum + parseNumeric(w.completed_works), 0),
-      physicalWorks.reduce((sum, w) => sum + parseNumeric(w.ongoing_works), 0),
-      physicalWorks.reduce((sum, w) => sum + parseNumeric(w.pending_works), 0)
+    const categoryLabels = language === 'mr'
+      ? { A: 'प्रकार अ', B: 'प्रकार ब', C: 'प्रकार क', D: 'प्रकार ड' }
+      : { A: 'Category A', B: 'Category B', C: 'Category C', D: 'Category D' };
+
+    const workStatusLabels = language === 'mr'
+      ? ['मंजूर', 'चालू मंजूर', 'पूर्ण', 'प्रगतीपथावर', 'प्रलंबित']
+      : ['Sanctioned', 'Approved', 'Completed', 'Ongoing', 'Pending'];
+
+    const headerRow1 = [
+      language === 'mr' ? 'अ.क्र.' : 'Sr. No.',
+      language === 'mr' ? 'जिल्हा' : 'District',
+      language === 'mr' ? 'तालुका' : 'Taluka',
+      language === 'mr' ? 'पेसा ग्रा.पं.' : 'PESA GP',
+      language === 'mr' ? 'पेसा गावे' : 'PESA Villages',
     ];
 
-    const worksheetData = [headers, ...dataRows, totals];
+    ['A', 'B', 'C', 'D'].forEach(cat => {
+      if (!selectedCategory || selectedCategory === cat) {
+        headerRow1.push(categoryLabels[cat as keyof typeof categoryLabels]);
+        headerRow1.push('', '', '', '');
+      }
+    });
 
-    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+    wsData.push(headerRow1);
 
-    const columnWidths = [
+    const headerRow2 = ['', '', '', '', ''];
+    ['A', 'B', 'C', 'D'].forEach(cat => {
+      if (!selectedCategory || selectedCategory === cat) {
+        workStatusLabels.forEach(label => headerRow2.push(label));
+      }
+    });
+
+    wsData.push(headerRow2);
+
+    const dataRowsArray = Array.from(districtsByTaluka.values());
+    dataRowsArray.forEach((entry, index) => {
+      const row = [
+        index + 1,
+        entry.get('district_name') || '',
+        entry.get('taluka_name') || '',
+        parseNumeric(entry.get('pesa_gram_panchayat_count')),
+        parseNumeric(entry.get('pesa_village_count')),
+      ];
+
+      ['A', 'B', 'C', 'D'].forEach(cat => {
+        if (!selectedCategory || selectedCategory === cat) {
+          row.push(
+            entry.get(`${cat}_sanctioned`) || 0,
+            entry.get(`${cat}_approved`) || 0,
+            entry.get(`${cat}_completed`) || 0,
+            entry.get(`${cat}_ongoing`) || 0,
+            entry.get(`${cat}_pending`) || 0
+          );
+        }
+      });
+
+      wsData.push(row);
+    });
+
+    const totalRow = [
+      language === 'mr' ? 'एकूण' : 'Total',
+      '', '',
+      dataRowsArray.reduce((sum, entry) => sum + parseNumeric(entry.get('pesa_gram_panchayat_count')), 0),
+      dataRowsArray.reduce((sum, entry) => sum + parseNumeric(entry.get('pesa_village_count')), 0),
+    ];
+
+    ['A', 'B', 'C', 'D'].forEach(cat => {
+      if (!selectedCategory || selectedCategory === cat) {
+        totalRow.push(
+          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_sanctioned`) || 0), 0),
+          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_approved`) || 0), 0),
+          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_completed`) || 0), 0),
+          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_ongoing`) || 0), 0),
+          dataRowsArray.reduce((sum, entry) => sum + (entry.get(`${cat}_pending`) || 0), 0)
+        );
+      }
+    });
+
+    wsData.push(totalRow);
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    const merges: XLSX.Range[] = [];
+
+    merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: headerRow1.length - 1 } });
+
+    let colIndex = 5;
+    ['A', 'B', 'C', 'D'].forEach(cat => {
+      if (!selectedCategory || selectedCategory === cat) {
+        merges.push({ s: { r: 2, c: colIndex }, e: { r: 2, c: colIndex + 4 } });
+        colIndex += 5;
+      }
+    });
+
+    merges.push({ s: { r: 3, c: 0 }, e: { r: 3, c: 0 } });
+    merges.push({ s: { r: 3, c: 1 }, e: { r: 3, c: 1 } });
+    merges.push({ s: { r: 3, c: 2 }, e: { r: 3, c: 2 } });
+    merges.push({ s: { r: 3, c: 3 }, e: { r: 3, c: 3 } });
+    merges.push({ s: { r: 3, c: 4 }, e: { r: 3, c: 4 } });
+
+    merges.push({ s: { r: wsData.length - 1, c: 1 }, e: { r: wsData.length - 1, c: 2 } });
+
+    ws['!merges'] = merges;
+
+    const columnWidths: XLSX.ColInfo[] = [
       { wch: 8 },
       { wch: 20 },
       { wch: 20 },
-      { wch: 15 },
-      { wch: 25 },
-      { wch: 20 },
-      { wch: 18 },
-      { wch: 20 },
-      { wch: 18 },
-      { wch: 18 },
-      { wch: 18 }
+      { wch: 12 },
+      { wch: 12 },
     ];
+
+    const numCategories = selectedCategory ? 1 : 4;
+    for (let i = 0; i < numCategories * 5; i++) {
+      columnWidths.push({ wch: 12 });
+    }
+
     ws['!cols'] = columnWidths;
 
     if (!ws['!rows']) ws['!rows'] = [];
-    ws['!rows'][0] = { hpt: 30 };
+    ws['!rows'][0] = { hpt: 25 };
+    ws['!rows'][2] = { hpt: 25 };
+    ws['!rows'][3] = { hpt: 25 };
 
     const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
 
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!ws[cellAddress]) continue;
-
+        if (!ws[cellAddress]) ws[cellAddress] = { v: '' };
         if (!ws[cellAddress].s) ws[cellAddress].s = {};
 
-        ws[cellAddress].s = {
-          border: {
-            top: { style: 'thin', color: { rgb: '000000' } },
-            bottom: { style: 'thin', color: { rgb: '000000' } },
-            left: { style: 'thin', color: { rgb: '000000' } },
-            right: { style: 'thin', color: { rgb: '000000' } }
-          },
+        let cellStyle: any = {
           alignment: {
-            horizontal: R === 0 ? 'center' : (C <= 3 ? 'left' : 'right'),
+            horizontal: 'center',
             vertical: 'center',
             wrapText: true
           },
           font: {
-            bold: R === 0 || R === range.e.r,
-            size: R === 0 ? 12 : 11,
-            name: 'Calibri'
-          },
-          fill: R === 0
-            ? { fgColor: { rgb: '4472C4' } }
-            : R === range.e.r
-            ? { fgColor: { rgb: 'E7E6E6' } }
-            : undefined
+            name: 'Calibri',
+            size: 11
+          }
         };
 
         if (R === 0) {
-          ws[cellAddress].s.font = { ...ws[cellAddress].s.font, color: { rgb: 'FFFFFF' } };
+          cellStyle.font = { ...cellStyle.font, bold: true, size: 14, color: { rgb: 'FFFFFF' } };
+          cellStyle.fill = { fgColor: { rgb: '4472C4' } };
+          cellStyle.alignment = { horizontal: 'center', vertical: 'center' };
+        } else if (R === 2 || R === 3) {
+          cellStyle.font = { ...cellStyle.font, bold: true, size: 10, color: { rgb: 'FFFFFF' } };
+          cellStyle.fill = { fgColor: { rgb: '5B9BD5' } };
+          cellStyle.border = {
+            top: { style: 'thin', color: { rgb: '000000' } },
+            bottom: { style: 'thin', color: { rgb: '000000' } },
+            left: { style: 'thin', color: { rgb: '000000' } },
+            right: { style: 'thin', color: { rgb: '000000' } }
+          };
+        } else if (R === wsData.length - 1) {
+          cellStyle.font = { ...cellStyle.font, bold: true };
+          cellStyle.fill = { fgColor: { rgb: 'D9D9D9' } };
+          cellStyle.border = {
+            top: { style: 'medium', color: { rgb: '000000' } },
+            bottom: { style: 'medium', color: { rgb: '000000' } },
+            left: { style: 'thin', color: { rgb: '000000' } },
+            right: { style: 'thin', color: { rgb: '000000' } }
+          };
+          if (C >= 3) {
+            cellStyle.alignment = { horizontal: 'right', vertical: 'center' };
+          }
+        } else if (R > 3) {
+          cellStyle.border = {
+            top: { style: 'thin', color: { rgb: '000000' } },
+            bottom: { style: 'thin', color: { rgb: '000000' } },
+            left: { style: 'thin', color: { rgb: '000000' } },
+            right: { style: 'thin', color: { rgb: '000000' } }
+          };
+          if (C === 0) {
+            cellStyle.alignment = { horizontal: 'center', vertical: 'center' };
+          } else if (C <= 2) {
+            cellStyle.alignment = { horizontal: 'left', vertical: 'center' };
+          } else {
+            cellStyle.alignment = { horizontal: 'right', vertical: 'center' };
+          }
         }
 
-        if (C >= 4 && R > 0) {
+        if (C >= 3 && R > 3 && R < wsData.length - 1) {
           ws[cellAddress].z = '#,##0';
         }
+
+        ws[cellAddress].s = cellStyle;
       }
     }
 
     XLSX.utils.book_append_sheet(wb, ws, 'Physical Works Report');
 
-    const fileName = `Physical_Works_Report_${
+    const fileName = `Physical_Works_Report_${monthName}_${year}_${
       selectedDistrict ? `${selectedDistrict}_` : ''
     }${
       selectedTaluka ? `${selectedTaluka}_` : ''
     }${
       selectedCategory ? `Category_${selectedCategory}_` : ''
-    }${new Date().toISOString().split('T')[0]}.xlsx`;
+    }.xlsx`;
 
     XLSX.writeFile(wb, fileName);
 
