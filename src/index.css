@@ -13,14 +13,6 @@ input[type=number] {
   -moz-appearance: textfield;
 }
 
-input::first-letter {
-  text-transform: capitalize;
-}
-
-input {
-  text-transform: capitalize;
-}
-
 table td {
   text-transform: capitalize;
 }
