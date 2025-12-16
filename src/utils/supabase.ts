@@ -505,6 +505,9 @@ export const pesaWorkOperations = {
             await pesaSupabase
               .from('aarakhada_physical')
               .update({
+                village_name: village.village_name,
+                work_category: data.work_category,
+                added_month: data.added_month || null,
                 completed_works: completedWorksInc + (existingPhysical.completed_works || 0),
                 ongoing_works: ongoingWorksInc + (existingPhysical.ongoing_works || 0),
                 pending_works: pendingWorksInc + (existingPhysical.pending_works || 0),
@@ -600,6 +603,10 @@ export const pesaWorkOperations = {
             await pesaSupabase
               .from('taluka_aarakhada_physical')
               .update({
+                taluka_name: village.block,
+                work_category: data.work_category,
+                gram_panchayat: village.gram_panchayat,
+                village_id: data.village_id,
                 completed_works: talukaCompletedWorksInc + existingTalukaPhysical.completed_works,
                 ongoing_works: talukaOngoingWorksInc + existingTalukaPhysical.ongoing_works,
                 pending_works: talukaPendingWorksInc + existingTalukaPhysical.pending_works,
@@ -753,6 +760,9 @@ export const pesaWorkOperations = {
             await pesaSupabase
               .from('district_aarakhada_physical')
               .update({
+                district_name: village.district,
+                taluka_name: village.block,
+                work_category: data.work_category,
                 completed_works: districtCompletedWorksInc + existingDistrictPhysical.completed_works,
                 ongoing_works: districtOngoingWorksInc + existingDistrictPhysical.ongoing_works,
                 pending_works: districtPendingWorksInc + existingDistrictPhysical.pending_works,
@@ -909,7 +919,6 @@ export const pesaWorkOperations = {
   },
 
   async update(id: string, work: any) {
-
     // Fetch existing record
     const { data: currentWork, error: fetchError } = await pesaSupabase
       .from("works")
@@ -943,80 +952,85 @@ export const pesaWorkOperations = {
       }
 
       if (existingPhysical) {
-        const allowedStatuses = ['pending', 'in_progress', 'completed'];
-        const newStatus = allowedStatuses.includes(work.current_status) ? work.current_status : 'pending';
-
-        const completedWorksInc = newStatus === 'completed' ? 1 : 0;
-        const ongoingWorksInc = newStatus === 'in_progress' ? 1 : 0;
-        const pendingWorksInc = newStatus === 'pending' ? 1 : 0;
-
         let completed = existingPhysical.completed_works || 0;
         let ongoing = existingPhysical.ongoing_works || 0;
         let pending = existingPhysical.pending_works || 0;
 
-        // Adjust counts if status changed
-        if (currentWork.current_status !== work.current_status) {
-          if (currentWork.current_status === 'completed') completed = Math.max(completed - 1, 0);
-          if (currentWork.current_status === 'in_progress') ongoing = Math.max(ongoing - 1, 0);
-          if (currentWork.current_status === 'pending') pending = Math.max(pending - 1, 0);
+        const oldStatus = currentWork.current_status;
+        const newStatus = work.current_status;
 
-          completed += completedWorksInc;
-          ongoing += ongoingWorksInc;
-          pending += pendingWorksInc;
+        if (oldStatus !== newStatus) {
+
+          // subtract old bucket
+          if (oldStatus === "completed") completed = Math.max(completed - 1, 0);
+          if (oldStatus === "in_progress") ongoing = Math.max(ongoing - 1, 0);
+          if (oldStatus === "pending") pending = Math.max(pending - 1, 0);
+
+          // add new bucket
+          if (newStatus === "completed") completed += 1;
+          if (newStatus === "in_progress") ongoing += 1;
+          if (newStatus === "pending") pending += 1;
         }
 
         await pesaSupabase
-          .from('aarakhada_physical')
+          .from("aarakhada_physical")
           .update({
-            status: work.current_status,
+            work_category: currentWork.work_category,
+            village_id: currentWork.village_id,
+            gram_panchayat: currentWork.pesa_grampanchayat,
+            status: newStatus,
             completed_works: completed,
             ongoing_works: ongoing,
             pending_works: pending,
-            sanctioned_works: completed + ongoing + pending,  // Updated this line to include sanctioned_works update
+            sanctioned_works: completed + ongoing + pending,
             updated_at: new Date().toISOString(),
           })
-          .eq('village_id', currentWork.village_id)
-          .eq('work_category', currentWork.work_category);
+          .eq("village_id", currentWork.village_id)
+          .eq("work_category", currentWork.work_category);
       }
 
       // Sync taluka_aarakhada_physical
-      const { data: existingTalukaPhysical, error: talukaPhysicalFetchError } = await pesaSupabase
-        .from("taluka_aarakhada_physical")
-        .select("*")
-        .eq("taluka_name", currentWork.taluka)
-        .eq("gram_panchayat", currentWork.pesa_grampanchayat)
-        .eq("work_category", currentWork.work_category)
-        .single();
+      const { data: existingTalukaPhysical, error: talukaPhysicalFetchError } =
+        await pesaSupabase
+          .from("taluka_aarakhada_physical")
+          .select("*")
+          .eq("taluka_name", currentWork.taluka)
+          .eq("gram_panchayat", currentWork.pesa_grampanchayat)
+          .eq("work_category", currentWork.work_category)
+          .single();
 
       if (talukaPhysicalFetchError && talukaPhysicalFetchError.code !== "PGRST116") {
         throw talukaPhysicalFetchError;
       }
 
       if (existingTalukaPhysical) {
-        const { data: allVillageWorks, error: aggError } = await pesaSupabase
-          .from("aarakhada_physical")
-          .select("completed_works, ongoing_works, pending_works")
-          .eq("gram_panchayat", currentWork.pesa_grampanchayat)
-          .eq("work_category", currentWork.work_category);
+        let completed = existingTalukaPhysical.completed_works || 0;
+        let ongoing = existingTalukaPhysical.ongoing_works || 0;
+        let pending = existingTalukaPhysical.pending_works || 0;
 
-        if (aggError) throw aggError;
+        const oldStatus = currentWork.current_status;
+        const newStatus = work.current_status;
 
-        const aggregated = allVillageWorks?.reduce(
-          (acc, curr) => ({
-            completed_works: acc.completed_works + (curr.completed_works ?? 0),
-            ongoing_works: acc.ongoing_works + (curr.ongoing_works ?? 0),
-            pending_works: acc.pending_works + (curr.pending_works ?? 0),
-          }),
-          { completed_works: 0, ongoing_works: 0, pending_works: 0 }
-        ) ?? { completed_works: 0, ongoing_works: 0, pending_works: 0 };
+        if (oldStatus !== newStatus) {
+
+          if (oldStatus === "completed") completed = Math.max(completed - 1, 0);
+          if (oldStatus === "in_progress") ongoing = Math.max(ongoing - 1, 0);
+          if (oldStatus === "pending") pending = Math.max(pending - 1, 0);
+
+          if (newStatus === "completed") completed += 1;
+          if (newStatus === "in_progress") ongoing += 1;
+          if (newStatus === "pending") pending += 1;
+        }
 
         await pesaSupabase
           .from("taluka_aarakhada_physical")
           .update({
-            completed_works: aggregated.completed_works,
-            ongoing_works: aggregated.ongoing_works,
-            pending_works: aggregated.pending_works,
-            sanctioned_works: aggregated.completed_works + aggregated.ongoing_works + aggregated.pending_works,
+            work_category: currentWork.work_category,
+            gram_panchayat: currentWork.pesa_grampanchayat,
+            completed_works: completed,
+            ongoing_works: ongoing,
+            pending_works: pending,
+            sanctioned_works: completed + ongoing + pending,
             updated_at: new Date().toISOString(),
           })
           .eq("taluka_name", currentWork.taluka)
@@ -1025,42 +1039,47 @@ export const pesaWorkOperations = {
       }
 
       // Sync district_aarakhada_physical
-      const { data: existingDistrictPhysical, error: districtPhysicalFetchError } = await pesaSupabase
-        .from("district_aarakhada_physical")
-        .select("*")
-        .eq("taluka_name", currentWork.taluka)
-        .eq("work_category", currentWork.work_category)
-        .single();
+      const { data: existingDistrictPhysical, error: districtPhysicalFetchError } =
+        await pesaSupabase
+          .from("district_aarakhada_physical")
+          .select("*")
+          .eq("taluka_name", currentWork.taluka)
+          .eq("work_category", currentWork.work_category)
+          .single();
 
       if (districtPhysicalFetchError && districtPhysicalFetchError.code !== "PGRST116") {
         throw districtPhysicalFetchError;
       }
 
       if (existingDistrictPhysical) {
-        const { data: allVillageWorks, error: aggError } = await pesaSupabase
-          .from("aarakhada_physical")
-          .select("completed_works, ongoing_works, pending_works")
-          .eq("taluka", currentWork.taluka)
-          .eq("work_category", currentWork.work_category);
+        let completed = existingDistrictPhysical.completed_works || 0;
+        let ongoing = existingDistrictPhysical.ongoing_works || 0;
+        let pending = existingDistrictPhysical.pending_works || 0;
 
-        if (aggError) throw aggError;
+        const oldStatus = currentWork.current_status;
+        const newStatus = work.current_status;
 
-        const aggregated = allVillageWorks?.reduce(
-          (acc, curr) => ({
-            completed_works: acc.completed_works + (curr.completed_works ?? 0),
-            ongoing_works: acc.ongoing_works + (curr.ongoing_works ?? 0),
-            pending_works: acc.pending_works + (curr.pending_works ?? 0),
-          }),
-          { completed_works: 0, ongoing_works: 0, pending_works: 0 }
-        ) ?? { completed_works: 0, ongoing_works: 0, pending_works: 0 };
+        if (oldStatus !== newStatus) {
+
+          if (oldStatus === "completed") completed = Math.max(completed - 1, 0);
+          if (oldStatus === "in_progress") ongoing = Math.max(ongoing - 1, 0);
+          if (oldStatus === "pending") pending = Math.max(pending - 1, 0);
+
+          if (newStatus === "completed") completed += 1;
+          if (newStatus === "in_progress") ongoing += 1;
+          if (newStatus === "pending") pending += 1;
+        }
 
         await pesaSupabase
           .from("district_aarakhada_physical")
           .update({
-            completed_works: aggregated.completed_works,
-            ongoing_works: aggregated.ongoing_works,
-            pending_works: aggregated.pending_works,
-            sanctioned_works: aggregated.completed_works + aggregated.ongoing_works + aggregated.pending_works,
+            district_name: currentWork.district,
+            taluka_name: currentWork.taluka,
+            work_category: currentWork.work_category,
+            completed_works: completed,
+            ongoing_works: ongoing,
+            pending_works: pending,
+            sanctioned_works: completed + ongoing + pending,
             updated_at: new Date().toISOString(),
           })
           .eq("taluka_name", currentWork.taluka)
@@ -1289,291 +1308,299 @@ export const pesaWorkOperations = {
     return data;
   },
 
-async delete(id: string) {
-  // Fetch the work to identify counts and related metadata
-  const { data: workToDelete, error: fetchWorkError } = await pesaSupabase
-    .from("works")
-    .select("*")
-    .eq("id", id)
-    .single();
+  async delete(id: string) {
+    // Fetch the work to identify counts and related metadata
+    const { data: workToDelete, error: fetchWorkError } = await pesaSupabase
+      .from("works")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-  if (fetchWorkError) {
-    console.error("Error fetching PESA work before delete:", fetchWorkError);
-    throw fetchWorkError;
-  }
+    if (fetchWorkError) {
+      console.error("Error fetching PESA work before delete:", fetchWorkError);
+      throw fetchWorkError;
+    }
 
-  try {
-    if (workToDelete) {
-      const allowedStatuses = ["pending", "in_progress", "completed"];
-      const status = allowedStatuses.includes(workToDelete.current_status) ? workToDelete.current_status : "pending";
+    try {
+      if (workToDelete) {
+        const allowedStatuses = ["pending", "in_progress", "completed"];
+        const status = allowedStatuses.includes(workToDelete.current_status) ? workToDelete.current_status : "pending";
 
-      const completedDec = status === "completed" ? 1 : 0;
-      const ongoingDec = status === "in_progress" ? 1 : 0;
-      const pendingDec = status === "pending" ? 1 : 0;
+        const completedDec = status === "completed" ? 1 : 0;
+        const ongoingDec = status === "in_progress" ? 1 : 0;
+        const pendingDec = status === "pending" ? 1 : 0;
 
-      // Decrement counts in aarakhada_physical for the village and category
-      const { data: existingPhysical, error: physicalFetchError } = await pesaSupabase
-        .from("aarakhada_physical")
-        .select("*")
-        .eq("village_id", workToDelete.village_id)
-        .eq("work_category", workToDelete.work_category)
-        .single();
-
-      if (physicalFetchError && physicalFetchError.code !== "PGRST116") {
-        throw physicalFetchError;
-      }
-
-      if (existingPhysical) {
-        const updatedCompleted = Math.max((existingPhysical.completed_works || 0) - completedDec, 0);
-        const updatedOngoing = Math.max((existingPhysical.ongoing_works || 0) - ongoingDec, 0);
-        const updatedPending = Math.max((existingPhysical.pending_works || 0) - pendingDec, 0);
-
-        if (updatedCompleted === 0 && updatedOngoing === 0 && updatedPending === 0) {
-          // Delete the row if all counts are zero
-          await pesaSupabase
-            .from("aarakhada_physical")
-            .delete()
-            .eq("village_id", workToDelete.village_id)
-            .eq("work_category", workToDelete.work_category);
-
-          // Delete corresponding financial row
-          await pesaSupabase
-            .from("aarakhada_financial")
-            .delete()
-            .eq("village_id", workToDelete.village_id)
-            .eq("work_category", workToDelete.work_category);
-        } else {
-          await pesaSupabase
-            .from("aarakhada_physical")
-            .update({
-              completed_works: updatedCompleted,
-              ongoing_works: updatedOngoing,
-              pending_works: updatedPending,
-              sanctioned_works: updatedCompleted + updatedOngoing + updatedPending,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("village_id", workToDelete.village_id)
-            .eq("work_category", workToDelete.work_category);
-        }
-      }
-
-      // taluka_aarakhada_physical table decrement
-      const { data: existingTalukaPhysical, error: talukaPhysicalError } = await pesaSupabase
-        .from("taluka_aarakhada_physical")
-        .select("*")
-        .eq("taluka_name", workToDelete.taluka)
-        .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
-        .eq("work_category", workToDelete.work_category)
-        .single();
-
-      if (talukaPhysicalError && talukaPhysicalError.code !== "PGRST116") {
-        throw talukaPhysicalError;
-      }
-
-      if (existingTalukaPhysical) {
-        const updatedCompleted = Math.max((existingTalukaPhysical.completed_works || 0) - completedDec, 0);
-        const updatedOngoing = Math.max((existingTalukaPhysical.ongoing_works || 0) - ongoingDec, 0);
-        const updatedPending = Math.max((existingTalukaPhysical.pending_works || 0) - pendingDec, 0);
-
-        if (updatedCompleted === 0 && updatedOngoing === 0 && updatedPending === 0) {
-          // Delete the row if all counts are zero
-          await pesaSupabase
-            .from("taluka_aarakhada_physical")
-            .delete()
-            .eq("taluka_name", workToDelete.taluka)
-            .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
-            .eq("work_category", workToDelete.work_category);
-
-          // Delete corresponding taluka financial row
-          await pesaSupabase
-            .from("taluka_aarakhada_financial")
-            .delete()
-            .eq("taluka_name", workToDelete.taluka)
-            .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
-            .eq("work_category", workToDelete.work_category);
-        } else {
-          await pesaSupabase
-            .from("taluka_aarakhada_physical")
-            .update({
-              completed_works: updatedCompleted,
-              ongoing_works: updatedOngoing,
-              pending_works: updatedPending,
-              sanctioned_works: updatedCompleted + updatedOngoing + updatedPending,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("taluka_name", workToDelete.taluka)
-            .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
-            .eq("work_category", workToDelete.work_category);
-        }
-      }
-
-      // district_aarakhada_physical table decrement
-      const { data: existingDistrictPhysical, error: districtPhysicalError } = await pesaSupabase
-        .from("district_aarakhada_physical")
-        .select("*")
-        .eq("taluka_name", workToDelete.taluka)
-        .eq("work_category", workToDelete.work_category)
-        .single();
-
-      if (districtPhysicalError && districtPhysicalError.code !== "PGRST116") {
-        throw districtPhysicalError;
-      }
-
-      if (existingDistrictPhysical) {
-        const updatedCompleted = Math.max((existingDistrictPhysical.completed_works || 0) - completedDec, 0);
-        const updatedOngoing = Math.max((existingDistrictPhysical.ongoing_works || 0) - ongoingDec, 0);
-        const updatedPending = Math.max((existingDistrictPhysical.pending_works || 0) - pendingDec, 0);
-
-        if (updatedCompleted === 0 && updatedOngoing === 0 && updatedPending === 0) {
-          // Delete the row if all counts are zero
-          await pesaSupabase
-            .from("district_aarakhada_physical")
-            .delete()
-            .eq("taluka_name", workToDelete.taluka)
-            .eq("work_category", workToDelete.work_category);
-
-          // Delete corresponding district financial row
-          await pesaSupabase
-            .from("district_aarakhada_financial")
-            .delete()
-            .eq("taluka_name", workToDelete.taluka)
-            .eq("work_category", workToDelete.work_category);
-        } else {
-          await pesaSupabase
-            .from("district_aarakhada_physical")
-            .update({
-              completed_works: updatedCompleted,
-              ongoing_works: updatedOngoing,
-              pending_works: updatedPending,
-              sanctioned_works: updatedCompleted + updatedOngoing + updatedPending,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("taluka_name", workToDelete.taluka)
-            .eq("work_category", workToDelete.work_category);
-        }
-      }
-
-      // Financial updates (for remaining physical rows)
-      const { data: existingAarakhadaFinancial, error: financialFetchError } = await pesaSupabase
-        .from("aarakhada_financial")
-        .select("*")
-        .eq("village_id", workToDelete.village_id)
-        .eq("work_category", workToDelete.work_category)
-        .single();
-
-      if (financialFetchError && financialFetchError.code !== "PGRST116") {
-        throw financialFetchError;
-      }
-
-      if (existingAarakhadaFinancial) {
-        const previousExpenditure = workToDelete.previous_expenditure || 0;
-        const currentExpenditure = workToDelete.current_expenditure || 0;
-        const cumulativeExpenditure = previousExpenditure + currentExpenditure;
-
-        // Updated released_amount and remaining funds
-        const updatedReleasedAmount = (existingAarakhadaFinancial.released_amount || 0) - (workToDelete.agreement_approval_amount || 0);
-        const updatedRemainingFunds = updatedReleasedAmount - ((existingAarakhadaFinancial.cumulative_expenditure || 0) - cumulativeExpenditure);
-
-        const updatedPreviousExpenditure = Math.max((existingAarakhadaFinancial.previous_expenditure || 0) - previousExpenditure, 0);
-        const updatedCurrentExpenditure = Math.max((existingAarakhadaFinancial.current_expenditure || 0) - currentExpenditure, 0);
-        const updatedCumulativeExpenditure = (existingAarakhadaFinancial.cumulative_expenditure || 0) - cumulativeExpenditure;
-
-        await pesaSupabase
-          .from("aarakhada_financial")
-          .update({
-            previous_expenditure: updatedPreviousExpenditure,
-            current_expenditure: updatedCurrentExpenditure,
-            cumulative_expenditure: updatedCumulativeExpenditure >= 0 ? updatedCumulativeExpenditure : 0,
-            released_amount: updatedReleasedAmount >= 0 ? updatedReleasedAmount : 0,
-            remaining_funds: updatedRemainingFunds >= 0 ? updatedRemainingFunds : 0,
-            updated_at: new Date().toISOString(),
-          })
+        // Decrement counts in aarakhada_physical for the village and category
+        const { data: existingPhysical, error: physicalFetchError } = await pesaSupabase
+          .from("aarakhada_physical")
+          .select("*")
           .eq("village_id", workToDelete.village_id)
-          .eq("work_category", workToDelete.work_category);
-      }
+          .eq("work_category", workToDelete.work_category)
+          .single();
 
-      // taluka_aarakhada_financial update
-      const { data: existingTalukaFinancial, error: talukaFinancialError } = await pesaSupabase
-        .from("taluka_aarakhada_financial")
-        .select("*")
-        .eq("taluka_name", workToDelete.taluka)
-        .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
-        .eq("work_category", workToDelete.work_category)
-        .single();
+        if (physicalFetchError && physicalFetchError.code !== "PGRST116") {
+          throw physicalFetchError;
+        }
 
-      if (talukaFinancialError && talukaFinancialError.code !== "PGRST116") {
-        throw talukaFinancialError;
-      }
+        if (existingPhysical) {
+          const updatedCompleted = Math.max((existingPhysical.completed_works || 0) - completedDec, 0);
+          const updatedOngoing = Math.max((existingPhysical.ongoing_works || 0) - ongoingDec, 0);
+          const updatedPending = Math.max((existingPhysical.pending_works || 0) - pendingDec, 0);
 
-      if (existingTalukaFinancial) {
-        const previousExpenditure = workToDelete.previous_expenditure || 0;
-        const currentExpenditure = workToDelete.current_expenditure || 0;
+          if (updatedCompleted === 0 && updatedOngoing === 0 && updatedPending === 0) {
+            // Delete the row if all counts are zero
+            await pesaSupabase
+              .from("aarakhada_physical")
+              .delete()
+              .eq("village_id", workToDelete.village_id)
+              .eq("work_category", workToDelete.work_category);
 
-        const updatedAnnualReceivedFund = (existingTalukaFinancial.annual_received_fund || 0) - (workToDelete.agreement_approval_amount || 0);
-        const updatedRemainingFunds = updatedAnnualReceivedFund - existingTalukaFinancial.cumulative_expenditure;
+            // Delete corresponding financial row
+            await pesaSupabase
+              .from("aarakhada_financial")
+              .delete()
+              .eq("village_id", workToDelete.village_id)
+              .eq("work_category", workToDelete.work_category);
+          } else {
+            await pesaSupabase
+              .from("aarakhada_physical")
+              .update({
+                work_category: workToDelete.work_category,
+                village_id: workToDelete.village_id,
+                gram_panchayat: workToDelete.pesa_grampanchayat,
+                completed_works: updatedCompleted,
+                ongoing_works: updatedOngoing,
+                pending_works: updatedPending,
+                sanctioned_works: updatedCompleted + updatedOngoing + updatedPending,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("village_id", workToDelete.village_id)
+              .eq("work_category", workToDelete.work_category);
+          }
+        }
 
-        const updatedPreviousExpenditure = Math.max((existingTalukaFinancial.previous_expenditure || 0) - previousExpenditure, 0);
-        const updatedCurrentExpenditure = Math.max((existingTalukaFinancial.current_expenditure || 0) - currentExpenditure, 0);
-
-        await pesaSupabase
-          .from("taluka_aarakhada_financial")
-          .update({
-            previous_expenditure: updatedPreviousExpenditure,
-            current_expenditure: updatedCurrentExpenditure,
-            annual_received_fund: updatedAnnualReceivedFund >= 0 ? updatedAnnualReceivedFund : 0,
-            remaining_funds: updatedRemainingFunds >= 0 ? updatedRemainingFunds : 0,
-            updated_at: new Date().toISOString(),
-          })
+        // taluka_aarakhada_physical table decrement
+        const { data: existingTalukaPhysical, error: talukaPhysicalError } = await pesaSupabase
+          .from("taluka_aarakhada_physical")
+          .select("*")
           .eq("taluka_name", workToDelete.taluka)
           .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
-          .eq("work_category", workToDelete.work_category);
-      }
+          .eq("work_category", workToDelete.work_category)
+          .single();
 
-      // district_aarakhada_financial update
-      const { data: existingDistrictFinancial, error: districtFinancialError } = await pesaSupabase
-        .from("district_aarakhada_financial")
-        .select("*")
-        .eq("taluka_name", workToDelete.taluka)
-        .eq("work_category", workToDelete.work_category)
-        .single();
+        if (talukaPhysicalError && talukaPhysicalError.code !== "PGRST116") {
+          throw talukaPhysicalError;
+        }
 
-      if (districtFinancialError && districtFinancialError.code !== "PGRST116") {
-        throw districtFinancialError;
-      }
+        if (existingTalukaPhysical) {
+          const updatedCompleted = Math.max((existingTalukaPhysical.completed_works || 0) - completedDec, 0);
+          const updatedOngoing = Math.max((existingTalukaPhysical.ongoing_works || 0) - ongoingDec, 0);
+          const updatedPending = Math.max((existingTalukaPhysical.pending_works || 0) - pendingDec, 0);
 
-      if (existingDistrictFinancial) {
-        const previousExpenditure = workToDelete.previous_expenditure || 0;
-        const currentExpenditure = workToDelete.current_expenditure || 0;
+          if (updatedCompleted === 0 && updatedOngoing === 0 && updatedPending === 0) {
+            // Delete the row if all counts are zero
+            await pesaSupabase
+              .from("taluka_aarakhada_physical")
+              .delete()
+              .eq("taluka_name", workToDelete.taluka)
+              .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
+              .eq("work_category", workToDelete.work_category);
 
-        const updatedAnnualReceivedFund = (existingDistrictFinancial.annual_received_fund || 0) - (workToDelete.agreement_approval_amount || 0);
-        const updatedRemainingFunds = updatedAnnualReceivedFund - existingDistrictFinancial.cumulative_expenditure;
+            // Delete corresponding taluka financial row
+            await pesaSupabase
+              .from("taluka_aarakhada_financial")
+              .delete()
+              .eq("taluka_name", workToDelete.taluka)
+              .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
+              .eq("work_category", workToDelete.work_category);
+          } else {
+            await pesaSupabase
+              .from("taluka_aarakhada_physical")
+              .update({
+                work_category: workToDelete.work_category,
+                gram_panchayat: workToDelete.pesa_grampanchayat,
+                completed_works: updatedCompleted,
+                ongoing_works: updatedOngoing,
+                pending_works: updatedPending,
+                sanctioned_works: updatedCompleted + updatedOngoing + updatedPending,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("taluka_name", workToDelete.taluka)
+              .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
+              .eq("work_category", workToDelete.work_category);
+          }
+        }
 
-        await pesaSupabase
-          .from("district_aarakhada_financial")
-          .update({
-            annual_received_fund: updatedAnnualReceivedFund >= 0 ? updatedAnnualReceivedFund : 0,
-            remaining_funds: updatedRemainingFunds >= 0 ? updatedRemainingFunds : 0,
-            previous_expenditure: previousExpenditure >= 0 ? previousExpenditure : 0,
-            current_expenditure: currentExpenditure >= 0 ? currentExpenditure : 0,
-            updated_at: new Date().toISOString(),
-          })
+        // district_aarakhada_physical table decrement
+        const { data: existingDistrictPhysical, error: districtPhysicalError } = await pesaSupabase
+          .from("district_aarakhada_physical")
+          .select("*")
           .eq("taluka_name", workToDelete.taluka)
-          .eq("work_category", workToDelete.work_category);
-      }
+          .eq("work_category", workToDelete.work_category)
+          .single();
 
-      // Finally delete the work entry
-      const { error: deleteError } = await pesaSupabase.from("works").delete().eq("id", id);
+        if (districtPhysicalError && districtPhysicalError.code !== "PGRST116") {
+          throw districtPhysicalError;
+        }
 
-      if (deleteError) {
-        console.error("Error deleting PESA work:", deleteError);
-        throw deleteError;
+        if (existingDistrictPhysical) {
+          const updatedCompleted = Math.max((existingDistrictPhysical.completed_works || 0) - completedDec, 0);
+          const updatedOngoing = Math.max((existingDistrictPhysical.ongoing_works || 0) - ongoingDec, 0);
+          const updatedPending = Math.max((existingDistrictPhysical.pending_works || 0) - pendingDec, 0);
+
+          if (updatedCompleted === 0 && updatedOngoing === 0 && updatedPending === 0) {
+            // Delete the row if all counts are zero
+            await pesaSupabase
+              .from("district_aarakhada_physical")
+              .delete()
+              .eq("taluka_name", workToDelete.taluka)
+              .eq("work_category", workToDelete.work_category);
+
+            // Delete corresponding district financial row
+            await pesaSupabase
+              .from("district_aarakhada_financial")
+              .delete()
+              .eq("taluka_name", workToDelete.taluka)
+              .eq("work_category", workToDelete.work_category);
+          } else {
+            await pesaSupabase
+              .from("district_aarakhada_physical")
+              .update({
+                work_category: workToDelete.work_category,
+                district_name: workToDelete.district,
+                taluka_name: workToDelete.taluka,
+                completed_works: updatedCompleted,
+                ongoing_works: updatedOngoing,
+                pending_works: updatedPending,
+                sanctioned_works: updatedCompleted + updatedOngoing + updatedPending,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("taluka_name", workToDelete.taluka)
+              .eq("work_category", workToDelete.work_category);
+          }
+        }
+
+        // Financial updates (for remaining physical rows)
+        const { data: existingAarakhadaFinancial, error: financialFetchError } = await pesaSupabase
+          .from("aarakhada_financial")
+          .select("*")
+          .eq("village_id", workToDelete.village_id)
+          .eq("work_category", workToDelete.work_category)
+          .single();
+
+        if (financialFetchError && financialFetchError.code !== "PGRST116") {
+          throw financialFetchError;
+        }
+
+        if (existingAarakhadaFinancial) {
+          const previousExpenditure = workToDelete.previous_expenditure || 0;
+          const currentExpenditure = workToDelete.current_expenditure || 0;
+          const cumulativeExpenditure = previousExpenditure + currentExpenditure;
+
+          // Updated released_amount and remaining funds
+          const updatedReleasedAmount = (existingAarakhadaFinancial.released_amount || 0) - (workToDelete.agreement_approval_amount || 0);
+          const updatedRemainingFunds = updatedReleasedAmount - ((existingAarakhadaFinancial.cumulative_expenditure || 0) - cumulativeExpenditure);
+
+          const updatedPreviousExpenditure = Math.max((existingAarakhadaFinancial.previous_expenditure || 0) - previousExpenditure, 0);
+          const updatedCurrentExpenditure = Math.max((existingAarakhadaFinancial.current_expenditure || 0) - currentExpenditure, 0);
+          const updatedCumulativeExpenditure = (existingAarakhadaFinancial.cumulative_expenditure || 0) - cumulativeExpenditure;
+
+          await pesaSupabase
+            .from("aarakhada_financial")
+            .update({
+              previous_expenditure: updatedPreviousExpenditure,
+              current_expenditure: updatedCurrentExpenditure,
+              cumulative_expenditure: updatedCumulativeExpenditure >= 0 ? updatedCumulativeExpenditure : 0,
+              released_amount: updatedReleasedAmount >= 0 ? updatedReleasedAmount : 0,
+              remaining_funds: updatedRemainingFunds >= 0 ? updatedRemainingFunds : 0,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("village_id", workToDelete.village_id)
+            .eq("work_category", workToDelete.work_category);
+        }
+
+        // taluka_aarakhada_financial update
+        const { data: existingTalukaFinancial, error: talukaFinancialError } = await pesaSupabase
+          .from("taluka_aarakhada_financial")
+          .select("*")
+          .eq("taluka_name", workToDelete.taluka)
+          .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
+          .eq("work_category", workToDelete.work_category)
+          .single();
+
+        if (talukaFinancialError && talukaFinancialError.code !== "PGRST116") {
+          throw talukaFinancialError;
+        }
+
+        if (existingTalukaFinancial) {
+          const previousExpenditure = workToDelete.previous_expenditure || 0;
+          const currentExpenditure = workToDelete.current_expenditure || 0;
+
+          const updatedAnnualReceivedFund = (existingTalukaFinancial.annual_received_fund || 0) - (workToDelete.agreement_approval_amount || 0);
+          const updatedRemainingFunds = updatedAnnualReceivedFund - existingTalukaFinancial.cumulative_expenditure;
+
+          const updatedPreviousExpenditure = Math.max((existingTalukaFinancial.previous_expenditure || 0) - previousExpenditure, 0);
+          const updatedCurrentExpenditure = Math.max((existingTalukaFinancial.current_expenditure || 0) - currentExpenditure, 0);
+
+          await pesaSupabase
+            .from("taluka_aarakhada_financial")
+            .update({
+              previous_expenditure: updatedPreviousExpenditure,
+              current_expenditure: updatedCurrentExpenditure,
+              annual_received_fund: updatedAnnualReceivedFund >= 0 ? updatedAnnualReceivedFund : 0,
+              remaining_funds: updatedRemainingFunds >= 0 ? updatedRemainingFunds : 0,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("taluka_name", workToDelete.taluka)
+            .eq("gram_panchayat", workToDelete.pesa_grampanchayat)
+            .eq("work_category", workToDelete.work_category);
+        }
+
+        // district_aarakhada_financial update
+        const { data: existingDistrictFinancial, error: districtFinancialError } = await pesaSupabase
+          .from("district_aarakhada_financial")
+          .select("*")
+          .eq("taluka_name", workToDelete.taluka)
+          .eq("work_category", workToDelete.work_category)
+          .single();
+
+        if (districtFinancialError && districtFinancialError.code !== "PGRST116") {
+          throw districtFinancialError;
+        }
+
+        if (existingDistrictFinancial) {
+          const previousExpenditure = workToDelete.previous_expenditure || 0;
+          const currentExpenditure = workToDelete.current_expenditure || 0;
+
+          const updatedAnnualReceivedFund = (existingDistrictFinancial.annual_received_fund || 0) - (workToDelete.agreement_approval_amount || 0);
+          const updatedRemainingFunds = updatedAnnualReceivedFund - existingDistrictFinancial.cumulative_expenditure;
+
+          await pesaSupabase
+            .from("district_aarakhada_financial")
+            .update({
+              annual_received_fund: updatedAnnualReceivedFund >= 0 ? updatedAnnualReceivedFund : 0,
+              remaining_funds: updatedRemainingFunds >= 0 ? updatedRemainingFunds : 0,
+              previous_expenditure: previousExpenditure >= 0 ? previousExpenditure : 0,
+              current_expenditure: currentExpenditure >= 0 ? currentExpenditure : 0,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("taluka_name", workToDelete.taluka)
+            .eq("work_category", workToDelete.work_category);
+        }
+
+        // Finally delete the work entry
+        const { error: deleteError } = await pesaSupabase.from("works").delete().eq("id", id);
+
+        if (deleteError) {
+          console.error("Error deleting PESA work:", deleteError);
+          throw deleteError;
+        }
       }
+    } catch (err) {
+      console.error("Error during PESA work delete sync:", err);
+      throw err;
     }
-  } catch (err) {
-    console.error("Error during PESA work delete sync:", err);
-    throw err;
-  }
-},
+  },
 
   async duplicate(id: string) {
     const { data, error } = await pesaSupabase
@@ -1635,8 +1662,8 @@ export const pesaWorkflowOperations = {
           await pesaSupabase
             .from("aarakhada_financial")
             .update({ status: 'completed' })
-          .eq("village_id", workflow.work.village_id)
-          .eq("work_name", workflow.work.work_name);
+            .eq("village_id", workflow.work.village_id)
+            .eq("work_name", workflow.work.work_name);
         }
       }
     }
@@ -1668,53 +1695,234 @@ export const pesaWorkflowOperations = {
     return data;
   },
 
- async updateWorkflow(id: string, updates: any) {
-  const { data, error } = await pesaSupabase
-    .from("workflows")
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating PESA workflow:', error);
-    throw error;
-  }
-
-  if (updates.status === 'completed' && data?.work_id) {
-    const { data: workRow, error: workError } = await pesaSupabase
-      .from("works")
-      .select("work_name, work_category, village_id")
-      .eq("id", data.work_id)
+  async updateWorkflow(id: string, updates: any) {
+    const { data, error } = await pesaSupabase
+      .from("workflows")
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
       .single();
-    if (workError) {
-      console.error('Error updating work current_status:', workError);
-      throw workError;
+
+    if (error) {
+      console.error("Error updating PESA workflow:", error);
+      throw error;
     }
 
-    const { error: workStatusError } = await pesaSupabase
-      .from("works")
-      .update({ current_status: 'completed' })
-      .eq("id", data.work_id);
-    if (workStatusError) {
-      console.error('Error updating work current_status:', workStatusError);
-      throw workStatusError;
+    if (updates.status === "completed" && data?.work_id) {
+      // fetch work including its previous current_status so we know what to decrement
+      const { data: workRow, error: workError } = await pesaSupabase
+        .from("works")
+        .select("work_name, work_category, village_id, taluka, pesa_grampanchayat, current_status")
+        .eq("id", data.work_id)
+        .single();
+      if (workError) {
+        console.error("Error fetching work row:", workError);
+        throw workError;
+      }
+
+      const previousWorkStatus = workRow?.current_status ?? null; // previous status of this work
+      const newWorkStatus = "completed"; // workflow update sets this work to completed in this flow
+
+      const { error: workStatusError } = await pesaSupabase
+        .from("works")
+        .update({ current_status: newWorkStatus })
+        .eq("id", data.work_id);
+      if (workStatusError) {
+        console.error("Error updating work current_status:", workStatusError);
+        throw workStatusError;
+      }
+
+      // Update aarakhada_financial status
+      const { error: financialError } = await pesaSupabase
+        .from("aarakhada_financial")
+        .update({ status: "completed" })
+        .eq("village_id", workRow.village_id);
+
+      if (financialError) {
+        console.error("Error updating aarakhada_financial status:", financialError);
+        throw financialError;
+      }
+
+      // Normalizer: keep 'ongoing' and 'in_progress' aligned
+      const normalize = (s: string | null) => {
+        if (!s) return s;
+        if (s === "ongoing") return "in_progress";
+        return s;
+      };
+
+      const oldStatusNormalized = normalize(previousWorkStatus);
+      const newStatusNormalized = normalize(newWorkStatus);
+
+      // ---------------------------------------------------
+      // 1) VILLAGE LEVEL — aarakhada_physical
+      // ---------------------------------------------------
+      const { data: existingPhysical, error: fetchPhysicalError } =
+        await pesaSupabase
+          .from("aarakhada_physical")
+          .select("*")
+          .eq("village_id", workRow.village_id)
+          .eq("work_category", workRow.work_category)
+          .single();
+
+      if (fetchPhysicalError && fetchPhysicalError.code !== "PGRST116") {
+        console.error("Error fetching aarakhada_physical:", fetchPhysicalError);
+        throw fetchPhysicalError;
+      }
+
+      if (existingPhysical) {
+        let completed = existingPhysical.completed_works || 0;
+        let ongoing = existingPhysical.ongoing_works || 0;
+        let pending = existingPhysical.pending_works || 0;
+
+        // Subtract previous work status bucket
+        if (oldStatusNormalized && oldStatusNormalized !== newStatusNormalized) {
+          if (oldStatusNormalized === "completed") completed = Math.max(completed - 1, 0);
+          if (oldStatusNormalized === "in_progress") ongoing = Math.max(ongoing - 1, 0);
+          if (oldStatusNormalized === "pending") pending = Math.max(pending - 1, 0);
+        }
+
+        // Add to new work status bucket
+        if (newStatusNormalized === "completed") completed += 1;
+        if (newStatusNormalized === "in_progress") ongoing += 1;
+        if (newStatusNormalized === "pending") pending += 1;
+
+        const sanctioned = completed + ongoing + pending;
+
+        const { error: physicalUpdateError } = await pesaSupabase
+          .from("aarakhada_physical")
+          .update({
+            status: newWorkStatus,
+            completed_works: completed,
+            ongoing_works: ongoing,
+            pending_works: pending,
+            sanctioned_works: sanctioned,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("village_id", workRow.village_id)
+          .eq("work_category", workRow.work_category);
+
+        if (physicalUpdateError) {
+          console.error("Error updating aarakhada_physical:", physicalUpdateError);
+          throw physicalUpdateError;
+        }
+      }
+
+      // ---------------------------------------------------
+      // 2) TALUKA LEVEL — taluka_aarakhada_physical
+      //    -> decrement previousWorkStatus bucket, increment newWorkStatus bucket
+      // ---------------------------------------------------
+      const { data: existingTaluka, error: talukaFetchError } = await pesaSupabase
+        .from("taluka_aarakhada_physical")
+        .select("*")
+        .eq("taluka_name", workRow.taluka)
+        .eq("gram_panchayat", workRow.pesa_grampanchayat)
+        .eq("work_category", workRow.work_category)
+        .single();
+
+      if (talukaFetchError && talukaFetchError.code !== "PGRST116") {
+        console.error("Error fetching taluka_aarakhada_physical:", talukaFetchError);
+        throw talukaFetchError;
+      }
+
+      if (existingTaluka) {
+        let completed = existingTaluka.completed_works || 0;
+        let ongoing = existingTaluka.ongoing_works || 0;
+        let pending = existingTaluka.pending_works || 0;
+
+        // Subtract previous status bucket for taluka
+        if (oldStatusNormalized && oldStatusNormalized !== newStatusNormalized) {
+          if (oldStatusNormalized === "completed") completed = Math.max(completed - 1, 0);
+          if (oldStatusNormalized === "in_progress") ongoing = Math.max(ongoing - 1, 0);
+          if (oldStatusNormalized === "pending") pending = Math.max(pending - 1, 0);
+        }
+
+        // Add to new status bucket for taluka
+        if (newStatusNormalized === "completed") completed += 1;
+        if (newStatusNormalized === "in_progress") ongoing += 1;
+        if (newStatusNormalized === "pending") pending += 1;
+
+        const sanctioned = completed + ongoing + pending;
+
+        const { error: talukaUpdateError } = await pesaSupabase
+          .from("taluka_aarakhada_physical")
+          .update({
+            status: newWorkStatus,
+            completed_works: completed,
+            ongoing_works: ongoing,
+            pending_works: pending,
+            sanctioned_works: sanctioned,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("taluka_name", workRow.taluka)
+          .eq("gram_panchayat", workRow.pesa_grampanchayat)
+          .eq("work_category", workRow.work_category);
+
+        if (talukaUpdateError) {
+          console.error("Error updating taluka_aarakhada_physical:", talukaUpdateError);
+          throw talukaUpdateError;
+        }
+      }
+
+      // ---------------------------------------------------
+      // 3) DISTRICT LEVEL — district_aarakhada_physical
+      //    -> decrement previousWorkStatus bucket, increment newWorkStatus bucket
+      // ---------------------------------------------------
+      const { data: existingDistrict, error: districtFetchError } =
+        await pesaSupabase
+          .from("district_aarakhada_physical")
+          .select("*")
+          .eq("taluka_name", workRow.taluka)
+          .eq("work_category", workRow.work_category)
+          .single();
+
+      if (districtFetchError && districtFetchError.code !== "PGRST116") {
+        console.error("Error fetching district_aarakhada_physical:", districtFetchError);
+        throw districtFetchError;
+      }
+
+      if (existingDistrict) {
+        let completed = existingDistrict.completed_works || 0;
+        let ongoing = existingDistrict.ongoing_works || 0;
+        let pending = existingDistrict.pending_works || 0;
+
+        // Subtract previous status bucket for district
+        if (oldStatusNormalized && oldStatusNormalized !== newStatusNormalized) {
+          if (oldStatusNormalized === "completed") completed = Math.max(completed - 1, 0);
+          if (oldStatusNormalized === "in_progress") ongoing = Math.max(ongoing - 1, 0);
+          if (oldStatusNormalized === "pending") pending = Math.max(pending - 1, 0);
+        }
+
+        // Add to new status bucket for district
+        if (newStatusNormalized === "completed") completed += 1;
+        if (newStatusNormalized === "in_progress") ongoing += 1;
+        if (newStatusNormalized === "pending") pending += 1;
+
+        const sanctioned = completed + ongoing + pending;
+
+        const { error: districtUpdateError } = await pesaSupabase
+          .from("district_aarakhada_physical")
+          .update({
+            completed_works: completed,
+            ongoing_works: ongoing,
+            pending_works: pending,
+            sanctioned_works: sanctioned,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("taluka_name", workRow.taluka)
+          .eq("work_category", workRow.work_category);
+
+        if (districtUpdateError) {
+          console.error("Error updating district_aarakhada_physical:", districtUpdateError);
+          throw districtUpdateError;
+        }
+      }
     }
 
-    const { error: financialError } = await pesaSupabase
-      .from("aarakhada_financial")
-      .update({ status: 'completed' })
-      .eq("village_id", workRow.village_id)
-    if (financialError) {
-      console.error('Error updating aarakhada_financial status:', financialError);
-      throw financialError;
-    }
-  }
-  return data;
-},
+    return data;
+  },
 
   async updateStep(id: string, updates: any) {
     const { data, error } = await pesaSupabase
@@ -1730,7 +1938,7 @@ export const pesaWorkflowOperations = {
     return data;
   },
 
-async deleteWorkflow(id: string) {
+  async deleteWorkflow(id: string) {
     const { error } = await pesaSupabase.from("workflows").delete().eq("id", id);
     if (error) {
       console.error('Error deleting workflow:', error);
