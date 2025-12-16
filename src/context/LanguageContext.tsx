@@ -198,7 +198,7 @@ const translations: Record<Language, Record<string, string>> = {
     selectPesaVillageWorkAndBuildWorkflow: 'पेसा गाव काम निवडा आणि सानुकूल टप्प्यांसह वर्कफ्लो तयार करा',
     selectWorkToStartBuildingWorkflow: 'वर्कफ्लो तयार करण्यासाठी काम निवडा',
     selectPesaVillageWorkWorkflowToTrackProgressAndManageSteps: 'प्रगती ट्रॅक करण्यासाठी आणि टप्पे व्यवस्थापित करण्यासाठी पेसा गाव काम वर्कफ्लो निवडा',
-    progressTitle: 'काम सुरू आहे, तुम्ही रक्कम संपादित करू शकत नाही',
+    pendingTitle: 'काम प्रलंबित आहे, तुम्ही रक्कम संपादित करू शकत नाही',
     releaseAmountTitle: 'प्राप्त निधी नाही, तुम्ही काम जोडू शकत नाही',
     sameMonthEntryTitle: 'या महिन्यासाठी नोंद आधीच अस्तित्वात आहे',
 
@@ -393,7 +393,7 @@ const translations: Record<Language, Record<string, string>> = {
     selectPesaVillageWorkAndBuildWorkflow: 'Select PESA village work and build workflow with custom steps',
     selectWorkToStartBuildingWorkflow: 'Select a work to start building workflow',
     selectPesaVillageWorkWorkflowToTrackProgressAndManageSteps: 'Select a PESA village work workflow to track progress and manage steps',
-    progressTitle: 'Work is in progress, you cannot edit amount',
+    pendingTitle: 'Work is pending, you cannot edit amount',
     releaseAmountTitle: 'No released amount, you cannot add work',
     sameMonthEntryTitle: 'Entry for the same month already exists',
 
