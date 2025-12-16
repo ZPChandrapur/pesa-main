@@ -86,6 +86,14 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
     document.body.removeChild(link);
   };
 
+const toProperCase = (str?: string | null) => {
+  if (!str) return "";
+  return str
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+
   const labelColorsMap: Record<string, string> = {
     'from-indigo-500 to-purple-600': 'text-indigo-600',
     'from-blue-500 to-indigo-600': 'text-blue-600',
@@ -434,13 +442,13 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
                       {isFirstOfGroup && (
                         <td rowSpan={groupSize} className="px-4 py-3 font-medium align-middle">{groupSrNo}</td>
                       )}
-                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{v.district || '-'}</td>}
-                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{v.block || '-'}</td>}
-                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{gramPanchayat}</td>}
+                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{toProperCase(v.district)}</td>}
+                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{toProperCase(v.block) || '-'}</td>}
+                      {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{toProperCase(gramPanchayat)}</td>}
                       {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{Number((v as any).gram_panchayat_population) || 0}</td>}
                       {isFirstOfGroup && <td rowSpan={groupSize} className="px-4 py-3 align-middle">{Number((v as any).gram_panchayat_st_population) || 0}</td>}
 
-                      <td className="px-4 py-3">{v.village_name}</td>
+                      <td className="px-4 py-3">{toProperCase(v.village_name)}</td>
                       <td className="px-4 py-3">{Number((v as any).village_population) || 0}</td>
                       <td className="px-4 py-3">{stPop}</td>
                       <td className="px-4 py-3">{amtPerHead}</td>
