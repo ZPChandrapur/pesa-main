@@ -229,7 +229,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
             <img
               src={MahaPesa}
               alt="Maha Pesa Logo"
-              className="w-full h-full object-contain rounded-full"
+              className="w-full h-full object-contain rounded-lg"
             />
           </div>
         </div>
