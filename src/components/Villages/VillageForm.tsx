@@ -10,6 +10,7 @@ interface VillageFormProps {
   isOpen: boolean;
   readonly?: boolean; // Added readonly prop for view mode
 }
+
 export function VillageForm({ village, onSave, onCancel, isOpen, readonly = false }: VillageFormProps) {
   const { t } = useLanguage();
   const [accessUsers, setAccessUsers] = useState<{ user_id: string }[]>([]);
@@ -59,7 +60,6 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
   useEffect(() => {
     const fetchAccessUsers = async () => {
       try {
-        // Step 1 → Load all users with role_id = 6
         const { data: roleUsers, error: roleError } = await supabase
           .from("user_roles")
           .select("user_id, role_id, name")
@@ -75,10 +75,8 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
           return;
         }
 
-        // Get all user IDs
         const userIds = roleUsers.map(u => u.user_id);
 
-        // Step 2 → Fetch village access rows (only for marking access, NOT filtering)
         const { data: villages, error: villageError } = await pesaSupabase
           .from("villages")
           .select("gram_user_access");
@@ -88,12 +86,10 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
           return;
         }
 
-        // Extract user IDs with GP access
         const accessUserIds = villages
           ?.filter(v => v.gram_user_access)
           .map(v => v.gram_user_access) || [];
 
-        // Step 3 → Build final list of all roleUsers but keep track of who has access
         const finalList = roleUsers.map(u => ({
           user_id: u.user_id,
           name: u.name,
@@ -111,31 +107,55 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
   }, []);
 
 
-  // Reset form fields to initial state
   const resetData = () => {
     setFormData(initialFormData);
   };
-  const handleSubmit = (e: React.FormEvent) => {
-    debugger
-    e.preventDefault();
-    const dataToSave = {
-      ...formData,
-      gram_user_access:
-        formData.gram_user_access === "" ? null : formData.gram_user_access,
-      gram_panchayat_population: formData.gram_panchayat_population ?? 0,
-      gram_panchayat_st_population: formData.gram_panchayat_st_population ?? 0,
-      village_population: formData.village_population ?? 0,
-      village_st_population: formData.village_st_population ?? 0,
-      amount_per_head_st_population:
-        formData.amount_per_head_st_population === ''
-          ? 0
-          : parseFloat(formData.amount_per_head_st_population),
-      is_pesa: !!formData.is_pesa,
-    };
-    onSave(dataToSave);
-    alert(t('submittedSuccessfully')); // Show success alert
-    resetData(); // Reset form after submit
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const villageName = formData.village_name;
+  const gpName = formData.gram_panchayat;
+
+  const { data: existing, error } = await pesaSupabase
+    .from("villages")
+    .select("id, village_name, gram_panchayat")
+    .eq("gram_panchayat", gpName)
+    .eq("village_name", villageName);
+
+  if (error) {
+    console.error("Error checking village duplicate:", error);
+  }
+
+  const isDuplicate =
+    existing &&
+    existing.length > 0 &&
+    existing[0].id !== (village?.id ?? null);
+
+  if (isDuplicate) {
+    alert("This village name is already present under this Gram Panchayat.");
+    return;
+  }
+
+  const dataToSave = {
+    ...formData,
+    gram_user_access:
+      formData.gram_user_access === "" ? null : formData.gram_user_access,
+    gram_panchayat_population: formData.gram_panchayat_population ?? 0,
+    gram_panchayat_st_population: formData.gram_panchayat_st_population ?? 0,
+    village_population: formData.village_population ?? 0,
+    village_st_population: formData.village_st_population ?? 0,
+    amount_per_head_st_population:
+      formData.amount_per_head_st_population === ""
+        ? 0
+        : parseFloat(formData.amount_per_head_st_population),
+    is_pesa: !!formData.is_pesa,
   };
+
+  onSave(dataToSave);
+  alert(t("submittedSuccessfully"));
+  resetData();
+};
+
   const handleChange = (field: keyof typeof formData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
