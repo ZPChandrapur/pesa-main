@@ -6,6 +6,7 @@ import { villageService, districtWorkService, pesaSupabase, workService } from '
 import * as XLSX from 'xlsx';
 import PesaLogo from '../../assets/pesaLogo.png';
 import { handleDownloadPhysicalExcel } from './DownloadPhysicalReport';
+import { handleDownloadFinancialExcel } from './DownloadFinancialReport';
 
 export function District() {
   const { t, language } = useLanguage();
@@ -49,94 +50,24 @@ export function District() {
     }
   };
 
-  const handleDownloadExcel = async () => {
-    if (activeTab === 'physical') {
-      await handleDownloadPhysicalExcel({
-        selectedDistrict,
-        selectedTaluka,
-        selectedCategory,
-        language: language as 'en' | 'mr',
-      });
-      return;
-    }
+const handleDownloadExcel = async () => {
+  if (activeTab === 'physical') {
+    await handleDownloadPhysicalExcel({
+      selectedDistrict,
+      selectedTaluka,
+      selectedCategory,
+      language: language as 'en' | 'mr',
+    });
+    return;
+  }
 
-    const parseNumeric = (val) => val == null ? 0 : Number(String(val).replace(/[^\d.-]/g, "")) || 0;
-
-    const financialColumns = language === 'mr'
-      ? [
-          'अ.क्र.',
-          'जिल्हा नाव',
-          'तालुका नाव',
-          'कार्य प्रकार',
-          'पेसा ग्रा.पं. संख्या',
-          'पेसा गावे संख्या',
-          'वार्षिक मंजूर निधी',
-          'वार्षिक प्राप्त निधी',
-          'प्राप्त व्याज',
-          'एकूण प्राप्त निधी',
-          'मागील खर्च',
-          'चालू खर्च',
-          'एकुण खर्च',
-          'उर्वरित निधी'
-        ]
-      : [
-          'Sr. No',
-          'District Name',
-          'Taluka Name',
-          'Work Category',
-          'PESA Gram Panchayat Count',
-          'PESA Village Count',
-          'Annual Approved Fund',
-          'Annual Received Fund',
-          'Received Interest',
-          'Total Received Fund',
-          'Previous Expenditure',
-          'Current Expenditure',
-          'Cumulative Expenditure',
-          'Remaining Funds'
-        ];
-
-    let financialQuery = pesaSupabase
-      .from('district_aarakhada_financial')
-      .select('*');
-    if (selectedDistrict) financialQuery = financialQuery.eq('district_name', selectedDistrict);
-    if (selectedTaluka) financialQuery = financialQuery.eq('taluka_name', selectedTaluka);
-    if (selectedCategory) financialQuery = financialQuery.eq('work_category', selectedCategory);
-    const { data: financialWorks, error: financialError } = await financialQuery;
-    if (financialError) {
-      alert('Failed to fetch financial summary');
-      return;
-    }
-
-    const financialSheetRows = (financialWorks || []).map((w, i) => [
-      i + 1,
-      w.district_name || '',
-      w.taluka_name || '',
-      w.work_category || '',
-      parseNumeric(w.pesa_gram_panchayat_count),
-      parseNumeric(w.pesa_village_count),
-      parseNumeric(w.annual_approved_fund),
-      parseNumeric(w.annual_received_fund),
-      parseNumeric(w.received_interest),
-      parseNumeric(w.total_received_fund),
-      parseNumeric(w.previous_expenditure),
-      parseNumeric(w.current_expenditure),
-      parseNumeric(w.cumulative_expenditure),
-      parseNumeric(w.remaining_funds)
-    ]);
-
-    const wb = XLSX.utils.book_new();
-    const wsFinancial = XLSX.utils.aoa_to_sheet([financialColumns, ...financialSheetRows]);
-    XLSX.utils.book_append_sheet(wb, wsFinancial, 'Financial Works');
-    const fileName = `Financial_Works_Report_${
-      selectedDistrict ? `${selectedDistrict}_` : ''
-    }${
-      selectedTaluka ? `${selectedTaluka}_` : ''
-    }${
-      selectedCategory ? `Category_${selectedCategory}_` : ''
-    }${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-  };
+  await handleDownloadFinancialExcel({
+    selectedDistrict,
+    selectedTaluka,
+    selectedCategory,
+    language: language as 'en' | 'mr',
+  });
+};
 
 
   React.useEffect(() => {
