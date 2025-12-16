@@ -397,7 +397,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     const statusMatch = statusFilter === 'all' || w.current_status === statusFilter;
     const yearMatch = yearFilter === 'all' || String(w.year) === yearFilter;
     const workCategoryMatch = workCategoryFilter === 'all' || w.work_category === workCategoryFilter;
-    const pesaGrampanchayatMatch = pesaGrampanchayatFilter === 'all' || w.pesa_grampanchayat === pesaGrampanchayatFilter;
+    const pesaGrampanchayatMatch = pesaGrampanchayatFilter === "all" || (w.pesa_grampanchayat ?? "").trim().toLowerCase() === pesaGrampanchayatFilter.trim().toLowerCase();
     const villageMatch = villageFilter === 'all' || (w.village?.village_name === villageFilter);
     return statusMatch && yearMatch && workCategoryMatch && pesaGrampanchayatMatch && villageMatch;
   });
@@ -870,18 +870,24 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                   />
                 </div> */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('status')}</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    {t('status')}
+                  </label>
                   <select
                     value={formData.current_status}
-                    onChange={(e) => setFormData({ ...formData, current_status: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                  >
+                    onChange={(e) =>
+                      setFormData({ ...formData, current_status: e.target.value })
+                    }
+                    disabled={formData.current_status === 'completed'}
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500
+                    ${formData.current_status === 'completed' ? 'bg-gray-100 cursor-not-allowed' : ''}`}>
                     <option value="">{t('selectOption')}</option>
                     <option value="pending">{t('pending')}</option>
                     <option value="in_progress">{t('in_progress')}</option>
                     <option value="completed">{t('completed')}</option>
                   </select>
                 </div>
+
                 {/* Remaining inputs except already placed fields and removed required admin_approval_no and admin_approval_date */}
                 {Object.keys(formData).map((field) => {
                   if (
