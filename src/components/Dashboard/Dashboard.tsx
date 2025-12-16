@@ -12,12 +12,14 @@ import ImgBanner1 from '../../assets/img-banner-1.png';
 import Img1 from '../../assets/img-1.jpg';
 import GovtLogo from '../../assets/govtMH logo.png';
 import HeaderLogo from '../../assets/headerLogo.png';
+import MahaPesa from '../../assets/mahaPesa.jpeg';
 
 export function Dashboard({ userId, roleName }: { userId: string; roleName: string }) {
   const { t, language } = useLanguage();
 
   const [totalVillages, setTotalVillages] = useState(0);
   const [totalPopulation, setTotalPopulation] = useState(0);
+  const [stPopulation, setStPopulation] = useState(0);
   const [activeProjects, setActiveProjects] = useState(0);
   const [distributedFunds, setDistributedFunds] = useState(0);
   const [completedWorksCount, setCompletedWorksCount] = useState(0);
@@ -52,7 +54,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         let allWorks = await pesaWorkOperations.getAll();
 
         // If roleName is not 'district', filter data by user access
-        if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId){
+        if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
           villages = villages.filter(
             (v) => v.tal_user_access === userId || v.gram_user_access === userId
           );
@@ -68,6 +70,14 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
           0
         );
         setTotalPopulation(populationSum);
+
+        const stPopulationSum = villages.reduce((sum, v) => {
+          const stVal =
+            Number((v as any).gram_panchayat_st_population) ||
+            0;
+          return sum + stVal;
+        }, 0);
+        setStPopulation(stPopulationSum);
 
         if (allWorks && allWorks.length > 0) {
           setTotalWorksCount(allWorks.length);
@@ -127,6 +137,17 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
       label: language === 'mr' ? 'एकूण लोकसंख्या' : 'Total Population',
       color: 'from-blue-500 to-indigo-600',
       bgColor: 'from-blue-50 to-indigo-50'
+    },
+    {
+      id: 'st_population',
+      icon: Users,
+      value:
+        stPopulation > 1000000
+          ? (stPopulation / 1000000).toFixed(1) + 'M'
+          : stPopulation.toLocaleString(),
+      label: language === 'mr' ? 'एसटी लोकसंख्या' : 'ST Population',
+      color: 'from-rose-500 to-pink-600',
+      bgColor: 'from-rose-50 to-pink-50'
     },
     {
       id: 'projects',
@@ -195,16 +216,27 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
   return (
     <div className="space-y-8">
       <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden flex items-center justify-between">
-        <div className="items-center justify-center w-40 h-40 bg-transparent">
-          <img
-            src={GovtLogo}
-            alt="Govt of Maharashtra Logo"
-            className="w-full h-full object-contain"
-          />
+        <div className="flex items-center gap-0">
+          <div className="flex items-center justify-center w-40 h-40 bg-transparent">
+            <img
+              src={GovtLogo}
+              alt="Govt of Maharashtra Logo"
+              className="w-full h-full object-contain"
+            />
+          </div>
+
+          <div className="flex items-center justify-center w-20 h-20 bg-transparent">
+            <img
+              src={MahaPesa}
+              alt="Maha Pesa Logo"
+              className="w-full h-full object-contain"
+            />
+          </div>
         </div>
+
         <div className="flex-1 flex flex-col items-center justify-center text-center px-2 md:px-8">
           <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 md:mb-4 drop-shadow">
-            {language === 'mr' ? 'पंचायत (अनूसूचित क्षेत्र विस्तार) अधिनियम, 1996' : 'Panchayat (Extension to Scheduled Areas) Act, 1996'}
+            {language === 'mr' ? 'पंचायतीसंबंधीचे उपबंध (अनुसूचित क्षेत्रावर विस्तारित करणे) अधिनियम १९९६' : 'Provisions of the Panchayats (Extension to the Scheduled Areas) Act, 1996'}
           </h1>
           <p className="text-base md:text-xl text-indigo-100 mb-3 md:mb-6 font-medium drop-shadow">
             {language === 'mr'
@@ -251,8 +283,32 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {stats.map((stat) => {
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {stats.slice(0, 3).map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={stat.id}
+              className={`bg-gradient-to-br ${stat.bgColor} rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-105 border border-white/50`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div
+                  className={`w-14 h-14 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center shadow-lg`}
+                >
+                  <Icon className="w-7 h-7 text-white" />
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-gray-800">{stat.value}</p>
+                </div>
+              </div>
+              <p className="text-gray-600 font-medium">{stat.label}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
+        {stats.slice(3).map((stat) => {
           const Icon = stat.icon;
           return (
             <div
@@ -360,7 +416,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
