@@ -1,406 +1,404 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Clock, CheckCircle, AlertCircle, Plus, Edit, Trash2, Eye, Copy, Layers, Download } from 'lucide-react';
-import toast, { Toaster } from 'react-hot-toast';
-import { pesaWorkflowOperations, pesaWorkOperations } from '../../utils/supabase';
+import { Clock, MapPin, Camera, CheckCircle, Play, Pause, TrendingUp, Edit, ArrowLeft, Upload, X, Save, Eye, Trash2 } from 'lucide-react';
+import { pesaWorkflowOperations, pesaWorkOperations, storageOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
-import WorkflowBuilder from '../Placeholders/WorkflowBuilder';
-import WorkflowProgress from '../Placeholders/WorkflowProgress';
 import { Village } from '../../types';
 import HeaderLogo from '../../assets/headerLogo.png';
 
-interface PesaWork {
+interface WorkflowStep {
   id: string;
-  taluka: string;
-  year?: string | number;
-  work_name: string;
-  //department: string;
-  admin_approval_no: string;
-  admin_approval_date: string;
-  admin_approval_amount?: string;
-  // tech_approval_no?: string;
-  // tech_approval_date?: string;
-  // tech_approval_amount?: number;
-  agreement_approval_no?: number;
-  agreement_approval_date?: string;
-  agreement_approval_amount?: string;
-  duration?: string;
-  contractor_name?: string;
-  current_status?: string;
-  delay?: string;
-  expected_completion_date?: string;
-  note?: string;
-  village_id?: string;
-  gram_panchayat_work_id?: string;
-  pesa_grampanchayat?: string;
-  work_category?: string;
-  added_month?: string; // added new field
+  workflow_id: string;
+  title: string;
+  description: string;
+  duration: number;
+  order: number;
+  status: 'pending' | 'in_progress' | 'completed';
+  completion_photos?: string[];
+  location_data?: any;
+  completed_at?: string;
+  created_at?: string;
+  location_name?: string;
+}
+interface Workflow {
+  id: string;
+  title: string;
+  description: string;
+  duration: number;
+  status: 'draft' | 'active' | 'completed';
+  work_id?: string;
+  workflow_steps?: WorkflowStep[];
+  work?: { work_name: string; taluka: string };
   created_at?: string;
   updated_at?: string;
-  village?: { village_name: string; village_name_mr?: string };
-  gram_panchayat_work?: { work_name: string; work_category: string };
 }
-export function WorkProgress({ userId, roleName }: { userId: string; roleName: string }) {
+
+interface WorkflowProgressProps {
+  userId: string;
+  allVillageData: Village[];
+  initialSelectedWorkName?: string;
+  onBackToList: () => void;
+}
+
+
+const WorkflowProgress: React.FC<WorkflowProgressProps> = ({ userId, allVillageData, initialSelectedWorkName, onBackToList }) => {
   const { t, language } = useLanguage();
-  const [works, setWorks] = useState<PesaWork[]>([]);
-  const [availableWorkNames, setAvailableWorkNames] = useState<any[]>([]);
-  const [pesaGrampanchayats, setPesaGrampanchayats] = useState<string[]>([]);
-  const [workCategories, setWorkCategories] = useState([
-    { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
-    { id: 'B', name: 'Category B - Forest Rights Act (FRA) and PESA Implementation', name_mr: 'प्रकार ब - वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी' },
-    { id: 'C', name: 'Category C - Health, Sanitation, and Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता व शिक्षण' },
-    { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation, Water Conservation, Forest Ponds, Wildlife Tourism, and Forest Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
-  ]);
-  const [villages, setVillages] = useState<{ id: string; village_name: string; village_name_mr?: string }[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [editingWork, setEditingWork] = useState<PesaWork | null>(null);
-  const [viewingWork, setViewingWork] = useState<PesaWork | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10; // adjust as needed
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<Workflow | null>(null);
+  const [editingStep, setEditingStep] = useState<WorkflowStep | null>(null);
+  const [viewMode, setViewMode] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
-  const [allVillageData, setAllVillageData] = useState<Village[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'builder' | 'progress'>('dashboard');
-  const [selectedWork, setSelectedWork] = useState<PesaWork | null>(null);
-  const handleTab = (tab: 'dashboard' | 'builder' | 'progress') => {
-    setActiveTab(tab);
-    if (tab === 'progress' && !selectedWork && works.length > 0) {
-      setSelectedWork(works[0]);
-    }
-  };
-
-  const handleBackToWorkflowProgress = () => {
-    setSelectedWork(null);    // clear selected work
-    setActiveTab('progress'); // switch to progress tab (workflow cards/list)
-  };
-
-
-  // Reordered formData fields for input order in form
-  const [formData, setFormData] = useState({
-    taluka: '',
-    year: '',
-    work_name: '',
-    //department: '',
-    current_status: '',
-    admin_approval_no: '',
-    admin_approval_date: '',
-    admin_approval_amount: '',
-    // tech_approval_no: '',
-    // tech_approval_date: '',
-    // tech_approval_amount: '',
-    agreement_approval_no: '',
-    agreement_approval_date: '',
-    agreement_approval_amount: '',
-    duration: '',
-    contractor_name: '',
-    delay: '',
-    expected_completion_date: '',
-    note: '',
-    village_id: '',
-    gram_panchayat_work_id: '',
-    pesa_grampanchayat: '',
-    work_category: '',
-    added_month: '', // added month field here
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [stepForm, setStepForm] = useState({
+    status: 'pending' as const,
+    completion_photos: [] as string[],
+    location_data: null as any,
+    location_name: '',
   });
-  // Added states for filtering dropdowns
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
-  const [yearFilter, setYearFilter] = useState<string>('all');
-  const [workCategoryFilter, setWorkCategoryFilter] = useState<string>('all');
-  const [pesaGrampanchayatFilter, setPesaGrampanchayatFilter] = useState<string>('all');
-  const [villageFilter, setVillageFilter] = useState<string>('all');
-  const completedStages = works.filter(w => w.current_status === 'completed').length;
-  const inProgress = works.filter(w => w.current_status === 'in_progress').length;
-  const pending = works.filter(w => w.current_status === 'pending').length;
-  const overallProgress = works.length ? Math.round((completedStages / works.length) * 100) : 0;
+
   useEffect(() => {
-    loadWorks();
-    loadAvailableWorkNames();
-    setCurrentPage(1);
-  }, [userId]);
+    loadWorkflows();
+  }, []);
 
+  useEffect(() => {
+    if (initialSelectedWorkName && workflows.length > 0) {
+      const workflowToSelect = workflows.find(
+        (w) => w.work?.work_name === initialSelectedWorkName
+      );
+      if (workflowToSelect) {
+        setSelectedWorkflow(workflowToSelect);
+      }
+    }
+  }, [initialSelectedWorkName, workflows]);
 
-  const handleDownloadCSV = () => {
-    const headers = [
-      'Taluka',
-      'Year',
-      'PESA Gram Panchayat',
-      'Village',
-      'Work Category',
-      'Work Name',
-      'Month',
-      'Approval Amount',
-      'Contractor Name',
-      'Status',
-    ];
-
-    const rowsHtml = filteredWorks.map((w: any) => {
-      return `<tr>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.taluka || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.year ?? ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.pesa_grampanchayat || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.village?.village_name || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.work_category || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.work_name || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.added_month || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.agreement_approval_amount || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.contractor_name || ''}</td>
-      <td style="border: 1px solid #ddd; padding: 4px;">${w.current_status || ''}</td>
-    </tr>`;
-    }).join('');
-
-    const headerHtml = headers.map(h => `
-    <th style="
-      background-color: #10b981;
-      color: white;
-      font-weight: bold;
-      padding: 6px 8px;
-      text-align: left;
-      border: 1px solid #ddd;
-    ">${h}</th>`).join('');
-
-    const tableHtml = `
-    <table style="border-collapse: collapse; width: 100%;">
-      <thead><tr>${headerHtml}</tr></thead>
-      <tbody>${rowsHtml}</tbody>
-    </table>
-  `;
-
-    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'work_progress_data.xls';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-
-  const loadWorks = async () => {
+  const loadWorkflows = async () => {
     try {
       setLoading(true);
 
-      const { villageService } = await import('../../utils/supabase');
-      const allVillageData = await villageService.getAll();
-      setAllVillageData(allVillageData);
-
-      let allowedVillageIds: string[] = [];
-
-      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
-        allowedVillageIds = allVillageData
-          .filter((v: any) => {
-            if (v.tal_user_access === null && v.gram_user_access === null) {
-              return false;
-            }
-
-            return v.tal_user_access === userId || v.gram_user_access === userId;
-          })
-          .map((v: any) => v.id);
-
-        if (!allowedVillageIds.length) {
-          setWorks([]);
-          return;
-        }
-      }
+      // Compute allowedVillageIds here if not computed globally in component
+      const allowedVillageIds = allVillageData
+        .filter(v => v.tal_user_access === userId || v.gram_user_access === userId)
+        .map(v => v.id);
 
       let worksData = await pesaWorkOperations.getAll();
 
       if (allowedVillageIds.length > 0) {
-        worksData = worksData.filter((w: any) =>
-          allowedVillageIds.includes(w.village_id)
-        );
+        worksData = worksData.filter(w => allowedVillageIds.includes(w.village_id));
       }
 
-      setWorks(worksData);
+      const data = await pesaWorkflowOperations.getAll();
 
-      const uniqueVillages = Array.from(
-        new Set(
-          worksData.map((w: any) => w.village?.village_name).filter(Boolean)
-        )
-      ) as string[];
-      setVillages(uniqueVillages.map(name => ({ id: name, village_name: name })));
+      const allowedWorkNames = worksData.map(work => work.work_name);
 
-      const uniqueGramPanchayats = Array.from(
-        new Set(worksData.map((w: any) => w.pesa_grampanchayat).filter(Boolean))
+      const filteredWorkflows = data.filter(
+        workflow =>
+          workflow.work &&
+          workflow.work.work_name &&
+          allowedWorkNames.includes(workflow.work.work_name)
       );
-      setPesaGrampanchayats(uniqueGramPanchayats);
 
+      const updatedWorkflows = await Promise.all(
+        filteredWorkflows
+          .filter(workflow => workflow.status !== "draft")
+          .map(async (workflow) => {
+            const allStepsCompleted = workflow.workflow_steps?.every(
+              step => step.status === "completed"
+            );
+            if (allStepsCompleted && workflow.status !== "completed") {
+              const updated = await pesaWorkflowOperations.updateWorkflow(workflow.id, {
+                status: "completed"
+              });
+              return updated;
+            }
+            return workflow;
+          })
+      );
+
+      setWorkflows(updatedWorkflows);
     } catch (error) {
-      console.error('Error loading works:', error);
-      toast.error('Error loading works');
+      console.error("Error loading workflows:", error);
     } finally {
       setLoading(false);
     }
   };
 
 
-  const loadAvailableWorkNames = async () => {
-    try {
-      const data = await pesaWorkOperations.getAvailableWorkNames();
-      setAvailableWorkNames(data);
-    } catch (error) {
-      console.error('Error loading available work names:', error);
-    }
-  };
-  const validateForm = () => {
-    const requiredFields = ['taluka', 'work_name', 'village_id'];
-    for (let field of requiredFields) {
-      if (!(formData as any)[field]) {
-        toast.error(`${t(field)} is required`);
-        return false;
-      }
-    }
-    return true;
+  const handleSelectWorkflow = (workflow: Workflow) => {
+    setSelectedWorkflow(workflow);
   };
 
-  const handleWorkClick = async (work: PesaWork) => {
-
-    try {
-      const workflowsData = await pesaWorkflowOperations.getAll();
-
-      // Filter workflows for the clicked work_name
-      const filteredWorkflows = workflowsData.filter(
-        (workflow: any) => workflow.work?.work_name === work.work_name
-      );
-
-      const hasProgressData = filteredWorkflows.some(
-        (workflow: any) => workflow.workflow_steps && workflow.workflow_steps.length > 0
-      );
-
-      if (!hasProgressData) {
-        alert('There are no steps added for this work.');
-        return;
-      }
-
-      setSelectedWork(work);
-      setActiveTab('progress');
-    } catch (error) {
-      console.error('Error checking workflow progress:', error);
-      toast.error('Error checking workflow progress');
-    }
+  const handleBackToList = () => {
+    setSelectedWorkflow(null);
+    setEditingStep(null);
+    setViewMode(false);
+    loadWorkflows();
+    onBackToList();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-
-    e.preventDefault();
-    if (!validateForm()) return;
-    const formattedData = {
-      ...formData,
-      year: formData.year || null,
-      tech_approval_amount: formData.tech_approval_amount ? Number(formData.tech_approval_amount) : null,
-      agreement_approval_no: formData.agreement_approval_no ? Number(formData.agreement_approval_no) : null,
-      agreement_approval_amount: formData.agreement_approval_amount ? Number(formData.agreement_approval_amount) : null,
-      current_status: ['pending', 'in_progress', 'completed'].includes(formData.current_status)
-        ? formData.current_status
-        : 'pending',
-      village_id: formData.village_id || null,
-      gram_panchayat_work_id: formData.gram_panchayat_work_id || null,
-      added_month: formData.added_month || null,
-    };
-    try {
-      if (editingWork) {
-        await pesaWorkOperations.update(editingWork.id, formattedData);
-        toast.success('Work updated successfully');
-      } else {
-        await pesaWorkOperations.create(formattedData);
-        toast.success('Work created successfully');
-      }
-      await loadWorks();
-      resetForm();
-    } catch (error) {
-      console.error('Error saving work:', error);
-      toast.error('Error saving work');
-    }
-  };
-  const handleEdit = (work: PesaWork) => {
-    setEditingWork(work);
-    setFormData({
-      taluka: work.taluka || '',
-      year: work.year !== undefined && work.year !== null ? String(work.year) : '',
-      work_name: work.work_name || '',
-      //department: work.department || '',
-      current_status: work.current_status || '',
-      admin_approval_no: work.admin_approval_no || '',
-      admin_approval_date: work.admin_approval_date || '',
-      admin_approval_amount: work.admin_approval_amount ? String(work.admin_approval_amount) : '',
-      // tech_approval_no: work.tech_approval_no || '',
-      // tech_approval_date: work.tech_approval_date || '',
-      // tech_approval_amount: work.tech_approval_amount ? String(work.tech_approval_amount) : '',
-      agreement_approval_no: work.agreement_approval_no ? String(work.agreement_approval_no) : '',
-      agreement_approval_date: work.agreement_approval_date || '',
-      agreement_approval_amount: work.agreement_approval_amount ? String(work.agreement_approval_amount) : '',
-      duration: work.duration || '',
-      contractor_name: work.contractor_name || '',
-      delay: work.delay || '',
-      expected_completion_date: work.expected_completion_date || '',
-      note: work.note || '',
-      village_id: work.village_id || '',
-      gram_panchayat_work_id: '',  // removed gram_panchayat_work_id usage
-      pesa_grampanchayat: work.pesa_grampanchayat || '',
-      work_category: work.work_category || work.gram_panchayat_work?.work_category || '',
-      added_month: work.added_month || '',
+  const handleEditStep = (step: WorkflowStep) => {
+    setEditingStep(step);
+    setViewMode(false);
+    setStepForm({
+      status: step.status,
+      completion_photos: step.completion_photos || [],
+      location_data: step.location_data,
+      location_name: step.location_name || step.location_data?.location_name || '',
     });
-    setShowForm(true);
   };
-  const handleView = (work: PesaWork) => setViewingWork(work);
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this work?')) {
+  const handleViewStep = (step: WorkflowStep) => {
+    setEditingStep(step);
+    setViewMode(true);
+    setStepForm({
+      status: step.status,
+      completion_photos: step.completion_photos || [],
+      location_data: step.location_data,
+      location_name: step.location_name || step.location_data?.location_name || '',
+    });
+  };
+
+  const handleSaveStep = async () => {
+    if (!editingStep) return;
+    try {
+      const updates: Partial<WorkflowStep> = {
+        status: stepForm.status,
+        completion_photos: stepForm.completion_photos,
+        location_data: {
+          ...stepForm.location_data,
+          location_name: stepForm.location_name,
+        },
+        location_name: stepForm.location_name,
+      };
+      if (stepForm.status === 'completed' && editingStep.status !== 'completed') {
+        updates.completed_at = new Date().toISOString();
+      }
+
+      // 1️⃣ Update step in Supabase
+      await pesaWorkflowOperations.updateStep(editingStep.id, updates);
+
+      // 2️⃣ Fetch updated workflow steps for the selected workflow
+      const updatedWorkflows = await pesaWorkflowOperations.getAll();
+      const updatedWorkflow = updatedWorkflows.find((w: Workflow) => w.id === selectedWorkflow?.id);
+      setSelectedWorkflow(updatedWorkflow);
+
+      // 3️⃣ Check if all steps of this workflow are completed
+      const allCompleted = updatedWorkflow?.workflow_steps?.every(
+        (step) => step.status === 'completed'
+      );
+
+      if (allCompleted && updatedWorkflow) {
+        // 4️⃣ Update workflow status in Supabase
+        await pesaWorkflowOperations.updateWorkflow(updatedWorkflow.id, {
+          status: 'completed',
+          updated_at: new Date().toISOString()
+        });
+        // 5️⃣ Update local state with workflow marked completed
+        setSelectedWorkflow({ ...updatedWorkflow, status: 'completed' });
+      }
+
+      setEditingStep(null);
+      setViewMode(false);
+      alert('Step updated successfully!');
+    } catch (error) {
+      console.error('Error updating step:', error);
+      alert('Error updating step. Please try again.');
+    }
+  };
+
+  const handleCaptureLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          try {
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=AIzaSyDzOjsiqs6rRjSJWVdXfUBl4ckXayL8AbE`
+            );
+            const data = await response.json();
+
+            let locationName = '';
+            let fullAddress = '';
+
+            if (data.results && data.results.length > 0) {
+              const result = data.results[0];
+              fullAddress = result.formatted_address;
+              const addressComponents = result.address_components;
+              if (addressComponents && addressComponents.length > 0) {
+                const nameComponent = addressComponents.find(component =>
+                  component.types.includes('establishment') ||
+                  component.types.includes('point_of_interest') ||
+                  component.types.includes('sublocality_level_1') ||
+                  component.types.includes('locality')
+                );
+                locationName = nameComponent ? nameComponent.long_name : addressComponents[0].long_name;
+              } else {
+                locationName = fullAddress.split(',')[0];
+              }
+            } else {
+              locationName = `Location ${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+              fullAddress = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            }
+
+            const locationData = {
+              latitude: lat,
+              longitude: lng,
+              address: fullAddress,
+              location_name: locationName,
+            };
+
+            setStepForm({
+              ...stepForm,
+              location_data: locationData,
+              location_name: locationName
+            });
+            alert('Location captured and address resolved successfully!');
+          } catch (error) {
+            console.error('Error getting address from coordinates:', error);
+            const locationData = {
+              latitude: lat,
+              longitude: lng,
+              address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+              location_name: `Location ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+            };
+            setStepForm({
+              ...stepForm,
+              location_data: locationData,
+              location_name: locationData.location_name
+            });
+            alert('Location captured successfully!');
+          }
+        },
+        (error) => {
+          console.error('Error getting location:', error);
+          alert('Error capturing location. Please try again.');
+        }
+      );
+    } else {
+      alert('Geolocation is not supported by this browser.');
+    }
+  };
+  const handlePlaceSelect = (event: any) => {
+    const place = event.target.place;
+    if (place && place.geometry) {
+      const locationData = {
+        latitude: place.geometry.location.lat(),
+        longitude: place.geometry.location.lng(),
+        address: place.formatted_address || place.name,
+        location_name: place.name || place.formatted_address,
+        place_id: place.place_id,
+      };
+      setStepForm({
+        ...stepForm,
+        location_data: locationData,
+        location_name: place.name || place.formatted_address
+      });
+    }
+  };
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && editingStep && selectedWorkflow) {
+      setUploadingPhotos(true);
       try {
-        await pesaWorkOperations.delete(id);
-        toast.success('Work deleted successfully');
-        await loadWorks(); // Refresh list after delete
+        const uploadPromises = Array.from(files).map(async (file) => {
+          if (file.size > 5 * 1024 * 1024) {
+            throw new Error(`File ${file.name} is too large. Maximum size is 5MB.`);
+          }
+          const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+          if (!allowedTypes.includes(file.type)) {
+            throw new Error(`File ${file.name} is not a supported image format.`);
+          }
+          return await storageOperations.uploadWorkflowPhoto(
+            file,
+            selectedWorkflow.id,
+            editingStep.id
+          );
+        });
+
+        const uploadedUrls = await Promise.all(uploadPromises);
+        setStepForm({
+          ...stepForm,
+          completion_photos: [...stepForm.completion_photos, ...uploadedUrls]
+        });
+        alert(`Successfully uploaded ${uploadedUrls.length} photo(s)!`);
       } catch (error) {
-        console.error('Error deleting work:', error);
-        toast.error('Error deleting work');
+        console.error('Error uploading photos:', error);
+        alert(`Error uploading photos: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      } finally {
+        setUploadingPhotos(false);
       }
     }
   };
-
-  const handleDuplicate = async (id: string) => {
+  const handleRemovePhoto = async (index: number) => {
+    const photoUrl = stepForm.completion_photos[index];
     try {
-      await pesaWorkOperations.duplicate(id);
-      await loadWorks();
-      toast.success('Work duplicated successfully!');
+      await storageOperations.removeWorkflowPhoto(photoUrl);
+      const updatedPhotos = stepForm.completion_photos.filter((_, i) => i !== index);
+      setStepForm({ ...stepForm, completion_photos: updatedPhotos });
     } catch (error) {
-      console.error('Error duplicating work:', error);
-      toast.error('Error duplicating work');
+      console.error('Error removing photo:', error);
+      alert('Error removing photo. Please try again.');
     }
   };
-  const resetForm = () => {
-    setFormData({
-      taluka: '',
-      year: '',
-      work_name: '',
-      //department: '',
-      current_status: '',
-      admin_approval_no: '',
-      admin_approval_date: '',
-      admin_approval_amount: '',
-      // tech_approval_no: '',
-      // tech_approval_date: '',
-      // tech_approval_amount: '',
-      agreement_approval_no: '',
-      agreement_approval_date: '',
-      agreement_approval_amount: '',
-      duration: '',
-      contractor_name: '',
-      delay: '',
-      expected_completion_date: '',
-      note: '',
-      village_id: '',
-      gram_panchayat_work_id: '',
-      pesa_grampanchayat: '',
-      work_category: '',
-      added_month: '',
-    });
-    setEditingWork(null);
-    setShowForm(false);
+  const handleChangeWorkflowStatus = async (workflowId: string, newStatus: string) => {
+    try {
+      await pesaWorkflowOperations.updateWorkflow(workflowId, { status: newStatus });
+      if (newStatus === 'completed' && selectedWorkflow) {
+        if (selectedWorkflow.work_id) {
+          await pesaWorkOperations.update(selectedWorkflow.work_id, { current_status: 'completed' });
+        }
+      }
+      await loadWorkflows();
+      const updatedWorkflows = await pesaWorkflowOperations.getAll();
+      const updatedWorkflow = updatedWorkflows.find((w: Workflow) => w.id === workflowId);
+      setSelectedWorkflow(updatedWorkflow);
+      alert('Workflow status updated successfully!');
+    } catch (error) {
+      console.error('Error updating workflow status:', error);
+      alert('Error updating workflow status. Please try again.');
+    }
   };
-  const filteredWorks = works.filter(w => {
-    const statusMatch = statusFilter === 'all' || w.current_status === statusFilter;
-    const yearMatch = yearFilter === 'all' || String(w.year) === yearFilter;
-    const workCategoryMatch = workCategoryFilter === 'all' || w.work_category === workCategoryFilter;
-    const pesaGrampanchayatMatch = pesaGrampanchayatFilter === "all" || (w.pesa_grampanchayat ?? "").trim().toLowerCase() === pesaGrampanchayatFilter.trim().toLowerCase();
-    const villageMatch = villageFilter === 'all' || (w.village?.village_name === villageFilter);
-    return statusMatch && yearMatch && workCategoryMatch && pesaGrampanchayatMatch && villageMatch;
+  const getProgressPercentage = (steps: WorkflowStep[]) => {
+    if (!steps || steps.length === 0) return 0;
+    const completedSteps = steps.filter(step => step.status === 'completed').length;
+    return Math.round((completedSteps / steps.length) * 100);
+  };
+
+  const handleDeleteWorkflow = async (workflowId: string) => {
+    if (!window.confirm("Are you sure you want to delete this workflow?")) {
+      return;
+    }
+    try {
+      await pesaWorkflowOperations.deleteWorkflow(workflowId);
+      alert("Workflow deleted successfully!");
+      loadWorkflows();
+      setSelectedWorkflow(null);
+    } catch (error) {
+      console.error('Error deleting workflow:', error);
+      alert("Error deleting workflow. Please try again.");
+    }
+  };
+
+
+  const getStatusColor = (status: string) => {
+    const colors = {
+      draft: 'bg-gradient-to-r from-gray-400 to-gray-500',
+      active: 'bg-gradient-to-r from-blue-400 to-indigo-400',
+      completed: 'bg-gradient-to-r from-green-400 to-emerald-400',
+      pending: 'bg-gradient-to-r from-yellow-400 to-orange-400',
+      in_progress: 'bg-gradient-to-r from-purple-400 to-pink-400',
+    };
+    return colors[status as keyof typeof colors] || colors.draft;
+  };
+
+  const filteredWorkflows = workflows.filter(workflow => {
+    const matchesSearch = workflow.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workflow.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || workflow.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -408,100 +406,17 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
       </div>
     );
   }
-  const cards = [
-    { icon: CheckCircle, label: t('completed'), value: completedStages, color: 'from-green-500 to-emerald-600' },
-    { icon: Clock, label: t('inProgress'), value: inProgress, color: 'from-blue-500 to-indigo-600' },
-    { icon: AlertCircle, label: t('pending'), value: pending, color: 'from-amber-500 to-orange-600' },
-    { icon: TrendingUp, label: t('overallProgress'), value: `${overallProgress}%`, color: 'from-purple-500 to-pink-600' },
-  ];
-  const uniqueYears = Array.from(new Set(works.map(w => w.year).filter(Boolean) as (string | number)[])).map(String);
 
-  const groupedBySomeKey = works.reduce((acc, work) => {
-    const key = work.groupKey || '-'; // replace 'groupKey' with your actual group field
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(work);
-    return acc;
-  }, {} as Record<string, typeof works[0][]>);
-
-  const groupedArray = Object.entries(groupedBySomeKey).map(([key, items], idx) => ({
-    key,
-    items,
-    groupSrNo: idx + 1,
-  }));
-
-  const totalPages = Math.ceil(filteredWorks.length / rowsPerPage);
-
-  const paginatedWorks = filteredWorks.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
-
-  const labelColorsMap = {
-    'from-green-500 to-emerald-600': 'text-emerald-600',
-    'from-blue-500 to-indigo-600': 'text-blue-600',
-    'from-amber-500 to-orange-600': 'text-orange-600',
-    'from-purple-500 to-pink-600': 'text-pink-600',
-  };
-
-
-  return (
-    <div className="space-y-6">
-      <Toaster position="top-right" />
-      {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '1rem' }}>
-        <button
-          onClick={() => handleTab('dashboard')}
-          style={{
-            fontWeight: activeTab === 'dashboard' ? 'bold' : 'normal',
-            color: activeTab === 'dashboard' ? '#2ab085' : 'inherit',
-            background: activeTab === 'dashboard' ? 'rgba(46,184,131,.08)' : 'transparent',
-            borderRadius: '6px',
-            padding: '6px 18px',
-            border: 'none',
-          }}
-        >
-          {t('workDashboard')}
-        </button>
-        <button
-          onClick={() => handleTab('builder')}
-          style={{
-            fontWeight: activeTab === 'builder' ? 'bold' : 'normal',
-            color: activeTab === 'builder' ? '#2a58ec' : 'inherit',
-            background: activeTab === 'builder' ? 'rgba(52,120,255,.08)' : 'transparent',
-            borderRadius: '6px',
-            padding: '6px 18px',
-            border: 'none',
-          }}
-        >
-          {t('workflowBuilder')}
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab('progress');
-            setSelectedWork(null);
-          }}
-          style={{
-            fontWeight: activeTab === 'progress' ? 'bold' : 'normal',
-            color: activeTab === 'progress' ? '#9350d6' : 'inherit',
-            background: activeTab === 'progress' ? 'rgba(147,80,214,.08)' : 'transparent',
-            borderRadius: '6px',
-            padding: '6px 18px',
-            border: 'none',
-          }}
-        >
-          {t('workflowProgress')}
-        </button>
-
-      </div>
-      {/* Header and Filters replacing Add New Work Button */}
-      {activeTab === 'dashboard' && (
-        <div className="bg-gradient-to-r from-orange-400 via-fuchsia-500 to-cyan-400 rounded-3xl p-6 shadow-2xl relative mb-4 overflow-hidden">
-          {/* Warli/BG Pattern Overlay */}
+  if (selectedWorkflow) {
+    return (
+      <div className="space-y-6">
+        {/* Header with Back Button */}
+        <div className="relative bg-gradient-to-r from-green-600 via-emerald-500 to-cyan-400 rounded-3xl p-6 shadow-2xl mb-4 overflow-hidden border border-white/20">
+          {/* BG Pattern Overlay */}
           <div className="absolute inset-0 bg-[url('/src/assets/tribal_bg.jpg')] bg-cover bg-center opacity-10 pointer-events-none rounded-3xl" />
-
-          <div className="relative z-10 flex items-center justify-between">
-            {/* Left Logo */}
-            <div className="flex-shrink-0 mr-6">
+          <div className="flex items-center justify-between relative z-10">
+            {/* Logo + Back button + Title */}
+            <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-transparent rounded-2xl flex items-center justify-center shadow border border-white/60">
                 <img
                   src={HeaderLogo}
@@ -509,490 +424,493 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                   className="w-full h-full object-contain rounded shadow"
                 />
               </div>
-            </div>
-
-            {/* Left-aligned, vertically centered Title/Subtitle */}
-            <div className="flex flex-col items-start justify-center flex-1">
-              <h2 className="text-3xl font-bold text-white drop-shadow">{t('workManagement')}</h2>
-              <p className="text-gray-100 mt-2 font-medium">{t('manageAndTrackAllWorkAssignments')}</p>
-            </div>
-
-            {/* Right Controls */}
-            <div className="flex gap-4 flex-shrink-0">
               <button
-                className="w-44 h-12 mt-4 bg-white text-cyan-600 rounded-2xl flex items-center justify-center gap-2 font-medium shadow-lg"
+                onClick={handleBackToList}
+                className="p-2 text-white hover:bg-gray-100 rounded-lg transition-colors duration-200"
               >
-                <Download className="w-5 h-5" />
-                Download Excel
+                <ArrowLeft className="w-6 h-6" />
               </button>
-
-              <div className="flex flex-col">
-                <label className="font-bold text-white">{t('pesaGrampanchayat')}</label>
-                <select
-                  value={pesaGrampanchayatFilter}
-                  onChange={e => setPesaGrampanchayatFilter(e.target.value)}
-                  className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fuchsia-500"
-                >
-                  <option value="all">{t('All')}</option>
-                  {pesaGrampanchayats.map(gp => (
-                    <option key={gp} value={gp}>{gp}</option>
-                  ))}
-                </select>
+              <div>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-white">
+                  {selectedWorkflow.title}
+                </h2>
+                <p className="text-gray-100 mt-2">{selectedWorkflow.description}</p>
+                {selectedWorkflow.work && (
+                  <p className="text-sm text-gray-200 mt-1">
+                    Work: {selectedWorkflow.work.work_name} | Taluka: {selectedWorkflow.work.taluka}
+                  </p>
+                )}
               </div>
-              <div className="flex flex-col">
-                <label className="font-bold text-white">{t('village')}</label>
-                <select
-                  value={villageFilter}
-                  onChange={e => setVillageFilter(e.target.value)}
-                  className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fuchsia-500"
-                >
-                  <option value="all">{t('All')}</option>
-                  {villages.map(v => (
-                    <option key={v.id} value={v.village_name}>
-                      {language === 'mr' ? v.village_name_mr || v.village_name : v.village_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            </div>
+            {/* Status dropdown */}
+            <div className="flex items-center space-x-4">
+              <select
+                value={selectedWorkflow.status}
+                onChange={(e) => handleChangeWorkflowStatus(selectedWorkflow.id, e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="draft">Draft</option>
+              </select>
             </div>
           </div>
         </div>
-      )}
-      {/* Cards */}
-      {activeTab === 'dashboard' && (
-        <div className="relative grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-3 py-4 tribal-bg">
-          {cards.map((item, index) => {
-            const Icon = item.icon;
-            const labelColorClass = labelColorsMap[item.color] || 'text-gray-600';
-            return (
+
+        {/* Progress Overview */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600">
+                {getProgressPercentage(selectedWorkflow.workflow_steps)}%
+              </div>
+              <div className="text-gray-600">Completion</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">
+                {selectedWorkflow.workflow_steps?.length || 0}
+              </div>
+              <div className="text-gray-600">Total Steps</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600">
+                {selectedWorkflow.workflow_steps?.filter((s: WorkflowStep) => s.status === 'completed').length || 0}
+              </div>
+              <div className="text-gray-600">Completed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-600">
+                {selectedWorkflow.duration}
+              </div>
+              <div className="text-gray-600">Days</div>
+            </div>
+          </div>
+          {/* Progress Bar */}
+          <div className="mt-6">
+            <div className="w-full bg-gray-200 rounded-full h-3">
               <div
-                key={index}
-                className="relative bg-white/90 backdrop-blur-sm shadow-md rounded-2xl flex items-center justify-between p-4 hover:scale-105 hover:shadow-lg transform transition-all duration-300 border border-emerald-100 card-tribal"
-              >
-                <div className="flex flex-col text-left">
-                  <span className="text-2xl font-bold text-gray-700 mb-1">{item.value}</span>
-                  <span className={`text-sm font-semibold tracking-wide ${labelColorClass}`}>{item.label}</span>
+                className="bg-gradient-to-r from-green-500 to-emerald-500 h-3 rounded-full transition-all duration-500"
+                style={{ width: `${getProgressPercentage(selectedWorkflow.workflow_steps || [])}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+        {/* Steps Grid */}
+        <div className="space-y-4">
+          {selectedWorkflow.workflow_steps?.map((step: WorkflowStep, index: number) => (
+            <div
+              key={step.id}
+              className={`p-6 rounded-2xl border-2 transition-all duration-200 ${step.status === 'completed'
+                ? 'bg-green-50 border-green-200'
+                : step.status === 'in_progress'
+                  ? 'bg-blue-50 border-blue-200'
+                  : 'bg-gray-50 border-gray-200'
+                }`}
+            >
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-4 flex-1">
+                  <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-bold px-3 py-1 rounded-full">
+                    {index + 1}
+                  </span>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-gray-900 text-lg">{step.title}</h4>
+                    <p className="text-sm text-gray-600 mt-1">{step.description}</p>
+                  </div>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white ${getStatusColor(step.status)}`}>
+                    {t(step.status.replace('_', ''))}
+                  </span>
                 </div>
-                <div
-                  className={`w-12 h-12 bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-md`}
-                >
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
+                {/* Eye for completed, Edit otherwise */}
+                {step.status === 'completed' ? (
+                  <button
+                    onClick={() => handleViewStep(step)}
+                    className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200 ml-4"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleEditStep(step)}
+                    className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors duration-200 ml-4"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                )}
               </div>
-            );
-          })}
+              <div className="flex items-center space-x-6 mt-4 text-sm text-gray-500">
+                <div className="flex items-center space-x-1">
+                  <Clock className="w-3 h-3 mr-2" />
+                  <span>{step.duration} Days</span>
+                </div>
+                {step.location_data && (
+                  <div className="flex items-center space-x-1">
+                    <MapPin className="w-3 h-3 mr-2" />
+                    <span>Location captured</span>
+                  </div>
+                )}
+                {step.completion_photos && step.completion_photos.length > 0 && (
+                  <div className="flex items-center space-x-1">
+                    <Camera className="w-3 h-3 mr-2" />
+                    <span>{step.completion_photos.length} photos</span>
+                  </div>
+                )}
+                {step.completed_at && (
+                  <div className="flex items-center space-x-1">
+                    <CheckCircle className="w-3 h-3 mr-2" />
+                    <span>{new Date(step.completed_at).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
-      )}
-      {/* Filters */}
-      {activeTab === 'dashboard' && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
-
-          {/* Year Filter */}
-          <div className="flex flex-col w-full">
-            <label className="font-bold text-gray-700">{t('year')}</label>
-            <select
-              value={yearFilter}
-              onChange={e => setYearFilter(e.target.value)}
-              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 w-full"
-            >
-              <option value="all">{t('All')}</option>
-              {uniqueYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Work Category Filter */}
-          <div className="flex flex-col w-full">
-            <label className="font-bold text-gray-700">{t('workCategory')}</label>
-            <select
-              value={workCategoryFilter}
-              onChange={e => setWorkCategoryFilter(e.target.value)}
-              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 w-full"
-            >
-              <option value="all">{t('All')}</option>
-              {workCategories.map(cat => (
-                <option key={cat.id} value={cat.id}>
-                  {language === 'mr' ? cat.name_mr : cat.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex flex-col w-full">
-            <label className="font-bold text-gray-700">{t('Filter by Status')}</label>
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value as any)}
-              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 w-full"
-            >
-              <option value="all">{t('All')}</option>
-              <option value="pending">{t('pending')}</option>
-              <option value="in_progress">{t('inProgress')}</option>
-              <option value="completed">{t('completed')}</option>
-            </select>
-          </div>
-
-        </div>
-      )}
-      {/* Works Table */}
-      {activeTab === 'dashboard' && (
-        <div className="table-container rounded-3xl shadow-xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('Sr. No')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('taluka')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('year')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('pesaGrampanchayat')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('village')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('workCategory')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('workName')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('month')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('approval_amount')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('contractor_name')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('status')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('actions')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {paginatedWorks.map((work, index) => (
-                  <tr key={work.id} className="hover:bg-gray-50">
-                    <td className="px-2 py-4 text-xs">{index + 1}</td>
-                    <td className="px-2 py-4 text-xs">{work.taluka}</td>
-                    <td className="px-2 py-4 text-xs">{work.year !== undefined && work.year !== null ? String(work.year) : '-'}</td>
-                    <td className="px-2 py-4 text-xs">{work.pesa_grampanchayat || '-'}</td>
-                    <td className="px-2 py-4 text-xs">{work.village?.village_name || '-'}</td>
-                    <td className="px-2 py-4 text-xs">
-                      {work.work_category ? (
-                        workCategories.find(c => c.id === work.work_category)
-                          ? language === 'mr'
-                            ? workCategories.find(c => c.id === work.work_category)?.name_mr
-                            : workCategories.find(c => c.id === work.work_category)?.name
-                          : work.work_category
-                      ) : '-'}
-                    </td>
-                    <td
-                      className="px-2 py-4 text-xs text-blue-600 underline cursor-pointer hover:text-blue-800"
-                      onClick={() => handleWorkClick(work)}
+        {/* Step Edit/View Modal */}
+        {editingStep && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className={`text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent`}>
+                    {viewMode ? `View Step: ${editingStep.title}` : `Edit Step: ${editingStep.title}`}
+                  </h3>
+                  <button
+                    onClick={() => { setEditingStep(null); setViewMode(false); }}
+                    className="p-2 text-gray-400 hover:text-gray-600 rounded-lg"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="space-y-6">
+                  {/* Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={stepForm.status}
+                      onChange={(e) => setStepForm({ ...stepForm, status: e.target.value as any })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={viewMode}
                     >
-                      {work.work_name || '-'}
-                    </td>
-                    <td className="px-2 py-4 text-xs">{work.added_month || '-'}</td>
-                    <td className="px-2 py-4 text-xs">{work.agreement_approval_amount}</td>
-                    <td className="px-2 py-4 text-xs">{work.contractor_name}</td>
-                    <td className="px-1 py-4 text-xs">
-                      {work.current_status ? (
-                        <span
-                          className={`px-1 py-1 rounded-full text-xs font-semibold ${work.current_status === 'pending'
-                            ? 'bg-gray-100 text-gray-700'
-                            : work.current_status === 'in_progress'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-green-100 text-green-700'
-                            }`}
-                        >
-                          {t(work.current_status)}
-                        </span>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    <td className="px-2 py-4">
-                      <div className="flex items-center space-x-2">
-                        <button onClick={() => handleView(work)} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg" title="View work">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleEdit(work)} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg" title="Edit work">
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        {/* <button onClick={() => handleDuplicate(work.id)} className="p-1 text-green-600 hover:bg-green-50 rounded-lg" title="Duplicate work">
-                          <Copy className="w-4 h-4" />
-                        </button> */}
-                        {roleName?.trim().toLowerCase() !== 'grampanchayat' && (
-                          <button onClick={() => handleDelete(work.id)} className="p-1 text-red-600 hover:bg-red-50 rounded-lg" title="Delete work">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {filteredWorks.length === 0 && (
-            <div className="text-center py-12 text-gray-500">{t('No works found')}</div>
-          )}
-
-          <div className="flex justify-center gap-2 mt-4 mb-4">
-            <button
-              className="px-3 py-1 border rounded disabled:opacity-50"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => prev - 1)}
-            >
-              {t("prev")}
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i}
-                className={`px-3 py-1 border rounded ${currentPage === i + 1 ? "bg-gray-200" : ""}`}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              className="px-3 py-1 border rounded disabled:opacity-50"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => prev + 1)}
-            >
-              {t("next")}
-            </button>
-          </div>
-
-        </div>
-      )}
-      {activeTab === 'builder' && (
-        <WorkflowBuilder userId={userId} allVillageData={allVillageData} roleName={roleName} />
-      )}
-      {activeTab === 'progress' && (
-        <WorkflowProgress
-          userId={userId}
-          allVillageData={allVillageData}
-          initialSelectedWorkName={selectedWork?.work_name || null}
-          onBackToList={handleBackToWorkflowProgress}  // pass callback for back handling
-        />
-      )}
-
-      {/* Form Modal for Add/Edit */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-2xl font-bold mb-6 text-blue-600">{editingWork ? t('edit') : t('addNewWork')}</h3>
-              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Added pesaGrampanchayat Dropdown */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('pesaGrampanchayat')}</label>
-                  <select
-                    value={formData.pesa_grampanchayat}
-                    onChange={(e) => setFormData({ ...formData, pesa_grampanchayat: e.target.value })}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
-                      }`}
-                    disabled={roleName?.trim().toLowerCase() === 'grampanchayat'}
-                  >
-                    <option value="">{t('selectPesaGrampanchayat')}</option>
-                    {pesaGrampanchayats.map((gp) => (
-                      <option key={gp} value={gp}>
-                        {gp}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {/* Added workCategory Dropdown */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('workCategory')}</label>
-                  <select
-                    value={formData.work_category}
-                    onChange={(e) => setFormData({ ...formData, work_category: e.target.value })}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
-                      }`}
-                    disabled={roleName?.trim().toLowerCase() === 'grampanchayat'}
-                  >
-                    <option value="">{t('selectOption')}</option>
-                    {workCategories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {/* Added Month editable input */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('month')}</label>
-                  <input
-                    type="text"
-                    value={formData.added_month}
-                    onChange={(e) => setFormData({ ...formData, added_month: e.target.value })}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
-                      }`}
-                    placeholder="e.g. September-2025"
-                    readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
-                  />
-                </div>
-                {/* Top fields now placed here in order */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('taluka')}</label>
-                  <input
-                    type="text"
-                    value={formData.taluka}
-                    onChange={(e) => setFormData({ ...formData, taluka: e.target.value })}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
-                      }`}
-                    required
-                    readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('year')}</label>
-                  <input
-                    type="text"
-                    value={formData.year}
-                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
-                      }`}
-                    required
-                    readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('workName')}</label>
-                  <input
-                    type="text"
-                    value={formData.work_name}
-                    onChange={(e) => setFormData({ ...formData, work_name: e.target.value })}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
-                      }`}
-                    required
-                    readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
-                  />
-                </div>
-                {/* <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('department')}</label>
-                  <input
-                    type="text"
-                    value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                  />
-                </div> */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
-                    {t('status')}
-                  </label>
-                  <select
-                    value={formData.current_status}
-                    onChange={(e) =>
-                      setFormData({ ...formData, current_status: e.target.value })
-                    }
-                    disabled={formData.current_status === 'completed'}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500
-                    ${formData.current_status === 'completed' ? 'bg-gray-100 cursor-not-allowed' : ''}`}>
-                    <option value="">{t('selectOption')}</option>
-                    <option value="pending">{t('pending')}</option>
-                    <option value="in_progress">{t('in_progress')}</option>
-                    <option value="completed">{t('completed')}</option>
-                  </select>
-                </div>
-
-                {/* Remaining inputs except already placed fields and removed required admin_approval_no and admin_approval_date */}
-                {Object.keys(formData).map((field) => {
-                  if (
-                    [
-                      'village_id',
-                      'gram_panchayat_work_id',
-                      'pesa_grampanchayat',
-                      'work_category',
-                      'added_month',
-                      'taluka',
-                      'year',
-                      'work_name',
-                      //'department',
-                      'current_status',
-                    ].includes(field)
-                  )
-                    return null;
-                  const isRequired = field === 'agreement_approval_amount';
-                  return (
-                    <div key={field}>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        {t(field)} {isRequired && <span className="text-red-500">*</span>}
+                      <option value="pending">Pending</option>
+                      <option value="in_progress">In Progress</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </div>
+                  {/* Location */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Location
+                    </label>
+                    {/* Location Name Input */}
+                    <div className="mb-3">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Location Name
                       </label>
                       <input
-                        placeholder={field.includes('date') ? 'dd-mm-yyyy' : ''}
-                        type={
-                          field.includes('date')
-                            ? 'date'
-                            : field === 'year'
-                              ? 'text'
-                              : typeof (formData as any)[field] === 'number'
-                                ? 'number'
-                                : 'text'
-                        }
-                        required={isRequired}
-                        value={(formData as any)[field] ?? ''}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          const numericFields = ['agreement_approval_no', 'agreement_approval_amount', 'admin_approval_amount'];
-                          setFormData(
-                            (prev) => ({ ...prev, [field]: numericFields.includes(field) ? (value === '' ? null : Number(value)) : value })
-                          );
-                        }}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
-                        onKeyDown={(e) => ['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key) && e.preventDefault()}
-                        onFocus={e => e.target.addEventListener('wheel', function (ev) { ev.preventDefault(); }, { passive: false })}
-                        onBlur={e => e.target.removeEventListener('wheel', function (ev) { ev.preventDefault(); })}
+                        type="text"
+                        value={stepForm.location_name}
+                        onChange={(e) => setStepForm({ ...stepForm, location_name: e.target.value })}
+                        placeholder="Enter location name"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        disabled={viewMode}
                       />
                     </div>
-                  );
-                })}
-                {/* Buttons */}
-                <div className="md:col-span-2 flex justify-end space-x-4 pt-6 border-t">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="btn-secondary px-6 py-2 rounded-lg border border-blue-100 font-medium text-gray-800 hover:bg-gray-50"
-                  >
-                    {t('cancel')}
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-primary px-6 py-2 rounded-lg font-semibold text-white bg-gradient-to-r from-blue-500 to-indigo-400 shadow hover:scale-105 transition-all"
-                  >
-                    {editingWork ? t('update') : t('save')}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* View Modal structured like form fields */}
-      {viewingWork && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-y-auto p-6">
-            <h3 className="text-2xl font-bold mb-6 text-emerald-600">{t('viewWork')}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Show all form fields except village_id and gram_panchayat_work_id */}
-              {Object.keys(formData).map((field) => {
-                if (['village_id', 'gram_panchayat_work_id'].includes(field)) return null;
-                let displayValue = (viewingWork as any)[field];
-                displayValue = displayValue ? t(displayValue) : '-';
-                return (
-                  <div key={field}>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">{t(field)}</label>
-                    <div className="px-4 py-3 border border-gray-200 rounded-xl bg-gray-50 text-gray-700">
-                      {displayValue}
+                    {/* Hide Search/Capture in view mode */}
+                    {!viewMode && (
+                      <>
+                        {/* Google Places Picker */}
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Search Location
+                          </label>
+                          <div className="w-full">
+                            <gmpx-place-picker
+                              placeholder="Enter an address or place name"
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '8px',
+                                fontSize: '14px'
+                              }}
+                              onPlaceChange={handlePlaceSelect}
+                            ></gmpx-place-picker>
+                          </div>
+                        </div>
+                        {/* Capture Current Location Button */}
+                        <div className="flex space-x-2 mb-3">
+                          <button
+                            type="button"
+                            onClick={handleCaptureLocation}
+                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 text-sm"
+                          >
+                            <MapPin className="w-4 h-4" />
+                            <span>Capture Location</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                    {/* Location Details Display */}
+                    {stepForm.location_data && (
+                      <div className="px-4 py-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                        <div className="flex items-start space-x-2">
+                          <MapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="font-medium text-green-800 mb-1">
+                              {stepForm.location_data.location_name || 'Current Location'}
+                            </div>
+                            <div className="text-green-700 text-xs">
+                              📍 {stepForm.location_data.address || `${stepForm.location_data.latitude}, ${stepForm.location_data.longitude}`}
+                            </div>
+                            {stepForm.location_data.latitude && stepForm.location_data.longitude && (
+                              <div className="text-green-600 text-xs mt-1">
+                                Coordinates: {stepForm.location_data.latitude.toFixed(6)}, {stepForm.location_data.longitude.toFixed(6)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {/* Photos */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Completion Photos
+                    </label>
+                    <div className="space-y-4">
+                      {/* Hide choose files input in view mode */}
+                      {!viewMode && (
+                        <div className="flex items-center space-x-4">
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            onChange={handlePhotoUpload}
+                            disabled={uploadingPhotos}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
+                          />
+                          {uploadingPhotos && (
+                            <div className="flex items-center space-x-2 text-blue-600">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                              <span className="text-sm">Uploading...</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {stepForm.completion_photos.length > 0 && (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {stepForm.completion_photos.map((photo, index) => (
+                            <div key={index} className="relative">
+                              <img
+                                src={photo}
+                                alt={`Completion photo ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg border border-gray-200"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xMiAxNkM5Ljc5IDEzLjc5IDkuNzkgMTAuMjEgMTIgOEMxNC4yMSAxMC4yMSAxNC4yMSAxMy43OSAxMiAxNloiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+';
+                                }}
+                              />
+                              {!viewMode && (
+                                <button
+                                  onClick={() => handleRemovePhoto(index)}
+                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors duration-200"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="text-xs text-gray-500">
+                        Supported formats: PNG, JPEG, JPG, GIF, WebP (Max 5MB per file)
+                      </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => setViewingWork(null)}
-                className="btn-secondary px-6 py-2 rounded-lg border border-blue-100 font-medium text-gray-800 hover:bg-gray-50"
-              >
-                {t('close')}
-              </button>
+                </div>
+                <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => { setEditingStep(null); setViewMode(false); }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                  >
+                    Close
+                  </button>
+                  {/* Hide Save button in view mode */}
+                  {!viewMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Conditional validation: location and photos required only if status is "completed"
+                        if (stepForm.status === 'completed') {
+                          if (!stepForm.location_data || stepForm.completion_photos.length === 0) {
+                            alert('Location and at least one photo are required when status is "Completed".');
+                            return;
+                          }
+                        }
+                        handleSaveStep();
+                      }}
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                    >
+                      <Save className="w-4 h-4" />
+                      <span>Save Changes</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
+        )}
+      </div>
+    );
+  }
+
+  // Workflow List View
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="relative bg-gradient-to-r from-green-600 via-emerald-500 to-cyan-400 rounded-3xl p-6 shadow-2xl mb-4 overflow-hidden border border-white/20">
+        {/* Subtle tribal BG overlay */}
+        <div className="absolute inset-0 bg-[url('/src/assets/tribal_bg.jpg')] bg-cover bg-center opacity-10 pointer-events-none rounded-3xl" />
+        <div className="flex items-center justify-between relative z-10">
+          {/* Header Logo */}
+          <div className="w-16 h-16 bg-transparent rounded-2xl flex items-center justify-center shadow border border-white/60 mr-6">
+            <img
+              src={HeaderLogo}
+              alt="Header Logo"
+              className="w-full h-full object-contain rounded shadow"
+            />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent text-white">
+              {t('workflowProgress')}
+            </h2>
+            <p className="text-white mt-2">{t('selectPesaVillageWorkWorkflowToTrackProgressAndManageSteps')}</p>
+          </div>
+          <div className="flex items-center space-x-2 ml-6">
+            <TrendingUp className="w-8 h-8 text-white" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-4 border border-white/20">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search workflows..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      {/* Workflows List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredWorkflows.map((workflow) => (
+          <div
+            key={workflow.id}
+            onClick={() => handleSelectWorkflow(workflow)}
+            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20 card-hover cursor-pointer"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{workflow.title}</h3>
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">{workflow.description}</p>
+                {workflow.work && (
+                  <p className="text-xs text-gray-500 mb-2">
+                    {workflow.work.work_name} | {workflow.work.taluka}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center space-x-3">
+                <Eye className="w-5 h-5 text-gray-400 flex-shrink-0 cursor-pointer" />
+                <Trash2
+                  className="w-5 h-5 text-red-600 cursor-pointer hover:text-red-800"
+                  onClick={(e) => {
+                    e.stopPropagation(); // prevent triggering parent onClick
+                    handleDeleteWorkflow(workflow.id);
+                  }}
+                  title="Delete workflow"
+                />
+              </div>
+            </div>
+            <div className="space-y-3">
+              {/* Progress Bar */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium text-gray-700">Progress</span>
+                  <span className="text-sm text-gray-500">
+                    {getProgressPercentage(workflow.workflow_steps || [])}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${getProgressPercentage(workflow.workflow_steps || [])}%` }}
+                  ></div>
+                </div>
+              </div>
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <div className="text-lg font-bold text-blue-600">
+                    {workflow.workflow_steps?.length || 0}
+                  </div>
+                  <div className="text-xs text-gray-500">Steps</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-green-600">
+                    {workflow.workflow_steps?.filter((s: WorkflowStep) => s.status === 'completed').length || 0}
+                  </div>
+                  <div className="text-xs text-gray-500">Done</div>
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-orange-600">
+                    {workflow.duration}
+                  </div>
+                  <div className="text-xs text-gray-500">Days</div>
+                </div>
+              </div>
+              {/* Status */}
+              <div className="flex justify-between items-center">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-white ${getStatusColor(workflow.status)}`}>
+                  {t(workflow.status)}
+                </span>
+                <div className="text-xs text-gray-500">
+                  {workflow.created_at ? new Date(workflow.created_at).toLocaleDateString() : '-'}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {filteredWorkflows.length === 0 && workflows.length > 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-lg mb-2">No workflows match your search</div>
+          <p className="text-gray-500">Try adjusting your search terms or filters</p>
+        </div>
+      )}
+      {workflows.length === 0 && (
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-lg mb-2">No workflows found</div>
+          <p className="text-gray-500">Create workflows in Workflow Builder to track progress here</p>
         </div>
       )}
     </div>
   );
-}
+};
+export default WorkflowProgress;
