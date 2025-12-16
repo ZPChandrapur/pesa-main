@@ -13,6 +13,18 @@ input[type=number] {
   -moz-appearance: textfield;
 }
 
+input::first-letter {
+  text-transform: capitalize;
+}
+
+input {
+  text-transform: capitalize;
+}
+
+table td {
+  text-transform: capitalize;
+}
+
 .card-tribal, .aarakhadaBG {
   background-image: linear-gradient(rgb(244 247 203 / 90%), rgb(219 210 135 / 60%)), url('/src/assets/warliBG3.jpg');
   background-repeat: no-repeat;
@@ -60,4 +72,3 @@ input[type=number] {
   position: relative;
   z-index: 1;
 }
-
