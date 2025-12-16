@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hide number input arrows (spinners) for all number inputs */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+input::first-letter {
+  text-transform: capitalize;
+}
+
+input {
+  text-transform: capitalize;
+}
+
+table td {
+  text-transform: capitalize;
+}
+
+.card-tribal, .aarakhadaBG {
+  background-image: linear-gradient(rgb(244 247 203 / 90%), rgb(219 210 135 / 60%)), url('/src/assets/warliBG3.jpg');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}
+
+.card-tribal span{
+  font-weight: 800;
+  color: rgb(55 65 81)!important;
+}
+
+.table-container {
+  position: relative;
+}
+
+.table-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url('/src/assets/tribal_bg.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.table-container table {
+  position: relative;
+  z-index: 1;
+  background-color: rgba(255, 255, 255, 0.95); /* white background with slight transparency */
+  color: black;
+}
+
+.table-container table tbody, .aarakhadaDiv {
+  background-image: linear-gradient(
+      rgba(255, 255, 255, 0.9),
+      rgba(255, 255, 255, 0.9)
+    ),
+    url('/src/assets/tribal_bg.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  pointer-events: auto; 
+  position: relative;
+  z-index: 1;
+}
