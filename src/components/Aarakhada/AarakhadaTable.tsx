@@ -260,15 +260,15 @@ export function AarakhadaTable({
                             className="text-green-500 hover:text-green-700"
                             onClick={() => {
                               const status = (work.status || '').trim();
-                              if (status === 'in_progress') {
+                              if (status === 'pending') {
                                 return; 
                               }
                               onEdit(work);
                             }}
-                            title={((work.status || '').trim() === 'in_progress' || (work.status || '').trim() === 'pending')
-                              ? t('progressTitle')
+                            title={((work.status || '').trim() === 'pending')
+                              ? t('pendingTitle')
                               : t('edit')}
-                            disabled={(work.status || '').trim() === 'in_progress' || (work.status || '').trim() === 'pending'}
+                            disabled={(work.status || '').trim() === 'pending'}
                           >
                             <Edit size={18} />
                           </button>
