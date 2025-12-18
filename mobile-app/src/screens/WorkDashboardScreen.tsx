@@ -52,6 +52,10 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
   const [pesaGrampanchayats, setPesaGrampanchayats] = useState<string[]>([]);
 
+  const [totalPopulation, setTotalPopulation] = useState(0);
+  const [stPopulation, setStPopulation] = useState(0);
+  const [distributedFunds, setDistributedFunds] = useState(0);
+
   const workCategories = [
     { id: 'A', name: 'Category A - Infrastructure' },
     { id: 'B', name: 'Category B - Social Development' },
@@ -118,6 +122,19 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
       console.log('Filtered villages for user:', filteredVillages.length);
       setVillages(filteredVillages);
+
+      const populationSum = filteredVillages.reduce(
+        (sum, v) => sum + (Number(v.village_population) || 0),
+        0
+      );
+      setTotalPopulation(populationSum);
+
+      const stPopulationSum = filteredVillages.reduce((sum, v) => {
+        const stVal = Number(v.gram_panchayat_st_population) || 0;
+        return sum + stVal;
+      }, 0);
+      setStPopulation(stPopulationSum);
+
       return data || [];
     } catch (error) {
       console.error('Failed to load villages:', error);
@@ -166,6 +183,12 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
       console.log('Filtered works for user:', filteredWorks.length);
       setWorks(filteredWorks);
+
+      const fundsSum = filteredWorks.reduce((sum, work) => {
+        const agreementAmount = Number(work.agreement_approval_amount) || 0;
+        return sum + agreementAmount;
+      }, 0);
+      setDistributedFunds(fundsSum);
 
       const uniqueGPs = Array.from(new Set(filteredWorks.map(w => w.pesa_grampanchayat).filter(Boolean)));
       setPesaGrampanchayats(uniqueGPs as string[]);
@@ -263,6 +286,35 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
                 </Picker>
               </View>
             </View>
+          </View>
+        </View>
+
+        <View style={styles.countCardsContainer}>
+          <View style={[styles.countCard, styles.villagesCard]}>
+            <Text style={styles.countValue}>{villages.length}</Text>
+            <Text style={styles.countLabel}>Total Villages</Text>
+          </View>
+          <View style={[styles.countCard, styles.populationCard]}>
+            <Text style={styles.countValue}>
+              {totalPopulation > 1000000
+                ? (totalPopulation / 1000000).toFixed(1) + 'M'
+                : totalPopulation.toLocaleString()}
+            </Text>
+            <Text style={styles.countLabel}>Total Population</Text>
+          </View>
+          <View style={[styles.countCard, styles.stPopCard]}>
+            <Text style={styles.countValue}>
+              {stPopulation > 1000000
+                ? (stPopulation / 1000000).toFixed(1) + 'M'
+                : stPopulation.toLocaleString()}
+            </Text>
+            <Text style={styles.countLabel}>ST Population</Text>
+          </View>
+          <View style={[styles.countCard, styles.fundsCard]}>
+            <Text style={styles.countValue}>
+              ₹{(distributedFunds / 10000000).toFixed(2)}Cr
+            </Text>
+            <Text style={styles.countLabel}>Distributed Funds</Text>
           </View>
         </View>
 
@@ -496,6 +548,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  villagesCard: {
+    backgroundColor: '#d1fae5',
+  },
+  populationCard: {
+    backgroundColor: '#dbeafe',
+  },
+  stPopCard: {
+    backgroundColor: '#fce7f3',
+  },
+  fundsCard: {
+    backgroundColor: '#fed7aa',
   },
   completedCard: {
     backgroundColor: '#d1fae5',

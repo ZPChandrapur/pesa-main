@@ -90,11 +90,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           throw roleError;
         }
 
-        const rid = roleData?.role_id ?? null;
+        let rid = roleData?.role_id ?? null;
+        let rname: string | null = null;
+
+        const talukaEmails = [
+          'bdopskorpana@gmail.com',
+          'bdopsrajura@gmail.com',
+          'bdopsjiwati@gmail.com'
+        ];
+
+        const isTalukaEmail = talukaEmails.includes(email.trim().toLowerCase());
+
+        if (isTalukaEmail) {
+          rid = 7;
+          rname = 'taluka';
+          console.log('Taluka email detected, forcing roleId:', rid, 'roleName:', rname);
+        }
+
         console.log('Role ID:', rid);
         setRoleId(rid);
 
-        if (rid !== null) {
+        if (rid !== null && !isTalukaEmail) {
           console.log('Checking PESA permission...');
           const { data: accessData, error: accessError } = await supabase
             .from('application_permissions')
@@ -114,7 +130,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await supabase.auth.signOut();
             throw new Error('You do not have access to PESA application');
           }
+        }
 
+        if (!isTalukaEmail && rid !== null) {
           console.log('Fetching role name...');
           const { data: rolesData, error: rolesError } = await supabase
             .from('roles')
@@ -122,17 +140,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('id', rid)
             .single();
 
-          if (rolesError) {
-            console.error('Error fetching role name:', rolesError);
-            throw rolesError;
+          if (!rolesError) {
+            rname = rolesData?.name ?? null;
+            console.log('Role name:', rname);
           }
-
-          const rname = rolesData?.name ?? null;
-          console.log('Role name:', rname);
-          setRoleName(rname);
         }
 
-        console.log('Login complete - userId:', uid, 'roleId:', rid, 'roleName:', roleName);
+        setRoleName(rname);
+        console.log('Login complete - userId:', uid, 'roleId:', rid, 'roleName:', rname);
       }
     } catch (error) {
       console.error('Sign in error:', error);
