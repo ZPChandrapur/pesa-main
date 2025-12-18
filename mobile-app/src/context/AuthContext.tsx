@@ -27,17 +27,77 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let mounted = true;
     let timeoutId: NodeJS.Timeout;
 
+    const fetchRoleData = async (uid: string, email: string) => {
+      try {
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role_id')
+          .eq('user_id', uid)
+          .single();
+
+        if (roleError) {
+          console.error('Error fetching role:', roleError);
+          return { roleId: null, roleName: null };
+        }
+
+        let rid = roleData?.role_id ?? null;
+        let rname: string | null = null;
+
+        const talukaEmails = [
+          'bdopskorpana@gmail.com',
+          'bdopsrajura@gmail.com',
+          'bdopsjiwati@gmail.com'
+        ];
+
+        const isTalukaEmail = talukaEmails.includes(email.trim().toLowerCase());
+
+        if (isTalukaEmail) {
+          rid = 7;
+          rname = 'taluka';
+          console.log('Taluka email detected on session restore');
+        } else if (rid !== null) {
+          const { data: rolesData } = await supabase
+            .from('roles')
+            .select('name')
+            .eq('id', rid)
+            .single();
+
+          rname = rolesData?.name ?? null;
+        }
+
+        return { roleId: rid, roleName: rname };
+      } catch (error) {
+        console.error('Error in fetchRoleData:', error);
+        return { roleId: null, roleName: null };
+      }
+    };
+
     (async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
+
+        if (session?.user) {
+          console.log('Session restored, fetching role data...');
+          setUserId(session.user.id);
+          const { roleId, roleName } = await fetchRoleData(session.user.id, session.user.email || '');
+          if (mounted) {
+            setRoleId(roleId);
+            setRoleName(roleName);
+            console.log('Session restored with roleId:', roleId, 'roleName:', roleName);
+          }
+        }
       } catch (err) {
         console.error('Error retrieving initial session:', err);
         if (mounted) {
           setSession(null);
           setUser(null);
+          setUserId(null);
+          setRoleId(null);
+          setRoleName(null);
         }
       } finally {
         if (mounted) setLoading(false);
@@ -52,10 +112,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }, 5000);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
+
+      if (session?.user) {
+        setUserId(session.user.id);
+        const { roleId, roleName } = await fetchRoleData(session.user.id, session.user.email || '');
+        if (mounted) {
+          setRoleId(roleId);
+          setRoleName(roleName);
+        }
+      } else {
+        setUserId(null);
+        setRoleId(null);
+        setRoleName(null);
+      }
+
       setLoading(false);
     });
 
