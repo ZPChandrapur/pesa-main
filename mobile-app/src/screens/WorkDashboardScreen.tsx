@@ -65,6 +65,7 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
   useEffect(() => {
     if (user && userId && roleName) {
+      console.log('Loading work dashboard for user:', userId, 'role:', roleName);
       loadData();
     }
   }, [user, userId, roleName]);
