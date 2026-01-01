@@ -2,11 +2,18 @@ import React, { useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { pesaWorkOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
-export function Aarakhada({ userId, roleName }: { userId: string; roleName: string  }) {
+
+const getDefaultFinancialYear = () => {
+  const currentYear = new Date().getFullYear()
+  const lastYear = currentYear - 1;
+  const shortCurrentYear = String(currentYear).slice(-2);
+  return `${lastYear}-${shortCurrentYear}`;
+};
+export function Aarakhada({ userId, roleName }: { userId: string; roleName: string }) {
   const { t, language } = useLanguage();
   const [formData, setFormData] = useState({
     taluka: '' as string,
-    year: null as string | number | null,
+    year: getDefaultFinancialYear() as string,
     work_name: '',
     work_category: '',
     //department: '',
@@ -39,6 +46,16 @@ export function Aarakhada({ userId, roleName }: { userId: string; roleName: stri
   const [editingWork, setEditingWork] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const readonly = false;
+  const [modal, setModal] = useState<{
+    open: boolean;
+    type: 'success' | 'error';
+    message: string;
+  }>({
+    open: false,
+    type: 'success',
+    message: '',
+  });
+
   // Auto-populate taluka when village is selected
   useEffect(() => {
     if (formData.village_id) {
@@ -65,18 +82,25 @@ export function Aarakhada({ userId, roleName }: { userId: string; roleName: stri
       setFormData(prev => ({ ...prev, village_id: '' }));
     }
   }, [formData.pesa_grampanchayat, villages]);
+
   useEffect(() => {
     loadAvailableWorkNames();
     loadVillages();
     setLoading(false);
-    // Set added_month only on component mount (not on subsequent renders or on edit)
+
     if (!editingWork) {
       const date = new Date();
       const month = date.toLocaleString('default', { month: 'long' });
       const year = date.getFullYear();
-      setFormData(prev => ({ ...prev, added_month: `${month}-${year}` }));
+
+      setFormData(prev => ({
+        ...prev,
+        added_month: `${month}-${year}`,
+        year: getDefaultFinancialYear(),
+      }));
     }
   }, []);
+
   const loadAvailableWorkNames = async () => {
     try {
       const data = await pesaWorkOperations.getAvailableWorkNames();
@@ -86,49 +110,49 @@ export function Aarakhada({ userId, roleName }: { userId: string; roleName: stri
     }
   };
 
-const loadVillages = async () => {
-  try {
-    const { villageService } = await import('../../utils/supabase');
-    let data = await villageService.getAll();
+  const loadVillages = async () => {
+    try {
+      const { villageService } = await import('../../utils/supabase');
+      let data = await villageService.getAll();
 
-    // ✅ If roleName is 'district', set all data as it is
-    if (['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase())) {
-      setVillages(data);
-    } else {
-      // ✅ For other roles, filter based on userId
-      if (userId) {
-        const allowedVillageIds = data
-          .filter((v: any) => {
-            if (v.tal_user_access === null && v.gram_user_access === null) {
-              return false;
-            }
-            return v.tal_user_access === userId || v.gram_user_access === userId;
-          })
-          .map((v: any) => v.id);
+      // ✅ If roleName is 'district', set all data as it is
+      if (['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase())) {
+        setVillages(data);
+      } else {
+        // ✅ For other roles, filter based on userId
+        if (userId) {
+          const allowedVillageIds = data
+            .filter((v: any) => {
+              if (v.tal_user_access === null && v.gram_user_access === null) {
+                return false;
+              }
+              return v.tal_user_access === userId || v.gram_user_access === userId;
+            })
+            .map((v: any) => v.id);
 
-        if (!allowedVillageIds.length) {
-          setWorks([]);
-          return;
+          if (!allowedVillageIds.length) {
+            setWorks([]);
+            return;
+          }
+
+          data = data.filter((v: any) => allowedVillageIds.includes(v.id));
         }
-
-        data = data.filter((v: any) => allowedVillageIds.includes(v.id));
+        setVillages(data);
       }
-      setVillages(data);
+
+      // ✅ Extract only VALID Gram Panchayat values for dropdown
+      const uniqueGramPanchayats = Array.from(
+        new Set(data.map((v: any) => v.gram_panchayat).filter(Boolean))
+      ).map((gp) => ({
+        id: gp,
+        gram_panchayat: gp,
+      }));
+
+      setPesaGramPanchayats(uniqueGramPanchayats);
+    } catch (error) {
+      console.error('Error loading villages:', error);
     }
-
-    // ✅ Extract only VALID Gram Panchayat values for dropdown
-    const uniqueGramPanchayats = Array.from(
-      new Set(data.map((v: any) => v.gram_panchayat).filter(Boolean))
-    ).map((gp) => ({
-      id: gp,
-      gram_panchayat: gp,
-    }));
-
-    setPesaGramPanchayats(uniqueGramPanchayats);
-  } catch (error) {
-    console.error('Error loading villages:', error);
-  }
-};
+  };
 
   const validateForm = () => {
     const requiredFields = [
@@ -148,6 +172,7 @@ const loadVillages = async () => {
     }
     return true;
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
 
     e.preventDefault();
@@ -155,15 +180,31 @@ const loadVillages = async () => {
     try {
       if (editingWork) {
         await pesaWorkOperations.update(editingWork, formData);
-        toast.success(t('workUpdatedSuccessfully'));
+        setModal({
+          open: true,
+          type: 'success',
+          message: t('workUpdatedSuccessfully'),
+        });
       } else {
         await pesaWorkOperations.create(formData);
-        toast.success(t('workCreatedSuccessfully'));
+        setModal({
+          open: true,
+          type: 'success',
+          message: t('workCreatedSuccessfully'),
+        });
       }
-      //resetForm();
-    } catch (error) {
-      console.error('Error saving work:', error);
-      toast.error(t('errorSavingWork'));
+    } catch (error: any) {
+      let message = t('errorSavingWork');
+
+      if (error?.message === 'DUPLICATE_WORK') {
+        message = 'Work name already exists for this village and category.';
+      }
+
+      setModal({
+        open: true,
+        type: 'error',
+        message,
+      });
     }
   };
   const resetForm = () => {
@@ -428,6 +469,30 @@ const loadVillages = async () => {
           </button>
         </div>
       </form>
+
+      {modal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+            <h3
+              className={`text-xl font-bold mb-4 ${modal.type === 'success' ? 'text-green-600' : 'text-red-600'
+                }`}
+            >
+              {modal.type === 'success' ? 'Success' : 'Error'}
+            </h3>
+
+            <p className="text-gray-700 mb-6">{modal.message}</p>
+
+            <div className="flex justify-end">
+              <button
+                onClick={() => setModal({ ...modal, open: false })}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
