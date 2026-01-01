@@ -6,6 +6,9 @@ const URL = import.meta.env.VITE_SUPABASE_URL || 'https://tvmqkondihsomlebizjj.s
 const supabaseUrl = URL as string;
 const supabaseKey = Password as string;
 
+// const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+// const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   db: {
     schema: 'public'
@@ -467,16 +470,39 @@ export const pesaWorkOperations = {
   },
 
   async create(work: any) {
+    debugger;
+
+    const trimmedWorkName = work.work_name?.trim();
+
+    const { data: existingWork, error: checkError } = await pesaSupabase
+      .from('works')
+      .select('id')
+      .eq('village_id', work.village_id)
+      .eq('work_category', work.work_category)
+      .ilike('work_name', trimmedWorkName)
+      .maybeSingle();
+
+    if (checkError) {
+      throw checkError;
+    }
+
+    if (existingWork) {
+      throw new Error('DUPLICATE_WORK');
+    }
+
+    work.work_name = trimmedWorkName;
 
     const { data, error } = await pesaSupabase
       .from("works")
       .insert([work])
       .select()
       .single();
+
     if (error) {
       console.error('Error creating PESA work:', error);
       throw error;
     }
+
     if (data.village_id && data.work_category && data.year && data.added_month) {
       try {
         const village = await villageService.getById(data.village_id);
@@ -741,12 +767,14 @@ export const pesaWorkOperations = {
           const pesaGramPanchayatCount = uniqueGramPanchayatsInTaluka.size;
           const pesaVillageCountInTaluka = allVillagesInTaluka?.length || 0;
 
-          const { data: existingDistrictPhysical, error: districtPhysicalFetchError } = await pesaSupabase
-            .from('district_aarakhada_physical')
-            .select('*')
-            .eq('taluka_name', village.block)
-            .eq('work_category', data.work_category)
-            .single();
+          const { data: existingDistrictPhysical, error: districtPhysicalFetchError } =
+            await pesaSupabase
+              .from('district_aarakhada_physical')
+              .select('*')
+              .eq('taluka_name', village.block)
+              .eq('work_category', data.work_category)
+              .limit(1)
+              .maybeSingle();
 
           if (districtPhysicalFetchError && districtPhysicalFetchError.code !== 'PGRST116') {
             throw districtPhysicalFetchError;
@@ -760,9 +788,6 @@ export const pesaWorkOperations = {
             await pesaSupabase
               .from('district_aarakhada_physical')
               .update({
-                district_name: village.district,
-                taluka_name: village.block,
-                work_category: data.work_category,
                 completed_works: districtCompletedWorksInc + existingDistrictPhysical.completed_works,
                 ongoing_works: districtOngoingWorksInc + existingDistrictPhysical.ongoing_works,
                 pending_works: districtPendingWorksInc + existingDistrictPhysical.pending_works,
@@ -1309,6 +1334,7 @@ export const pesaWorkOperations = {
   },
 
   async delete(id: string) {
+    debugger
     // Fetch the work to identify counts and related metadata
     const { data: workToDelete, error: fetchWorkError } = await pesaSupabase
       .from("works")
@@ -1365,9 +1391,6 @@ export const pesaWorkOperations = {
             await pesaSupabase
               .from("aarakhada_physical")
               .update({
-                work_category: workToDelete.work_category,
-                village_id: workToDelete.village_id,
-                gram_panchayat: workToDelete.pesa_grampanchayat,
                 completed_works: updatedCompleted,
                 ongoing_works: updatedOngoing,
                 pending_works: updatedPending,
@@ -1417,8 +1440,6 @@ export const pesaWorkOperations = {
             await pesaSupabase
               .from("taluka_aarakhada_physical")
               .update({
-                work_category: workToDelete.work_category,
-                gram_panchayat: workToDelete.pesa_grampanchayat,
                 completed_works: updatedCompleted,
                 ongoing_works: updatedOngoing,
                 pending_works: updatedPending,
@@ -1466,9 +1487,6 @@ export const pesaWorkOperations = {
             await pesaSupabase
               .from("district_aarakhada_physical")
               .update({
-                work_category: workToDelete.work_category,
-                district_name: workToDelete.district,
-                taluka_name: workToDelete.taluka,
                 completed_works: updatedCompleted,
                 ongoing_works: updatedOngoing,
                 pending_works: updatedPending,
