@@ -27,7 +27,6 @@ const navItems: NavItem[] = [
   { id: 'gramPanchayat', icon: Building2, labelKey: 'gramPanchayat' },
   { id: 'taluka', icon: Building2, labelKey: 'taluka' },
   { id: 'district', icon: Building2, labelKey: 'district' },
-  { id: 'funds', icon: Banknote, labelKey: 'distributedFunds' },
 ];
 
 export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: SidebarProps) {

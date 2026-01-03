@@ -106,6 +106,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
   const [workCategoryFilter, setWorkCategoryFilter] = useState<string>('all');
   const [pesaGrampanchayatFilter, setPesaGrampanchayatFilter] = useState<string>('all');
   const [villageFilter, setVillageFilter] = useState<string>('all');
+  const [talukaFilter, setTalukaFilter] = useState<string>('all');
   const completedStages = works.filter(w => w.current_status === 'completed').length;
   const inProgress = works.filter(w => w.current_status === 'in_progress').length;
   const pending = works.filter(w => w.current_status === 'pending').length;
@@ -397,10 +398,24 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     const statusMatch = statusFilter === 'all' || w.current_status === statusFilter;
     const yearMatch = yearFilter === 'all' || String(w.year) === yearFilter;
     const workCategoryMatch = workCategoryFilter === 'all' || w.work_category === workCategoryFilter;
-    const pesaGrampanchayatMatch = pesaGrampanchayatFilter === "all" || (w.pesa_grampanchayat ?? "").trim().toLowerCase() === pesaGrampanchayatFilter.trim().toLowerCase();
+    const pesaGrampanchayatMatch =
+      pesaGrampanchayatFilter === "all" ||
+      (w.pesa_grampanchayat ?? "").trim().toLowerCase() === pesaGrampanchayatFilter.trim().toLowerCase();
     const villageMatch = villageFilter === 'all' || (w.village?.village_name === villageFilter);
-    return statusMatch && yearMatch && workCategoryMatch && pesaGrampanchayatMatch && villageMatch;
+    const talukaMatch =
+      talukaFilter === 'all' ||
+      (w.taluka ?? '').trim().toLowerCase() === talukaFilter.trim().toLowerCase(); // ✅ NEW
+
+    return (
+      statusMatch &&
+      yearMatch &&
+      workCategoryMatch &&
+      pesaGrampanchayatMatch &&
+      villageMatch &&
+      talukaMatch
+    );
   });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -415,6 +430,9 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     { icon: TrendingUp, label: t('overallProgress'), value: `${overallProgress}%`, color: 'from-purple-500 to-pink-600' },
   ];
   const uniqueYears = Array.from(new Set(works.map(w => w.year).filter(Boolean) as (string | number)[])).map(String);
+  const uniqueTalukas = Array.from(
+    new Set(works.map(w => w.taluka).filter(Boolean))
+  ) as string[];
 
   const groupedBySomeKey = works.reduce((acc, work) => {
     const key = work.groupKey || '-'; // replace 'groupKey' with your actual group field
@@ -518,38 +536,53 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
             </div>
 
             {/* Right Controls */}
-            <div className="flex gap-4 flex-shrink-0">
+            {/* Right Controls */}
+            <div className="flex items-end gap-4 flex-shrink-0">
+              {/* Download Button */}
               <button
-                className="w-44 h-12 mt-4 bg-white text-cyan-600 rounded-2xl flex items-center justify-center gap-2 font-medium shadow-lg"
+                className="h-12 px-6 bg-white text-cyan-600 rounded-2xl
+               flex items-center gap-2 font-medium shadow-lg
+               whitespace-nowrap"
               >
                 <Download className="w-5 h-5" />
                 Download Excel
               </button>
 
-              <div className="flex flex-col">
-                <label className="font-bold text-white">{t('pesaGrampanchayat')}</label>
+              {/* Taluka Filter */}
+              <div className="flex flex-col w-44">
+                <label className="font-bold text-white mb-1">
+                  {t('taluka')}
+                </label>
                 <select
-                  value={pesaGrampanchayatFilter}
-                  onChange={e => setPesaGrampanchayatFilter(e.target.value)}
-                  className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fuchsia-500"
+                  value={talukaFilter}
+                  onChange={e => setTalukaFilter(e.target.value)}
+                  className="h-12 px-3 border border-gray-300 rounded-xl
+                 focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="all">{t('All')}</option>
-                  {pesaGrampanchayats.map(gp => (
-                    <option key={gp} value={gp}>{gp}</option>
+                  {uniqueTalukas.map(taluka => (
+                    <option key={taluka} value={taluka}>
+                      {taluka}
+                    </option>
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col">
-                <label className="font-bold text-white">{t('village')}</label>
+
+              {/* PESA Gram Panchayat Filter */}
+              <div className="flex flex-col w-44">
+                <label className="font-bold text-white mb-1">
+                  {t('pesaGrampanchayat')}
+                </label>
                 <select
-                  value={villageFilter}
-                  onChange={e => setVillageFilter(e.target.value)}
-                  className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fuchsia-500"
+                  value={pesaGrampanchayatFilter}
+                  onChange={e => setPesaGrampanchayatFilter(e.target.value)}
+                  className="h-12 px-3 border border-gray-300 rounded-xl
+                 focus:ring-2 focus:ring-fuchsia-500 bg-white"
                 >
                   <option value="all">{t('All')}</option>
-                  {villages.map(v => (
-                    <option key={v.id} value={v.village_name}>
-                      {language === 'mr' ? v.village_name_mr || v.village_name : v.village_name}
+                  {pesaGrampanchayats.map(gp => (
+                    <option key={gp} value={gp}>
+                      {gp}
                     </option>
                   ))}
                 </select>
@@ -586,6 +619,22 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
       {/* Filters */}
       {activeTab === 'dashboard' && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
+
+          <div className="flex flex-col">
+            <label className="font-bold text-gray-700">{t('village')}</label>
+            <select
+              value={villageFilter}
+              onChange={e => setVillageFilter(e.target.value)}
+              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-fuchsia-500"
+            >
+              <option value="all">{t('All')}</option>
+              {villages.map(v => (
+                <option key={v.id} value={v.village_name}>
+                  {language === 'mr' ? v.village_name_mr || v.village_name : v.village_name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Year Filter */}
           <div className="flex flex-col w-full">

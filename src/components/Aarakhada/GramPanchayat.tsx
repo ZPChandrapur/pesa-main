@@ -18,6 +18,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
   const [activeTab, setActiveTab] = useState<'financial' | 'physical'>('physical');
   const [selectedGramPanchayat, setSelectedGramPanchayat] = useState('');
   const [selectedVillage, setSelectedVillage] = useState('');
+  const [selectedTaluka, setSelectedTaluka] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'A' | 'B' | 'C' | 'D' | ''>('');
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
@@ -30,7 +31,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
   const [editingWork, setEditingWork] = useState<AarakhadaWork | null>(null);
   const [viewMode, setViewMode] = useState(false);
 
-   const workCategories = [
+  const workCategories = [
     { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
     { id: 'B', name: 'Category B - Forest Rights Act (FRA) and PESA Implementation', name_mr: 'प्रकार ब - वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी' },
     { id: 'C', name: 'Category C - Health, Sanitation, and Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता व शिक्षण' },
@@ -38,6 +39,9 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
   ];
 
   const years = ['2022-23', '2023-24', '2024-25', '2025-26'];
+  const uniqueTalukas = Array.from(
+    new Set(allWorks.map(w => w.taluka).filter(Boolean))
+  ) as string[];
 
   const getMonthYear = (dateStr: string) => {
     if (!dateStr) return '';
@@ -65,7 +69,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
 
   useEffect(() => {
     filterWorks();
-  }, [allWorks, activeTab, selectedGramPanchayat, selectedVillage, selectedCategory, selectedYear, selectedMonth]);
+  }, [allWorks, activeTab, selectedTaluka, selectedGramPanchayat, selectedVillage, selectedCategory, selectedYear, selectedMonth]);
 
   const handleDownloadExcel = () => {
     const accessibleVillageNames = new Set(accessibleWorks.map(w => w.village_name));
@@ -193,7 +197,12 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
     let filtered = [...allWorks];
     if (activeTab === 'physical') filtered = filtered.filter(w => w.work_type === 'physical');
     else if (activeTab === 'financial') filtered = filtered.filter(w => w.work_type === 'financial');
-
+    if (selectedTaluka)
+      filtered = filtered.filter(
+        w =>
+          (w.taluka ?? '').trim().toLowerCase() ===
+          selectedTaluka.trim().toLowerCase()
+      );
     if (selectedGramPanchayat) filtered = filtered.filter(w => w.gram_panchayat === selectedGramPanchayat);
     if (selectedVillage) filtered = filtered.filter(w => w.village_id === selectedVillage);
     if (selectedCategory) filtered = filtered.filter(w => w.work_category === selectedCategory);
@@ -257,37 +266,58 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
       const accessibleVillageIds = new Set(villages.map(v => v.id));
       return works.filter(w => accessibleVillageIds.has(w.village_id));
     })();
-const getUniqueWorkSum = (
-  works: AarakhadaWork[],
-  valueKey: keyof AarakhadaWork
-): number => {
-  if (isNoVillages || !works.length) return 0;
 
-  // Map for each key, select the record with latest month/year
-  const uniqueWorksMap = new Map<string, AarakhadaWork>();
-  for (const work of works) {
-    if (!work.work_name || !work.work_category || !work.village_id) continue;
-    const key = `${work.work_name}-${work.work_category}-${work.village_id}`;
-    const existing = uniqueWorksMap.get(key);
-    // If no existing, or this work is later, replace
-    if (
-      !existing ||
-      (work.added_month && existing.added_month &&
-        new Date(work.added_month) > new Date(existing.added_month))
-    ) {
-      uniqueWorksMap.set(key, work);
-    }
-  }
+  const getUniqueWorkSum = (
+    works: AarakhadaWork[],
+    valueKey: keyof AarakhadaWork
+  ): number => {
+    if (isNoVillages || !works.length) return 0;
 
-  let sum = 0;
-  for (const work of uniqueWorksMap.values()) {
-    const value = work[valueKey];
-    if (typeof value === 'number' && !isNaN(value)) {
-      sum += value;
+    const uniqueWorksMap = new Map<string, AarakhadaWork>();
+
+    for (const work of works) {
+      if (!work.work_name || !work.work_category || !work.village_id) continue;
+
+      const key = `${work.work_name}-${work.work_category}-${work.village_id}`;
+      const existing = uniqueWorksMap.get(key);
+
+      const currentDate = work.added_month
+        ? new Date(`01 ${work.added_month}`)
+        : null;
+
+      const existingDate = existing?.added_month
+        ? new Date(`01 ${existing.added_month}`)
+        : null;
+
+      if (
+        !existing ||
+        (currentDate &&
+          existingDate &&
+          !isNaN(currentDate.getTime()) &&
+          !isNaN(existingDate.getTime()) &&
+          currentDate > existingDate)
+      ) {
+        uniqueWorksMap.set(key, work);
+      }
     }
-  }
-  return sum;
-};
+
+    let sum = 0;
+
+    for (const work of uniqueWorksMap.values()) {
+      const rawValue = work[valueKey];
+
+      const numericValue =
+        typeof rawValue === 'number'
+          ? rawValue
+          : Number(rawValue);
+
+      if (!isNaN(numericValue)) {
+        sum += numericValue;
+      }
+    }
+
+    return sum;
+  };
 
   const totalVillages = isNoVillages ? 0 : villages.length;
   const totalWorks = getUniqueWorkSum(accessibleWorks, 'sanctioned_works');
@@ -341,20 +371,52 @@ const getUniqueWorkSum = (
                 <Download className="w-5 h-5" />
                 Download Excel
               </button>
+
+              {/* Taluka Filter */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-white mb-1">
+                  {language === 'mr' ? 'तालुका निवडा' : 'Select Taluka'}
+                </label>
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <select
+                    value={selectedTaluka}
+                    onChange={e => setSelectedTaluka(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl
+                 focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500
+                 transition-all duration-300 bg-white text-sm"
+                  >
+                    <option value="">
+                      {language === 'mr' ? 'तालुका निवडा' : 'Select Taluka'}
+                    </option>
+                    {uniqueTalukas.map(taluka => (
+                      <option key={taluka} value={taluka}>
+                        {taluka}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="flex flex-col">
                 <label className="block text-xs font-semibold text-white mb-1">
                   {language === 'mr' ? 'ग्रामपंचायत निवडा' : 'Select Gram Panchayat'}
                 </label>
-                <select
-                  value={selectedGramPanchayat}
-                  onChange={e => setSelectedGramPanchayat(e.target.value)}
-                  className="pl-3 pr-3 py-2 rounded-2xl focus:ring-4 focus:ring-purple-500/30 focus:border-purple-500 bg-white text-sm font-medium"
-                >
-                  <option value="">{language === 'mr' ? 'सर्व ग्रामपंचायत' : 'All Gram Panchayats'}</option>
-                  {gramPanchayatNames.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <select
+                    value={selectedGramPanchayat}
+                    onChange={e => setSelectedGramPanchayat(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl
+                 focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500
+                 transition-all duration-300 bg-white text-sm"
+                  >
+                    <option value="">{language === 'mr' ? 'ग्रामपंचायत निवडा' : 'Select Gram Panchayat'}</option>
+                    {gramPanchayatNames.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -515,8 +577,6 @@ const getUniqueWorkSum = (
                     {language === 'mr' ? category.name_mr : category.name}
                   </option>
                 ))}
-
-
               </select>
             </div>
           </div>

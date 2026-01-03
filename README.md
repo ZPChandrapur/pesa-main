@@ -8,7 +8,7 @@
 ## 1. Introduction
 
 Welcome to the **PESA Application**.  
-This App is operated by **Zilla Parishad Chandrapur**. We are committed to protecting your privacy and ensuring the security of your personal information.
+We are committed to protecting your privacy and ensuring the security of your personal information.
 
 This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application for conducting fund management and managing inspection data.
 
