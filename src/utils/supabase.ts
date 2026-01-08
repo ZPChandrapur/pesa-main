@@ -133,9 +133,12 @@ export const workService = {
     ];
     return allWorks;
   },
-  async insert(workData: any) {
+  async insert(workData: any) {debugger
 
     const tableName = workData.work_type === 'financial' ? 'aarakhada_financial' : 'aarakhada_physical';
+    // Debug: log payload and break here to inspect in devtools
+    console.log('workService.insert payload:', workData, 'targetTable:', tableName);
+    debugger;
 
     // Insert the work first
     const { data, error } = await pesaSupabase.from(tableName).insert(workData).select().single();
@@ -214,6 +217,9 @@ export const workService = {
           .from("district_aarakhada_financial")
           .update({
             remaining_funds: workData.remaining_funds,
+            previous_expenditure: workData.previous_expenditure,
+            current_expenditure: workData.current_expenditure,
+            cumulative_expenditure: workData.cumulative_expenditure,
             updated_at: new Date().toISOString(),
           })
           .eq("taluka_name", workData.taluka)
@@ -236,7 +242,7 @@ export const workService = {
     return data;
   },
 
-  async update(id: string, workData: any) {
+  async update(id: string, workData: any) {debugger
 
     const tableName = workData.work_type === 'financial' ? 'aarakhada_financial' : 'aarakhada_physical';
     const { data, error } = await pesaSupabase
@@ -944,6 +950,7 @@ export const pesaWorkOperations = {
   },
 
   async update(id: string, work: any) {
+    debugger
     // Fetch existing record
     const { data: currentWork, error: fetchError } = await pesaSupabase
       .from("works")
@@ -997,6 +1004,7 @@ export const pesaWorkOperations = {
           if (newStatus === "pending") pending += 1;
         }
 
+        // Only update the physical row that matches the previous added_month
         await pesaSupabase
           .from("aarakhada_physical")
           .update({
@@ -1004,6 +1012,8 @@ export const pesaWorkOperations = {
             village_id: currentWork.village_id,
             gram_panchayat: currentWork.pesa_grampanchayat,
             status: newStatus,
+            // if the month was changed in the work, update the physical row's month too
+            added_month: work.added_month ?? currentWork.added_month,
             completed_works: completed,
             ongoing_works: ongoing,
             pending_works: pending,
@@ -1011,7 +1021,8 @@ export const pesaWorkOperations = {
             updated_at: new Date().toISOString(),
           })
           .eq("village_id", currentWork.village_id)
-          .eq("work_category", currentWork.work_category);
+          .eq("work_category", currentWork.work_category)
+          .eq("added_month", currentWork.added_month);
       }
 
       // Sync taluka_aarakhada_physical
@@ -1114,28 +1125,38 @@ export const pesaWorkOperations = {
       const sanctionedAmount = Number(work.admin_approval_amount ?? currentWork.admin_approval_amount) || 0;
       const releasedAmount = Number(work.agreement_approval_amount ?? currentWork.agreement_approval_amount) || 0;
 
+      // Try to find the financial row for the previous month only
       const { data: existingVillageFinancial, error: fetchVillageFinError } = await pesaSupabase
         .from("aarakhada_financial")
         .select("*")
         .eq("village_id", currentWork.village_id)
         .eq("work_category", currentWork.work_category)
         .eq("work_name", currentWork.work_name)
+        .eq("added_month", currentWork.added_month)
+        .maybeSingle();
 
       if (fetchVillageFinError && fetchVillageFinError.code !== "PGRST116") {
         throw fetchVillageFinError;
       }
 
       if (existingVillageFinancial) {
-        const previousExpenditure = Number(work.previous_expenditure ?? existingVillageFinancial.previous_expenditure ?? 0);
-        const currentExpenditure = Number(work.current_expenditure ?? existingVillageFinancial.current_expenditure ?? 0);
+        const previousExpenditure = Number(
+          work.previous_expenditure ?? existingVillageFinancial.previous_expenditure ?? 0
+        );
+        const currentExpenditure = Number(
+          work.current_expenditure ?? existingVillageFinancial.current_expenditure ?? 0
+        );
+
         const cumulativeExpenditure = previousExpenditure + currentExpenditure;
         const remainingFunds = releasedAmount - cumulativeExpenditure;
 
+        // 🔹 1️⃣ Update ALL common financial fields
         await pesaSupabase
           .from("aarakhada_financial")
           .update({
             status: work.current_status ?? existingVillageFinancial.status,
             sanctioned_amount: sanctionedAmount,
+            year: work.year ?? existingVillageFinancial.year,
             released_amount: releasedAmount,
             previous_expenditure: previousExpenditure,
             current_expenditure: currentExpenditure,
@@ -1144,18 +1165,35 @@ export const pesaWorkOperations = {
             updated_at: new Date().toISOString(),
           })
           .eq("village_id", currentWork.village_id)
-          .eq("work_category", currentWork.work_category)
-          .eq("work_name", currentWork.work_name);
+          .eq("work_category", currentWork.work_category);
+
+        // 🔹 2️⃣ Update ONLY added_month (restricted by work_name + previous added_month)
+        if (work.added_month && work.added_month !== currentWork.added_month) {
+          await pesaSupabase
+            .from("aarakhada_financial")
+            .update({
+              added_month: work.added_month,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("village_id", currentWork.village_id)
+            .eq("work_category", currentWork.work_category)
+            .eq("work_name", currentWork.work_name)
+            .eq("added_month", currentWork.added_month);
+        }
+
       } else {
+        // 🟢 INSERT logic remains unchanged
         const { data: village, error: vError } = await pesaSupabase
           .from("villages")
           .select("*")
           .eq("id", currentWork.village_id)
           .single();
+
         if (vError) throw vError;
 
         const previousExpenditure = Number(work.previous_expenditure) || 0;
         const currentExpenditure = Number(work.current_expenditure) || 0;
+
         const cumulativeExpenditure = previousExpenditure + currentExpenditure;
         const remainingFunds = releasedAmount - cumulativeExpenditure;
 
@@ -1175,14 +1213,13 @@ export const pesaWorkOperations = {
             current_expenditure: currentExpenditure,
             cumulative_expenditure: cumulativeExpenditure,
             remaining_funds: remainingFunds,
-            year: currentWork.year || null,
-            added_month: currentWork.added_month || null,
+            year: work.year || currentWork.year || null,
+            added_month: work.added_month || currentWork.added_month || null,
             work_name: currentWork.work_name,
             work_type: "financial",
             created_at: new Date().toISOString(),
           });
       }
-
 
       // ---------- TALUKA level (taluka_aarakhada_financial) ----------
       const { data: talukaWorksFinancial, error: fetchTalukaWorksError } = await pesaSupabase
@@ -1526,6 +1563,7 @@ export const pesaWorkOperations = {
           await pesaSupabase
             .from("aarakhada_financial")
             .update({
+              added_month: workToDelete.added_month,
               previous_expenditure: updatedPreviousExpenditure,
               current_expenditure: updatedCurrentExpenditure,
               cumulative_expenditure: updatedCumulativeExpenditure >= 0 ? updatedCumulativeExpenditure : 0,
