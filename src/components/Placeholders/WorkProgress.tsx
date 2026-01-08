@@ -447,6 +447,26 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     groupSrNo: idx + 1,
   }));
 
+
+  const PAGE_WINDOW = 5;
+
+  const getVisiblePages = () => {
+    if (totalPages <= PAGE_WINDOW) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const half = Math.floor(PAGE_WINDOW / 2);
+    let start = Math.max(1, currentPage - half);
+    let end = Math.min(totalPages, start + PAGE_WINDOW - 1);
+
+    // Adjust start if we're near the end
+    if (end - start + 1 < PAGE_WINDOW) {
+      start = Math.max(1, end - PAGE_WINDOW + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  };
+
   const totalPages = Math.ceil(filteredWorks.length / rowsPerPage);
 
   const paginatedWorks = filteredWorks.slice(
@@ -700,7 +720,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('workCategory')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('workName')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('month')}</th>
-                  <th className="px-2 py-4 text-left text-xs font-medium">{t('approval_amount')}</th>
+                  <th className="px-2 py-4 text-left text-xs font-medium">{t('releasedAmount')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('contractor_name')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('status')}</th>
                   <th className="px-2 py-4 text-left text-xs font-medium">{t('actions')}</th>
@@ -776,7 +796,9 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
             <div className="text-center py-12 text-gray-500">{t('No works found')}</div>
           )}
 
-          <div className="flex justify-center gap-2 mt-4 mb-4">
+          <div className="flex justify-center items-center gap-2 mt-4 mb-4">
+
+            {/* Prev */}
             <button
               className="px-3 py-1 border rounded disabled:opacity-50"
               disabled={currentPage === 1}
@@ -784,15 +806,46 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
             >
               {t("prev")}
             </button>
-            {Array.from({ length: totalPages }, (_, i) => (
+
+            {/* First page */}
+            {currentPage > 3 && (
+              <>
+                <button
+                  className="px-3 py-1 border rounded"
+                  onClick={() => setCurrentPage(1)}
+                >
+                  1
+                </button>
+                <span className="px-1">…</span>
+              </>
+            )}
+
+            {/* Middle pages */}
+            {getVisiblePages().map(page => (
               <button
-                key={i}
-                className={`px-3 py-1 border rounded ${currentPage === i + 1 ? "bg-gray-200" : ""}`}
-                onClick={() => setCurrentPage(i + 1)}
+                key={page}
+                className={`px-3 py-1 border rounded ${currentPage === page ? "bg-gray-200 font-semibold" : ""
+                  }`}
+                onClick={() => setCurrentPage(page)}
               >
-                {i + 1}
+                {page}
               </button>
             ))}
+
+            {/* Last page */}
+            {currentPage < totalPages - 2 && (
+              <>
+                <span className="px-1">…</span>
+                <button
+                  className="px-3 py-1 border rounded"
+                  onClick={() => setCurrentPage(totalPages)}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            {/* Next */}
             <button
               className="px-3 py-1 border rounded disabled:opacity-50"
               disabled={currentPage === totalPages}
@@ -866,10 +919,9 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
                     type="text"
                     value={formData.added_month}
                     onChange={(e) => setFormData({ ...formData, added_month: e.target.value })}
-                    className={`w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 ${roleName?.trim().toLowerCase() === 'grampanchayat' ? 'bg-gray-100 ' : ''
-                      }`}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. September-2025"
-                    readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
+                  // readOnly={roleName?.trim().toLowerCase() === 'grampanchayat'}
                   />
                 </div>
                 {/* Top fields now placed here in order */}

@@ -48,12 +48,32 @@ export function AarakhadaTalukaTable({
 
   // Filter works where work.gram_panchayat matches any item in allowedGramPanchayats
   const filteredWorks = ['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase())
-  ? works // show all works for district-level
-  : works.filter(work =>
+    ? works // show all works for district-level
+    : works.filter(work =>
       allowedGramPanchayats.some(
         gp => gp.trim().toLowerCase() === (work.gram_panchayat || '').trim().toLowerCase()
       )
     );
+
+
+  const PAGE_WINDOW = 5;
+
+  const getVisiblePages = () => {
+    if (totalPages <= PAGE_WINDOW) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const half = Math.floor(PAGE_WINDOW / 2);
+    let start = Math.max(1, currentPage - half);
+    let end = Math.min(totalPages, start + PAGE_WINDOW - 1);
+
+    // Adjust start if we're near the end
+    if (end - start + 1 < PAGE_WINDOW) {
+      start = Math.max(1, end - PAGE_WINDOW + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  };
 
   const totalPages = Math.ceil(filteredWorks.length / rowsPerPage);
   const paginatedWorks = filteredWorks.slice(
@@ -112,40 +132,40 @@ export function AarakhadaTalukaTable({
               const completedNames =
                 workType === 'physical'
                   ? allWorks
-                      .filter(
-                        item =>
-                          item?.pesa_grampanchayat?.trim() === (work.gram_panchayat || '').trim() &&
-                          item?.work_category === work.work_category &&
-                          item?.current_status === 'completed'
-                      )
-                      .map(item => item.work_name)
-                      .filter(Boolean)
+                    .filter(
+                      item =>
+                        item?.pesa_grampanchayat?.trim() === (work.gram_panchayat || '').trim() &&
+                        item?.work_category === work.work_category &&
+                        item?.current_status === 'completed'
+                    )
+                    .map(item => item.work_name)
+                    .filter(Boolean)
                   : [];
 
               const ongoingNames =
                 workType === 'physical'
                   ? allWorks
-                      .filter(
-                        item =>
-                          item?.pesa_grampanchayat?.trim() === (work.gram_panchayat || '').trim() &&
-                          item?.work_category === work.work_category &&
-                          item?.current_status === 'in_progress'
-                      )
-                      .map(item => item.work_name)
-                      .filter(Boolean)
+                    .filter(
+                      item =>
+                        item?.pesa_grampanchayat?.trim() === (work.gram_panchayat || '').trim() &&
+                        item?.work_category === work.work_category &&
+                        item?.current_status === 'in_progress'
+                    )
+                    .map(item => item.work_name)
+                    .filter(Boolean)
                   : [];
 
               const pendingNames =
                 workType === 'physical'
                   ? allWorks
-                      .filter(
-                        item =>
-                          item?.pesa_grampanchayat?.trim() === (work.gram_panchayat || '').trim() &&
-                          item?.work_category === work.work_category &&
-                          item?.current_status === 'pending'
-                      )
-                      .map(item => item.work_name)
-                      .filter(Boolean)
+                    .filter(
+                      item =>
+                        item?.pesa_grampanchayat?.trim() === (work.gram_panchayat || '').trim() &&
+                        item?.work_category === work.work_category &&
+                        item?.current_status === 'pending'
+                    )
+                    .map(item => item.work_name)
+                    .filter(Boolean)
                   : [];
 
               const completedTitle = completedNames.length ? completedNames.join('\n') : undefined;
@@ -197,29 +217,62 @@ export function AarakhadaTalukaTable({
         </tbody>
       </table>
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-4 mb-4">
+        <div className="flex justify-center items-center gap-2 mt-4 mb-4">
+
+          {/* Prev */}
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(prev => prev - 1)}
           >
-            {t('prev')}
+            {t("prev")}
           </button>
-          {Array.from({ length: totalPages }, (_, i) => (
+
+          {/* First page */}
+          {currentPage > 3 && (
+            <>
+              <button
+                className="px-3 py-1 border rounded"
+                onClick={() => setCurrentPage(1)}
+              >
+                1
+              </button>
+              <span className="px-1">…</span>
+            </>
+          )}
+
+          {/* Middle pages */}
+          {getVisiblePages().map(page => (
             <button
-              key={i}
-              className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-gray-200' : ''}`}
-              onClick={() => setCurrentPage(i + 1)}
+              key={page}
+              className={`px-3 py-1 border rounded ${currentPage === page ? "bg-gray-200 font-semibold" : ""
+                }`}
+              onClick={() => setCurrentPage(page)}
             >
-              {i + 1}
+              {page}
             </button>
           ))}
+
+          {/* Last page */}
+          {currentPage < totalPages - 2 && (
+            <>
+              <span className="px-1">…</span>
+              <button
+                className="px-3 py-1 border rounded"
+                onClick={() => setCurrentPage(totalPages)}
+              >
+                {totalPages}
+              </button>
+            </>
+          )}
+
+          {/* Next */}
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage(prev => prev + 1)}
           >
-            {t('next')}
+            {t("next")}
           </button>
         </div>
       )}

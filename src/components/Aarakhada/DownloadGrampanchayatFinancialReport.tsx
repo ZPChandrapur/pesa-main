@@ -1,26 +1,29 @@
 import * as XLSX from 'xlsx';
 import { pesaSupabase } from '../../utils/supabase';
 
-interface DownloadFinancialReportProps {
-    selectedDistrict?: string;
+interface DownloadGrampanchayatFinancialReportProps {
     selectedTaluka?: string;
+    selectedGramPanchayat?: string;
+    selectedVillage?: string;
     selectedCategory?: string;
     language?: 'en' | 'mr';
 }
 
-export const handleDownloadFinancialExcel = async ({
-    selectedDistrict,
+export const handleDownloadGrampanchayatFinancialExcel = async ({
     selectedTaluka,
+    selectedGramPanchayat,
     selectedCategory,
+    selectedVillage,
     language = 'en',
-}: DownloadFinancialReportProps) => {
+}: DownloadGrampanchayatFinancialReportProps) => {
     try {
         let financialQuery = pesaSupabase
-            .from('district_aarakhada_financial')
+            .from('aarakhada_financial')
             .select('*');
 
-        if (selectedDistrict) financialQuery = financialQuery.eq('district_name', selectedDistrict);
         if (selectedTaluka) financialQuery = financialQuery.eq('taluka_name', selectedTaluka);
+        if (selectedGramPanchayat) financialQuery = financialQuery.eq('gram_panchayat', selectedGramPanchayat);
+        if (selectedVillage) financialQuery = financialQuery.eq('village_name', selectedVillage);
         if (selectedCategory) financialQuery = financialQuery.eq('work_category', selectedCategory);
 
         const { data: financialWorks, error: financialError } = await financialQuery;
@@ -51,55 +54,55 @@ export const handleDownloadFinancialExcel = async ({
         const monthName = monthNames[currentDate.getMonth()];
         const year = currentDate.getFullYear();
 
-        /* ================= GROUP BY TALUKA ================= */
+        /* ================= GROUP BY GRAM PANCHAYAT ================= */
         const districtsByTaluka = new Map<string, Map<string, any>>();
 
         financialWorks.forEach(work => {
-            const key = `${work.district_name}|${work.taluka_name}`;
+            if (!work.gram_panchayat) return;
+
+            const key = `${work.gram_panchayat}|${work.work_category}`;
 
             if (!districtsByTaluka.has(key)) {
                 districtsByTaluka.set(
                     key,
                     new Map([
-                        ['taluka_name', work.taluka_name],
-                        ['pesa_gram_panchayat_count', work.pesa_gram_panchayat_count],
-                        ['pesa_village_count', work.pesa_village_count],
+                        ['village_name', work.village_name || ''],
 
-                        ['A_approved',
-                            parseNumeric(work.A_approved) +
-                            parseNumeric(work.B_approved) +
-                            parseNumeric(work.C_approved) +
-                            parseNumeric(work.D_approved)
-                        ],
+                        ['A_total_received', 0],
+                        ['A_previous', 0],
+                        ['A_current', 0],
+                        ['A_total_exp', 0],
+                        ['A_remaining', 0],
 
-                        ['A_received',
-                            parseNumeric(work.A_received) +
-                            parseNumeric(work.B_received) +
-                            parseNumeric(work.C_received) +
-                            parseNumeric(work.D_received)
-                        ],
+                        ['B_total_received', 0],
+                        ['B_previous', 0],
+                        ['B_current', 0],
+                        ['B_total_exp', 0],
+                        ['B_remaining', 0],
 
-                        ['A_interest',
-                            parseNumeric(work.A_interest) +
-                            parseNumeric(work.B_interest) +
-                            parseNumeric(work.C_interest) +
-                            parseNumeric(work.D_interest)
-                        ],
+                        ['C_total_received', 0],
+                        ['C_previous', 0],
+                        ['C_current', 0],
+                        ['C_total_exp', 0],
+                        ['C_remaining', 0],
+
+                        ['D_total_received', 0],
+                        ['D_previous', 0],
+                        ['D_current', 0],
+                        ['D_total_exp', 0],
+                        ['D_remaining', 0],
                     ])
                 );
             }
 
             const entry = districtsByTaluka.get(key)!;
-            const category = work.work_category;
+            const cat = work.work_category;
 
-            entry.set(`${category}_approved`, parseNumeric(work.annual_approved_fund));
-            entry.set(`${category}_received`, parseNumeric(work.annual_received_fund));
-            entry.set(`${category}_interest`, parseNumeric(work.received_interest));
-            entry.set(`${category}_total_received`, parseNumeric(work.annual_received_fund));
-            entry.set(`${category}_previous`, parseNumeric(work.previous_expenditure));
-            entry.set(`${category}_current`, parseNumeric(work.current_expenditure));
-            entry.set(`${category}_total_exp`, parseNumeric(work.cumulative_expenditure));
-            entry.set(`${category}_remaining`, parseNumeric(work.remaining_funds));
+            entry.set(`${cat}_total_received`, parseNumeric(work.released_amount));
+            entry.set(`${cat}_previous`, parseNumeric(work.previous_expenditure));
+            entry.set(`${cat}_current`, parseNumeric(work.current_expenditure));
+            entry.set(`${cat}_total_exp`, parseNumeric(work.cumulative_expenditure));
+            entry.set(`${cat}_remaining`, parseNumeric(work.remaining_funds));
         });
 
         const wb = XLSX.utils.book_new();
@@ -115,8 +118,18 @@ export const handleDownloadFinancialExcel = async ({
 
         const categoryLabels =
             language === 'mr'
-                ? { A: 'पायाभूत सुविधा', B: 'वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी', C: 'आरोग्य, स्वच्छता व शिक्षण', D: 'वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' }
-                : { A: 'Infrastructure', B: 'Forest Rights Act (FRA) and PESA Implementation', C: 'Health, Sanitation and Education', D: 'Afforestation, Wildlife Conservation, Water Conservation, Forest Ponds, Wildlife Tourism, and Forest Livelihood' };
+                ? {
+                    A: '(अ) पायाभुत सुविधा',
+                    B: '(ब) वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी',
+                    C: '(क) आरोग्य, स्वच्छता व शिक्षण',
+                    D: '(ड) वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका',
+                }
+                : {
+                    A: '(A) Infrastructure',
+                    B: '(B) Forest Rights Act (FRA) and PESA Implementation',
+                    C: '(C) Health, Sanitation and Education',
+                    D: '(D) Afforestation, Wildlife Conservation, Water Conservation, Forest Ponds, Wildlife Tourism, and Forest Livelihood',
+                };
 
         const financeLabels =
             language === 'mr'
@@ -125,12 +138,7 @@ export const handleDownloadFinancialExcel = async ({
 
         const headerRow1 = [
             language === 'mr' ? 'अ.क्र.' : 'Sr. No.',
-            language === 'mr' ? 'तालुका' : 'Taluka',
-            language === 'mr' ? 'पेसा ग्रा.पं. संख्या' : 'PESA GP',
-            language === 'mr' ? 'पेसा गावांची संख्या' : 'PESA Villages',
-            language === 'mr' ? 'वार्षिक मंजूर निधी (₹)' : 'Annual Approved Fund (₹)',
-            language === 'mr' ? 'वार्षिक प्राप्त निधी (₹)' : 'Annual Received Fund (₹)',
-            language === 'mr' ? 'योजने अंतर्गत प्राप्त व्याजाची रक्कम' : 'Interest Received under the Scheme',
+            language === 'mr' ? 'पेसा गावाचे नाव' : 'PESA Gram Panchayat Name',
         ];
 
         let colPointer = headerRow1.length;
@@ -155,10 +163,9 @@ export const handleDownloadFinancialExcel = async ({
 
         wsData.push(headerRow1);
 
-        // 7 static columns before categories
-        const headerRow2: any[] = Array(7).fill('');
+        const headerRow2: any[] = Array(2).fill('');
 
-        let columnPointer = 7;
+        let columnPointer = 2;
 
         ['A', 'B', 'C', 'D'].forEach(cat => {
             if (!selectedCategory || selectedCategory === cat) {
@@ -184,12 +191,7 @@ export const handleDownloadFinancialExcel = async ({
         dataRowsArray.forEach((entry, index) => {
             const row: any[] = [
                 index + 1,
-                entry.get('taluka_name'),
-                parseNumeric(entry.get('pesa_gram_panchayat_count')),
-                parseNumeric(entry.get('pesa_village_count')),
-                parseNumeric(entry.get('A_approved')) + parseNumeric(entry.get('B_approved')) + parseNumeric(entry.get('C_approved')) + parseNumeric(entry.get('D_approved')),
-                parseNumeric(entry.get('A_received')) + parseNumeric(entry.get('B_received')) + parseNumeric(entry.get('C_received')) + parseNumeric(entry.get('D_received')),
-                parseNumeric(entry.get('A_interest')) + parseNumeric(entry.get('B_interest')) + parseNumeric(entry.get('C_interest')) + parseNumeric(entry.get('D_interest')),
+                entry.get('village_name'),
             ];
 
             let totals = Array(5).fill(0);
@@ -215,33 +217,8 @@ export const handleDownloadFinancialExcel = async ({
         const totalRow: any[] = [
             language === 'mr' ? 'एकूण' : 'Total',
             '',
-            dataRowsArray.reduce((sum, entry) =>
-                sum + parseNumeric(entry.get('pesa_gram_panchayat_count')), 0),
-            dataRowsArray.reduce((sum, entry) =>
-                sum + parseNumeric(entry.get('pesa_village_count')), 0),
-            dataRowsArray.reduce((sum, entry) =>
-                sum +
-                parseNumeric(entry.get('A_approved')) +
-                parseNumeric(entry.get('B_approved')) +
-                parseNumeric(entry.get('C_approved')) +
-                parseNumeric(entry.get('D_approved')), 0),
-            dataRowsArray.reduce((sum, entry) =>
-                sum +
-                parseNumeric(entry.get('A_received')) +
-                parseNumeric(entry.get('B_received')) +
-                parseNumeric(entry.get('C_received')) +
-                parseNumeric(entry.get('D_received')), 0),
-            dataRowsArray.reduce((sum, entry) =>
-                sum +
-                parseNumeric(entry.get('A_interest')) +
-                parseNumeric(entry.get('B_interest')) +
-                parseNumeric(entry.get('C_interest')) +
-                parseNumeric(entry.get('D_interest')), 0),
         ];
 
-        let grandApproved = 0;
-        let grandReceived = 0;
-        let grandInterest = 0;
         let grandTotalReceived = 0;
         let grandPrevious = 0;
         let grandCurrent = 0;
@@ -250,27 +227,15 @@ export const handleDownloadFinancialExcel = async ({
 
         ['A', 'B', 'C', 'D'].forEach(cat => {
             if (!selectedCategory || selectedCategory === cat) {
-                const approved = dataRowsArray.reduce((s, e) => s + (e.get(`${cat}_approved`) || 0), 0);
-                const received = dataRowsArray.reduce((s, e) => s + (e.get(`${cat}_received`) || 0), 0);
-                const interest = dataRowsArray.reduce((s, e) => s + (e.get(`${cat}_interest`) || 0), 0);
                 const totalReceived = dataRowsArray.reduce((s, e) => s + (e.get(`${cat}_total_received`) || 0), 0);
                 const previous = dataRowsArray.reduce((s, e) => s + (e.get(`${cat}_previous`) || 0), 0);
                 const current = dataRowsArray.reduce((s, e) => s + (e.get(`${cat}_current`) || 0), 0);
                 const totalExp = dataRowsArray.reduce((s, e) => s + (e.get(`${cat}_total_exp`) || 0), 0);
                 const remaining = dataRowsArray.reduce((s, e) => s + (e.get(`${cat}_remaining`) || 0), 0);
 
-                totalRow.push(
-                    totalReceived,
-                    previous,
-                    current,
-                    totalExp,
-                    remaining
-                );
+                totalRow.push(totalReceived, previous, current, totalExp, remaining);
 
                 if (!selectedCategory) {
-                    grandApproved += approved;
-                    grandReceived += received;
-                    grandInterest += interest;
                     grandTotalReceived += totalReceived;
                     grandPrevious += previous;
                     grandCurrent += current;
@@ -281,13 +246,7 @@ export const handleDownloadFinancialExcel = async ({
         });
 
         if (!selectedCategory) {
-            totalRow.push(
-                grandTotalReceived,
-                grandPrevious,
-                grandCurrent,
-                grandTotalExp,
-                grandRemaining
-            );
+            totalRow.push(grandTotalReceived, grandPrevious, grandCurrent, grandTotalExp, grandRemaining);
         }
 
         wsData.push([]);
@@ -306,7 +265,7 @@ export const handleDownloadFinancialExcel = async ({
         });
 
         // Static headers (row 2 & 3)
-        [0, 1, 2, 3, 4, 5, 6].forEach(col => {
+        [0, 1].forEach(col => {
             merges.push({
                 s: { r: 2, c: col },
                 e: { r: 3, c: col },
@@ -314,7 +273,7 @@ export const handleDownloadFinancialExcel = async ({
         });
 
         // Category header merges
-        let startCol = 7;
+        let startCol = 2;
         ['A', 'B', 'C', 'D'].forEach(cat => {
             if (!selectedCategory || selectedCategory === cat) {
                 merges.push({
@@ -337,14 +296,8 @@ export const handleDownloadFinancialExcel = async ({
         ws['!cols'] = [
             { wch: 6 },
             { wch: 18 },
-            { wch: 14 },
-            { wch: 16 },
-            { wch: 20 },
-            { wch: 20 },
-            { wch: 20 },
-            ...Array(headerRow1.length - 7).fill({ wch: 16 }),
+            ...Array(headerRow1.length - 2).fill({ wch: 16 }),
         ];
-
 
         ws['!cols'] = Array(headerRow1.length).fill({ wch: 16 });
 
@@ -398,19 +351,19 @@ export const handleDownloadFinancialExcel = async ({
                     cellStyle.font = { ...cellStyle.font, bold: true };
                     cellStyle.fill = { fgColor: { rgb: 'D9D9D9' } };
                     cellStyle.alignment = {
-                        horizontal: C >= 3 ? 'right' : 'center',
+                        horizontal: C >= 2 ? 'right' : 'center',
                         vertical: 'center'
                     };
                 }
 
                 else if (R > 3) {
                     cellStyle.alignment = {
-                        horizontal: C >= 3 ? 'right' : 'center',
+                        horizontal: C >= 2 ? 'right' : 'center',
                         vertical: 'center'
                     };
                 }
 
-                if (C >= 3 && R > 3 && R < wsData.length - 1) {
+                if (C >= 2 && R > 3 && R < wsData.length - 1) {
                     ws[cellAddress].z = '#,##0';
                 }
 
@@ -420,7 +373,7 @@ export const handleDownloadFinancialExcel = async ({
 
         XLSX.utils.book_append_sheet(wb, ws, 'Financial Works Report');
 
-        const fileName = `Financial_Works_Report_${monthName}_${year}_${selectedDistrict ?? ''}_${selectedTaluka ?? ''}_${selectedCategory ?? ''}.xlsx`;
+        const fileName = `Financial_Works_Report_${monthName}_${year}_${selectedTaluka ?? ''}_${selectedGramPanchayat ?? ''}_${selectedCategory ?? ''}.xlsx`;
         XLSX.writeFile(wb, fileName);
 
         return true;

@@ -114,7 +114,7 @@ export function AarakhadaWorkForm({
         year: editingWork.year || '',
       }));
     } else {
-      // Add mode: set Previous and Current Month Expenditure to null/0
+      // Add mode: set defaults but don't overwrite if user already edited the field
       setFormData((prev) => ({
         ...prev,
         village_id: villages.length > 0 ? villages[0].id : '',
@@ -143,11 +143,13 @@ export function AarakhadaWorkForm({
         completed_works: 0,
         progress_works: 0,
         not_started_works: 0,
-        added_month: currentMonth || '',
+        // Only default added_month when it is empty so we don't overwrite user changes
+        added_month: prev.added_month || currentMonth || '',
         year: '',
       }));
     }
-  }, [editingWork, workType, villages, workCategories, currentMonth]);
+    // Intentionally exclude `currentMonth` so user's edit isn't overwritten when it changes
+  }, [editingWork, workType, villages, workCategories]);
 
 
   useEffect(() => {
@@ -225,6 +227,7 @@ export function AarakhadaWorkForm({
           sanctioned_amount: formData.sanctioned_amount || 0,
           released_amount: formData.released_amount || 0,
           expenditure: formData.expenditure || 0,
+          added_month: formData.added_month,
           physical_progress: formData.physical_progress || 0,
           financial_progress: formData.financial_progress || 0,
           previous_expenditure: formData.previous_expenditure || 0,
@@ -238,6 +241,7 @@ export function AarakhadaWorkForm({
           ...baseWorkData,
           sanctioned_works: formData.sanctioned_works || 0,
           completed_works: formData.completed_works || 0,
+          added_month: formData.added_month,
           progress_works: formData.progress_works || 0,
           not_started_works: formData.not_started_works || 0,
           physical_progress: formData.physical_progress || 0,
@@ -329,16 +333,16 @@ export function AarakhadaWorkForm({
                 ))}
               </select>
             </div>
-
             {/* Conditionally show Current Month only in Add (when no editingWork.id) */}
             {(!editingWork || !editingWork.id) && (
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">{t('addedMonth')}</label>
                 <input
                   type="text"
-                  value={currentMonth || ''}
-                  readOnly
-                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-100 cursor-not-allowed"
+                  value={formData.added_month || currentMonth || ''}
+                  readOnly={readonly}
+                  onChange={(e) => !readonly && handleChange('added_month', e.target.value)}
+                  className={`w-full px-4 py-3 border border-gray-200 rounded-2xl ${readonly ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 />
               </div>
             )}
@@ -346,17 +350,20 @@ export function AarakhadaWorkForm({
             {/* Show Added Month only when editing an existing row (editingWork.id exists) */}
             {editingWork && editingWork.id && (
               <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-700">{t('month')}</label>
+                <label className="block text-sm font-semibold text-gray-700">
+                  {t('month')}
+                </label>
                 <input
                   type="text"
                   value={formData.added_month}
-                  readOnly={readonly}
-                  onChange={(e) => !readonly && handleChange('added_month', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
+                    readOnly={true}
+                    onChange={(e) => handleChange('added_month', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-100 cursor-not-allowed"
                   required
                 />
               </div>
             )}
+
 
             {/* Approved Fund */}
             <div>

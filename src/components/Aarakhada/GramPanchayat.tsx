@@ -7,6 +7,7 @@ import { AarakhadaWork } from '../../types';
 import { villageService, workService, pesaWorkOperations } from '../../utils/supabase';
 import * as XLSX from 'xlsx';
 import PesaLogo from '../../assets/pesaLogo.png';
+import { handleDownloadGrampanchayatFinancialExcel } from './DownloadGrampanchayatFinancialReport';
 
 interface GramPanchayatProps {
   userId?: string;
@@ -71,98 +72,16 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
     filterWorks();
   }, [allWorks, activeTab, selectedTaluka, selectedGramPanchayat, selectedVillage, selectedCategory, selectedYear, selectedMonth]);
 
-  const handleDownloadExcel = () => {
-    const accessibleVillageNames = new Set(accessibleWorks.map(w => w.village_name));
-    const accessibleCategories = new Set(accessibleWorks.map(w => w.work_category));
-
-    const filteredWorks = allWorks.filter(
-      w => accessibleVillageNames.has(w.village_name) && accessibleCategories.has(w.work_category)
-    );
-
-    if (!filteredWorks.length) {
-      alert('No data available to download');
-      return;
-    }
-
-    const displayedFinancialWorks = filteredWorks.filter(w => w.work_type === 'financial');
-    const displayedPhysicalWorks = filteredWorks.filter(w => w.work_type === 'physical');
-
-    const financialColumns = [
-      'Sr. No',
-      'Village Name',
-      'Work Category',
-      'Year',
-      'Month',
-      'Sanctioned Amount',
-      'Released Amount',
-      'Previous Month Expenditure',
-      'Current Month Expenditure',
-      'Cumulative Expenditure',
-      'Remaining Funds'
-    ];
-
-    const mapFinancialWorks = (worksArray: AarakhadaWork[]) =>
-      worksArray.map((work, index) => [
-        index + 1,
-        work.village_name || '',
-        work.work_category || '',
-        work.year || '',
-        work.added_month || '',
-        Number(work.sanctioned_amount) || 0,
-        Number(work.released_amount) || 0,
-        Number(work.previous_expenditure) || 0,
-        Number(work.current_expenditure) || 0,
-        Number(work.cumulative_expenditure) || 0,
-        Number(work.remaining_funds) || 0,
-      ]);
-
-    // Physical workbook columns
-    const physicalColumns = [
-      'Sr. No',
-      'Village Name',
-      'Work Category',
-      'Year',
-      'Month',
-      'Sanctioned Works',
-      'Completed Works',
-      'Ongoing Works',
-      'Pending Works'
-    ];
-
-    const mapPhysicalWorks = (worksArray: AarakhadaWork[]) =>
-      worksArray.map((work, index) => [
-        index + 1,
-        work.village_name || '',
-        work.work_category || '',
-        work.year || '',
-        work.added_month || '',
-        Number(work.sanctioned_works) || 0,
-        Number(work.completed_works) || 0,
-        Number(work.ongoing_works) || 0,
-        Number(work.pending_works) || 0,
-      ]);
-
-    // Generate workbook
-    const wb = XLSX.utils.book_new();
-
-    if (displayedPhysicalWorks.length) {
-      const wsPhysical = XLSX.utils.aoa_to_sheet([
-        physicalColumns,
-        ...mapPhysicalWorks(displayedPhysicalWorks),
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsPhysical, 'Physical Works');
-    }
-
-    if (displayedFinancialWorks.length) {
-      const wsFinancial = XLSX.utils.aoa_to_sheet([
-        financialColumns,
-        ...mapFinancialWorks(displayedFinancialWorks),
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsFinancial, 'Financial Works');
-    }
-
-    XLSX.writeFile(wb, 'work_progress_filtered.xlsx');
-  };
+    const handleDownloadExcel = async () => {
+      if (activeTab === 'financial') {
+        await handleDownloadGrampanchayatFinancialExcel({
+          selectedTaluka,
+          selectedGramPanchayat,
+          selectedCategory,
+          language: language as 'en' | 'mr',
+        });
+      }
+    };
 
   const loadVillages = async () => {
     try {

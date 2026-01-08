@@ -5,6 +5,7 @@ import { AarakhadaTalukaTable } from './AarakhadaTalukaTable';
 import { villageService, talukaWorkService } from '../../utils/supabase';
 import * as XLSX from 'xlsx';
 import PesaLogo from '../../assets/pesaLogo.png';
+import { handleDownloadTalukaFinancialExcel } from './DownloadTalukaFinancialReport';
 
 interface TalukaProps {
   userId?: string;
@@ -25,7 +26,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
   const [talukaAarakhadaFinancial, setTalukaAarakhadaFinancial] = React.useState<any[]>([]);
   const [talukaAarakhadaPhysical, setTalukaAarakhadaPhysical] = React.useState<any[]>([]);
 
-  const defaultWorkCategories =  [
+  const defaultWorkCategories = [
     { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
     { id: 'B', name: 'Category B - Forest Rights Act (FRA) and PESA Implementation', name_mr: 'प्रकार ब - वनहक्क अधिनियम (FRA) व पेसा अंमलबजावणी' },
     { id: 'C', name: 'Category C - Health, Sanitation, and Education', name_mr: 'प्रकार क - आरोग्य, स्वच्छता व शिक्षण' },
@@ -76,103 +77,6 @@ export function Taluka({ userId, roleName }: TalukaProps) {
     fetchTalukasAndGramPanchayats();
   }, [userId]);
 
-  const handleDownloadExcel = () => {
-    const accessibleGramPanchayats = new Set(villages.map(v => v.gram_panchayat));
-    const accessibleCategories = new Set(
-      [...talukaAarakhadaFinancial, ...talukaAarakhadaPhysical].map(w => w.work_category)
-    );
-
-    const allWorks = [...talukaAarakhadaFinancial, ...talukaAarakhadaPhysical];
-
-    const filteredWorks = allWorks.filter(
-      w =>
-        accessibleGramPanchayats.has(w.gram_panchayat) &&
-        accessibleCategories.has(w.work_category)
-    );
-
-    if (!filteredWorks.length) {
-      alert('No data available to download');
-      return;
-    }
-
-    const filteredFinancial = filteredWorks.filter(w => w.work_type === 'financial');
-    const filteredPhysical = filteredWorks.filter(w => w.work_type === 'physical');
-
-    const financialColumns = [
-      'Sr. No',
-      'Gram Panchayat',
-      'Work Category',
-      'PESA Village Count',
-      'Annual Approved Fund',
-      'Annual Received Fund',
-      'Received Interest',
-      'Total Received Fund',
-      'Previous Expenditure',
-      'Current Expenditure',
-      'Cumulative Expenditure',
-      'Remaining Funds'
-    ];
-
-    const physicalColumns = [
-      'Sr. No',
-      'Gram Panchayat',
-      'Work Category',
-      'PESA Village Count',
-      'Sanctioned Works',
-      'Completed Works',
-      'Ongoing Works',
-      'Pending Works'
-    ];
-
-    const mapFinancialRows = (data: any[]) =>
-      data.map((w, i) => [
-        i + 1,
-        w.gram_panchayat || '',
-        w.work_category || '',
-        w.pesa_village_count || 0,
-        Number(w.annual_approved_fund) || 0,
-        Number(w.annual_received_fund) || 0,
-        Number(w.received_interest) || 0,
-        Number(w.total_received_fund) || 0,
-        Number(w.previous_expenditure) || 0,
-        Number(w.current_expenditure) || 0,
-        Number(w.cumulative_expenditure) || 0,
-        Number(w.remaining_funds) || 0
-      ]);
-
-    const mapPhysicalRows = (data: any[]) =>
-      data.map((w, i) => [
-        i + 1,
-        w.gram_panchayat || '',
-        w.work_category || '',
-        w.pesa_village_count || 0,
-        Number(w.sanctioned_works) || 0,
-        Number(w.completed_works) || 0,
-        Number(w.ongoing_works) || 0,
-        Number(w.pending_works) || 0
-      ]);
-
-    const wb = XLSX.utils.book_new();
-
-    if (filteredPhysical.length) {
-      const wsPhysical = XLSX.utils.aoa_to_sheet([
-        physicalColumns,
-        ...mapPhysicalRows(filteredPhysical),
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsPhysical, 'Physical Works');
-    }
-
-    if (filteredFinancial.length) {
-      const wsFinancial = XLSX.utils.aoa_to_sheet([
-        financialColumns,
-        ...mapFinancialRows(filteredFinancial),
-      ]);
-      XLSX.utils.book_append_sheet(wb, wsFinancial, 'Financial Works');
-    }
-
-    XLSX.writeFile(wb, 'taluka_filtered_work_data.xlsx');
-  };
-
   const loadTalukaAarakhadaData = async () => {
     try {
       setLoading(true);
@@ -204,6 +108,17 @@ export function Taluka({ userId, roleName }: TalukaProps) {
       console.error('Error loading taluka aarakhada data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    if (activeTab === 'financial') {
+      await handleDownloadTalukaFinancialExcel({
+        selectedTaluka,
+        selectedGramPanchayat,
+        selectedCategory,
+        language: language as 'en' | 'mr',
+      });
     }
   };
 
@@ -287,7 +202,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
           </div>
           <button
             onClick={handleDownloadExcel}
-            className="bg-white text-indigo-600 px-6 py-3 rounded-2xl hover:bg-indigo-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
+            className="bg-white text-purple-600 px-6 py-3 rounded-2xl hover:bg-purple-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
             title={'Download Excel'}
           >
             <Download className="w-5 h-5" />

@@ -20,11 +20,13 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
   const [totalVillages, setTotalVillages] = useState(0);
   const [totalPopulation, setTotalPopulation] = useState(0);
   const [stPopulation, setStPopulation] = useState(0);
+  const [totalFundAllocatedGp, setTotalFundAllocatedGp] = useState(0);
   const [activeProjects, setActiveProjects] = useState(0);
   const [distributedFunds, setDistributedFunds] = useState(0);
   const [completedWorksCount, setCompletedWorksCount] = useState(0);
   const [overallProgress, setOverallProgress] = useState(0);
   const [totalWorksCount, setTotalWorksCount] = useState(0);
+  const [talukaSummary, setTalukaSummary] = useState<any[]>([]);
   const [recentWorks, setRecentWorks] = useState<any[]>([]);
 
   // Carousel images for Adiwasi theme (Chandrapur region)
@@ -65,19 +67,112 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
 
         setTotalVillages(villages.length);
 
-        const populationSum = villages.reduce(
-          (sum, v) => sum + (Number(v.village_population) || 0),
+        // 🔹 Taluka-wise aggregation for dashboard table (FIXED GP POPULATION LOGIC)
+        const talukaMap: Record<string, any> = {};
+
+        villages.forEach((v: any) => {
+          const taluka = v.block;
+          const gpName = v.gram_panchayat;
+
+          if (!talukaMap[taluka]) {
+            talukaMap[taluka] = {
+              taluka,
+              totalVillage: 0,
+
+              // ✅ Track unique GPs with population
+              gpPopulationMap: new Map<string, number>(),
+
+              totalPesaVillagePopulation: 0,
+            };
+          }
+
+          talukaMap[taluka].totalVillage += 1;
+
+          // ✅ Store GP population ONLY ONCE per Gram Panchayat
+          if (gpName && !talukaMap[taluka].gpPopulationMap.has(gpName)) {
+            talukaMap[taluka].gpPopulationMap.set(
+              gpName,
+              Number(v.gram_panchayat_population) || 0
+            );
+          }
+
+          // PESA village population (this is village-level → safe to sum)
+          if (v.is_pesa) {
+            talukaMap[taluka].totalPesaVillagePopulation +=
+              Number(v.village_population) || 0;
+          }
+        });
+
+        // ✅ Convert map → array
+        const talukaTableData = Object.values(talukaMap).map((t: any) => ({
+          taluka: t.taluka,
+          totalGp: t.gpPopulationMap.size,
+          totalVillage: t.totalVillage,
+
+          // ✅ Correct GP population sum
+          totalGpPopulation: Array.from(t.gpPopulationMap.values()).reduce(
+            (sum, val) => sum + val,
+            0
+          ),
+
+          totalPesaVillagePopulation: t.totalPesaVillagePopulation,
+        }));
+
+        setTalukaSummary(talukaTableData);
+
+        // ✅ Total Population = Sum of UNIQUE Gram Panchayat Population
+        const gpPopulationMap = new Map<string, number>();
+
+        villages.forEach((v: any) => {
+          const gpName = v.gram_panchayat;
+
+          if (gpName && !gpPopulationMap.has(gpName)) {
+            gpPopulationMap.set(
+              gpName,
+              Number(v.gram_panchayat_population) || 0
+            );
+          }
+        });
+
+        const populationSum = Array.from(gpPopulationMap.values()).reduce(
+          (sum, val) => sum + val,
           0
         );
+
         setTotalPopulation(populationSum);
 
         const stPopulationSum = villages.reduce((sum, v) => {
           const stVal =
-            Number((v as any).gram_panchayat_st_population) ||
+            Number((v as any).village_st_population) ||
             0;
           return sum + stVal;
         }, 0);
         setStPopulation(stPopulationSum);
+
+        // 1️⃣ Group villages by Gram Panchayat
+        const groupedByGp = villages.reduce((acc: Record<string, any[]>, v: any) => {
+          const gp = v.gram_panchayat;
+          if (!gp) return acc;
+          if (!acc[gp]) acc[gp] = [];
+          acc[gp].push(v);
+          return acc;
+        }, {});
+
+        // 2️⃣ Calculate GP-wise fund using same formula as VillagesList
+        const gpFundsMap = Object.values(groupedByGp).map((gpVillages) =>
+          gpVillages.reduce((sum, v) => {
+            const amtPerHead = Number(v.amount_per_head_st_population) || 0;
+            const stPop = Number(v.village_st_population) || 0;
+            return sum + amtPerHead * stPop;
+          }, 0)
+        );
+
+        const totalFundAllocatedGpSum = gpFundsMap.reduce(
+          (sum, val) => sum + val,
+          0
+        );
+
+        setTotalFundAllocatedGp(totalFundAllocatedGpSum);
 
         if (allWorks && allWorks.length > 0) {
           setTotalWorksCount(allWorks.length);
@@ -158,12 +253,15 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
       bgColor: 'from-purple-50 to-pink-50'
     },
     {
-      id: 'funds',
-      icon: Banknote,
-      value: `₹${(distributedFunds / 10000000).toFixed(2)}Cr`,
-      label: language === 'mr' ? 'वितरित निधी' : 'Distributed Funds',
-      color: 'from-orange-500 to-red-600',
-      bgColor: 'from-orange-50 to-red-50'
+      icon: Users,
+      label:
+        language === 'mr'
+          ? 'एकूण GP निधी वाटप'
+          : 'Total Fund Allocated (GP)',
+      value: totalFundAllocatedGp.toLocaleString('en-IN', {
+        maximumFractionDigits: 0,
+      }),
+      color: 'from-orange-500 to-amber-500',
     },
     {
       id: 'completed',
@@ -212,6 +310,22 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
     if (!dateString) return '-';
     return new Date(dateString).toLocaleDateString(language === 'mr' ? 'mr-IN' : 'en-IN');
   };
+
+  const talukaTotals = talukaSummary.reduce(
+    (acc, row) => {
+      acc.totalGp += row.totalGp;
+      acc.totalVillage += row.totalVillage;
+      acc.totalGpPopulation += row.totalGpPopulation;
+      acc.totalPesaVillagePopulation += row.totalPesaVillagePopulation;
+      return acc;
+    },
+    {
+      totalGp: 0,
+      totalVillage: 0,
+      totalGpPopulation: 0,
+      totalPesaVillagePopulation: 0,
+    }
+  );
 
   return (
     <div className="space-y-8">
@@ -331,7 +445,102 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <Target className="w-6 h-6" />
+            {language === 'mr' ? 'तालुकानिहाय आकडेवारी' : 'Taluka-wise Statistics'}
+          </h3>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto p-4">
+          <table className="min-w-full border-separate border-spacing-y-2">
+            <thead>
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-600">
+                  Taluka
+                </th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-emerald-600">
+                  Total GP
+                </th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-indigo-600">
+                  Total Village
+                </th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-purple-600">
+                  Total GP Population
+                </th>
+                <th className="px-4 py-3 text-center text-sm font-semibold text-rose-600">
+                  PESA Villages Population
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {talukaSummary.map((row, idx) => (
+                <tr
+                  key={idx}
+                  className="bg-gray-50 hover:bg-gray-100 transition rounded-2xl shadow-sm"
+                >
+                  <td className="px-4 py-3 font-semibold text-gray-800 rounded-l-2xl">
+                    {row.taluka}
+                  </td>
+
+                  <td className="px-4 py-3 text-center font-medium text-emerald-700">
+                    {row.totalGp}
+                  </td>
+
+                  <td className="px-4 py-3 text-center font-medium text-indigo-700">
+                    {row.totalVillage}
+                  </td>
+
+                  <td className="px-4 py-3 text-center font-medium text-purple-700">
+                    {row.totalGpPopulation.toLocaleString()}
+                  </td>
+
+                  <td className="px-4 py-3 text-center font-medium text-rose-700 rounded-r-2xl">
+                    {row.totalPesaVillagePopulation.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+
+              {/* 🔹 TOTAL ROW */}
+              <tr className="bg-gradient-to-r from-emerald-100 via-teal-100 to-cyan-100 border-t-2 border-emerald-300">
+                <td className="px-4 py-4 font-bold text-gray-900 rounded-l-2xl">
+                  {language === 'mr' ? 'एकूण' : 'Total'}
+                </td>
+
+                <td className="px-4 py-4 text-center font-bold text-emerald-800">
+                  {talukaTotals.totalGp}
+                </td>
+
+                <td className="px-4 py-4 text-center font-bold text-indigo-800">
+                  {talukaTotals.totalVillage}
+                </td>
+
+                <td className="px-4 py-4 text-center font-bold text-purple-800">
+                  {talukaTotals.totalGpPopulation.toLocaleString()}
+                </td>
+
+                <td className="px-4 py-4 text-center font-bold text-rose-800 rounded-r-2xl">
+                  {talukaTotals.totalPesaVillagePopulation.toLocaleString()}
+                </td>
+              </tr>
+
+              {talukaSummary.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center py-6 text-gray-500">
+                    {language === 'mr' ? 'डेटा उपलब्ध नाही' : 'No data available'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="grid">
         <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
           <div className="bg-gradient-to-r from-violet-500 to-purple-600 rounded-2xl p-4 mb-6">
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -371,83 +580,6 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
                 </p>
               </div>
             )}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-3xl shadow-xl p-6 border border-gray-100">
-          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-4 mb-6">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-              <Target className="w-6 h-6" />
-              {language === 'mr' ? 'मुख्य आकडेवारी' : 'Key Statistics'}
-            </h3>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
-                  <Award className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    {language === 'mr' ? 'यशस्वी दर' : 'Success Rate'}
-                  </p>
-                  <p className="text-2xl font-bold text-green-600">{overallProgress}%</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    {language === 'mr' ? 'या महिन्यात जोडले' : 'Added This Month'}
-                  </p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {recentWorks.filter(work => {
-                      const workDate = new Date(work.created_at || '');
-                      const currentDate = new Date();
-                      return workDate.getMonth() === currentDate.getMonth() &&
-                        workDate.getFullYear() === currentDate.getFullYear();
-                    }).length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    {language === 'mr' ? 'सरासरी निधी प्रति काम' : 'Avg Fund Per Work'}
-                  </p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    ₹{totalWorksCount > 0 ? ((distributedFunds / totalWorksCount) / 100000).toFixed(1) + 'L' : '0'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">
-                    {language === 'mr' ? 'प्रति गाव लोकसंख्या' : 'Population Per Village'}
-                  </p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    {totalVillages > 0 ? Math.round(totalPopulation / totalVillages).toLocaleString() : '0'}
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

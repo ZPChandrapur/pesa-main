@@ -86,12 +86,12 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
     document.body.removeChild(link);
   };
 
-const toProperCase = (str?: string | null) => {
-  if (!str) return "";
-  return str
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-};
+  const toProperCase = (str?: string | null) => {
+    if (!str) return "";
+    return str
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
 
 
   const labelColorsMap: Record<string, string> = {
@@ -246,6 +246,11 @@ const toProperCase = (str?: string | null) => {
     })
   );
 
+  const totalFundAllocatedGp = Object.values(gpFundsMap).reduce(
+    (sum, val) => sum + (Number(val) || 0),
+    0
+  );
+
   interface RenderRow {
     village: Village;
     isFirstOfGroup: boolean;
@@ -323,13 +328,47 @@ const toProperCase = (str?: string | null) => {
 
       {/* Stats Cards */}
       <div
-        className="relative grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-3 py-4 tribal-bg"
+        className="relative grid grid-cols-1 md:grid-cols-5 xl:grid-cols-5 gap-3 py-4 tribal-bg"
       >
         {[
-          { icon: Building2, label: language === 'mr' ? 'एकूण ग्रामपंचायती' : 'Total GPs', value: totalGP, color: 'from-indigo-500 to-purple-600' },
-          { icon: Users, label: language === 'mr' ? 'एकूण गावे' : 'Total Villages', value: totalVillages, color: 'from-blue-500 to-indigo-600' },
-          { icon: Users, label: language === 'mr' ? 'एकूण लोकसंख्या' : 'Total Population', value: totalPopulation.toLocaleString(), color: 'from-emerald-500 to-teal-600' },
-          { icon: Users, label: language === 'mr' ? 'PESA गावांची लोकसंख्या' : 'Total PESA Villages Population', value: totalPesaVillagesPopulation.toLocaleString(), color: 'from-pink-500 to-rose-500' }
+          {
+            icon: Building2,
+            label: language === 'mr' ? 'एकूण ग्रामपंचायती' : 'Total GPs',
+            value: totalGP,
+            color: 'from-indigo-500 to-purple-600',
+          },
+          {
+            icon: Users,
+            label: language === 'mr' ? 'एकूण गावे' : 'Total Villages',
+            value: totalVillages,
+            color: 'from-blue-500 to-indigo-600',
+          },
+          {
+            icon: Users,
+            label: language === 'mr' ? 'एकूण लोकसंख्या' : 'Total Population',
+            value: totalPopulation.toLocaleString(),
+            color: 'from-emerald-500 to-teal-600',
+          },
+          {
+            icon: Users,
+            label:
+              language === 'mr'
+                ? 'एकूण GP निधी वाटप'
+                : 'Total Fund Allocated (GP)',
+            value: totalFundAllocatedGp.toLocaleString('en-IN', {
+              maximumFractionDigits: 0,
+            }),
+            color: 'from-orange-500 to-amber-500',
+          },
+          {
+            icon: Users,
+            label:
+              language === 'mr'
+                ? 'PESA गावांची लोकसंख्या'
+                : 'Total PESA Villages Population',
+            value: totalPesaVillagesPopulation.toLocaleString(),
+            color: 'from-pink-500 to-rose-500',
+          },
         ].map((item, index) => {
           const Icon = item.icon;
           const labelColorClass = labelColorsMap[item.color] || 'text-gray-600';
@@ -438,7 +477,7 @@ const toProperCase = (str?: string | null) => {
                   const fundAllocatedVillage = Math.round((amtPerHead * stPop + Number.EPSILON) * 100) / 100;
                   const fundAllocatedGp = gpFundsMap[gramPanchayat] || 0;
                   return (
-                    <tr key={v.id} className="border-t hover:bg-gray-50 transition-colors">
+                    <tr key={v.id} className="border-t border-gray-400 hover:bg-gray-50 transition-colors">
                       {isFirstOfGroup && (
                         <td rowSpan={groupSize} className="px-4 py-3 font-medium align-middle">{groupSrNo}</td>
                       )}

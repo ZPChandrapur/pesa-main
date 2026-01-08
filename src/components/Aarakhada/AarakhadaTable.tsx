@@ -75,6 +75,8 @@ export function AarakhadaTable({
     }
     setEditingWork({
       ...work,
+      // remove id so the form treats this as "add new entry" (not editing existing row)
+      id: undefined,
       added_month: cm,
       previous_expenditure: work.cumulative_expenditure,
       current_expenditure: '',
@@ -90,11 +92,12 @@ export function AarakhadaTable({
   };
 
   const handleSaveWork = async (savedWork: AarakhadaWork) => {
+    // Prefer the month chosen/edited in the form; fallback to currentMonth
     const newWork = {
       ...savedWork,
       id: undefined,
-      added_month: currentMonth,
       work_type: workType,
+      added_month: savedWork.added_month || currentMonth,
     };
     await workService.insert(newWork);
     setIsAddOpen(false);
@@ -132,6 +135,25 @@ export function AarakhadaTable({
 
 
   // PAGINATION:
+  const PAGE_WINDOW = 5;
+
+  const getVisiblePages = () => {
+    if (totalPages <= PAGE_WINDOW) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const half = Math.floor(PAGE_WINDOW / 2);
+    let start = Math.max(1, currentPage - half);
+    let end = Math.min(totalPages, start + PAGE_WINDOW - 1);
+
+    // Adjust start if we're near the end
+    if (end - start + 1 < PAGE_WINDOW) {
+      start = Math.max(1, end - PAGE_WINDOW + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  };
+
   const totalPages = Math.ceil(filteredWorks.length / rowsPerPage);
   const paginatedWorks = filteredWorks.slice(
     (currentPage - 1) * rowsPerPage,
@@ -236,17 +258,17 @@ export function AarakhadaTable({
                               work.released_amount === 0
                                 ? t('releaseAmountTitle')
                                 : (() => {
-                                    const now = new Date();
-                                    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-                                    const cm = `${months[now.getMonth()]}-${now.getFullYear()}`;
-                                    const exists = works.some(w => w.work_type === 'financial' && (w.village_name || '').trim() === (work.village_name || '').trim() && w.work_category === work.work_category && (w.work_name || '').trim() === (work.work_name || '').trim() && w.added_month === cm);
-                                    return exists ? t('sameMonthEntryTitle') : t('addWork');
-                                  })()
+                                  const now = new Date();
+                                  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                                  const cm = `${months[now.getMonth()]}-${now.getFullYear()}`;
+                                  const exists = works.some(w => w.work_type === 'financial' && (w.village_name || '').trim() === (work.village_name || '').trim() && w.work_category === work.work_category && (w.work_name || '').trim() === (work.work_name || '').trim() && w.added_month === cm);
+                                  return exists ? t('sameMonthEntryTitle') : t('addWork');
+                                })()
                             }
                             disabled={
                               work.released_amount === 0 || (() => {
                                 const now = new Date();
-                                const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+                                const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
                                 const cm = `${months[now.getMonth()]}-${now.getFullYear()}`;
                                 const exists = works.some(w => w.work_type === 'financial' && (w.village_name || '').trim() === (work.village_name || '').trim() && w.work_category === work.work_category && (w.work_name || '').trim() === (work.work_name || '').trim() && w.added_month === cm);
                                 return exists;
@@ -261,7 +283,7 @@ export function AarakhadaTable({
                             onClick={() => {
                               const status = (work.status || '').trim();
                               if (status === 'pending') {
-                                return; 
+                                return;
                               }
                               onEdit(work);
                             }}
@@ -334,29 +356,62 @@ export function AarakhadaTable({
       </div>
       {/* PAGINATION UI */}
       {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-4 mb-4">
+        <div className="flex justify-center items-center gap-2 mt-4 mb-4">
+
+          {/* Prev */}
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(prev => prev - 1)}
           >
-            {t('prev')}
+            {t("prev")}
           </button>
-          {Array.from({ length: totalPages }, (_, i) => (
+
+          {/* First page */}
+          {currentPage > 3 && (
+            <>
+              <button
+                className="px-3 py-1 border rounded"
+                onClick={() => setCurrentPage(1)}
+              >
+                1
+              </button>
+              <span className="px-1">…</span>
+            </>
+          )}
+
+          {/* Middle pages */}
+          {getVisiblePages().map(page => (
             <button
-              key={i}
-              className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-gray-200' : ''}`}
-              onClick={() => setCurrentPage(i + 1)}
+              key={page}
+              className={`px-3 py-1 border rounded ${currentPage === page ? "bg-gray-200 font-semibold" : ""
+                }`}
+              onClick={() => setCurrentPage(page)}
             >
-              {i + 1}
+              {page}
             </button>
           ))}
+
+          {/* Last page */}
+          {currentPage < totalPages - 2 && (
+            <>
+              <span className="px-1">…</span>
+              <button
+                className="px-3 py-1 border rounded"
+                onClick={() => setCurrentPage(totalPages)}
+              >
+                {totalPages}
+              </button>
+            </>
+          )}
+
+          {/* Next */}
           <button
             className="px-3 py-1 border rounded disabled:opacity-50"
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage(prev => prev + 1)}
           >
-            {t('next')}
+            {t("next")}
           </button>
         </div>
       )}
