@@ -3,6 +3,8 @@ import { MapPin, Building2, Banknote, TrendingUp, Users, CheckCircle, Calendar, 
 import { useLanguage } from '../../context/LanguageContext';
 import { villageService } from '../../utils/supabase';
 import { pesaWorkOperations } from '../../utils/supabase';
+import { DashboardCharts } from './DashboardCharts';
+import { DashboardKPIs } from './DashboardKPIs';
 import Banner1 from '../../assets/Banner1.jpg';
 import Banner2 from '../../assets/Banner2.jpg';
 import Banner3 from '../../assets/Banner3.jpg';
@@ -28,6 +30,10 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
   const [totalWorksCount, setTotalWorksCount] = useState(0);
   const [talukaSummary, setTalukaSummary] = useState<any[]>([]);
   const [recentWorks, setRecentWorks] = useState<any[]>([]);
+  const [villages, setVillages] = useState<any[]>([]);
+  const [works, setWorks] = useState<any[]>([]);
+  const [talukaCount, setTalukaCount] = useState(0);
+  const [grampanchayatCount, setGrampanchayatCount] = useState(0);
 
   // Carousel images for Adiwasi theme (Chandrapur region)
   const adiwasiImages = [
@@ -65,7 +71,14 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
           allWorks = allWorks.filter((work) => allowedVillageIds.includes(work.village_id));
         }
 
+        setVillages(villages);
         setTotalVillages(villages.length);
+
+        const uniqueTalukas = new Set(villages.map((v: any) => v.block));
+        setTalukaCount(uniqueTalukas.size);
+
+        const uniqueGPs = new Set(villages.map((v: any) => v.gram_panchayat));
+        setGrampanchayatCount(uniqueGPs.size);
 
         // 🔹 Taluka-wise aggregation for dashboard table (FIXED GP POPULATION LOGIC)
         const talukaMap: Record<string, any> = {};
@@ -175,6 +188,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         setTotalFundAllocatedGp(totalFundAllocatedGpSum);
 
         if (allWorks && allWorks.length > 0) {
+          setWorks(allWorks);
           setTotalWorksCount(allWorks.length);
 
           const activeProjectsCount = allWorks.filter(work => work.current_status !== 'completed').length;
@@ -198,6 +212,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
             .slice(0, 5);
           setRecentWorks(sortedWorks);
         } else {
+          setWorks([]);
           setActiveProjects(0);
           setDistributedFunds(0);
           setCompletedWorksCount(0);
@@ -445,7 +460,27 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         })}
       </div>
 
-      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+      <DashboardKPIs
+        totalVillages={totalVillages}
+        totalPopulation={totalPopulation}
+        stPopulation={stPopulation}
+        activeProjects={activeProjects}
+        distributedFunds={distributedFunds}
+        completedWorksCount={completedWorksCount}
+        totalWorksCount={totalWorksCount}
+        overallProgress={Number(overallProgress)}
+        talukaCount={talukaCount}
+        grampanchayatCount={grampanchayatCount}
+      />
+
+      <DashboardCharts
+        userId={userId}
+        roleName={roleName}
+        villages={villages}
+        works={works}
+      />
+
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden mt-8">
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
