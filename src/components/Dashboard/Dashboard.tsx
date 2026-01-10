@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Building2, Banknote, TrendingUp, Users, CheckCircle, Calendar, Clock, Target, Award } from 'lucide-react';
+import { MapPin, Building2, Banknote, TrendingUp, Users, CheckCircle, Calendar, Clock, Target, Award, BarChart3, TrendingDown, Zap } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { villageService } from '../../utils/supabase';
 import { pesaWorkOperations } from '../../utils/supabase';
 import { DashboardCharts } from './DashboardCharts';
 import { DashboardKPIs } from './DashboardKPIs';
+import { RetrospectiveAnalysis } from './RetrospectiveAnalysis';
+import { PredictiveAnalysis } from './PredictiveAnalysis';
 import Banner1 from '../../assets/Banner1.jpg';
 import Banner2 from '../../assets/Banner2.jpg';
 import Banner3 from '../../assets/Banner3.jpg';
@@ -34,6 +36,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
   const [works, setWorks] = useState<any[]>([]);
   const [talukaCount, setTalukaCount] = useState(0);
   const [grampanchayatCount, setGrampanchayatCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<'overview' | 'retrospective' | 'predictive'>('overview');
 
   // Carousel images for Adiwasi theme (Chandrapur region)
   const adiwasiImages = [
@@ -460,25 +463,77 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         })}
       </div>
 
-      <DashboardKPIs
-        totalVillages={totalVillages}
-        totalPopulation={totalPopulation}
-        stPopulation={stPopulation}
-        activeProjects={activeProjects}
-        distributedFunds={distributedFunds}
-        completedWorksCount={completedWorksCount}
-        totalWorksCount={totalWorksCount}
-        overallProgress={Number(overallProgress)}
-        talukaCount={talukaCount}
-        grampanchayatCount={grampanchayatCount}
-      />
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex-1 px-6 py-4 font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+              activeTab === 'overview'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-b-4 border-blue-700'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <BarChart3 className="w-5 h-5" />
+            Dashboard Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('retrospective')}
+            className={`flex-1 px-6 py-4 font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+              activeTab === 'retrospective'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-b-4 border-blue-700'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <TrendingDown className="w-5 h-5" />
+            Retrospective Analysis
+          </button>
+          <button
+            onClick={() => setActiveTab('predictive')}
+            className={`flex-1 px-6 py-4 font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+              activeTab === 'predictive'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-b-4 border-blue-700'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Zap className="w-5 h-5" />
+            Predictive Analysis
+          </button>
+        </div>
 
-      <DashboardCharts
-        userId={userId}
-        roleName={roleName}
-        villages={villages}
-        works={works}
-      />
+        <div className="p-6">
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              <DashboardKPIs
+                totalVillages={totalVillages}
+                totalPopulation={totalPopulation}
+                stPopulation={stPopulation}
+                activeProjects={activeProjects}
+                distributedFunds={distributedFunds}
+                completedWorksCount={completedWorksCount}
+                totalWorksCount={totalWorksCount}
+                overallProgress={Number(overallProgress)}
+                talukaCount={talukaCount}
+                grampanchayatCount={grampanchayatCount}
+              />
+
+              <DashboardCharts
+                userId={userId}
+                roleName={roleName}
+                villages={villages}
+                works={works}
+              />
+            </div>
+          )}
+
+          {activeTab === 'retrospective' && (
+            <RetrospectiveAnalysis works={works} villages={villages} />
+          )}
+
+          {activeTab === 'predictive' && (
+            <PredictiveAnalysis works={works} villages={villages} />
+          )}
+        </div>
+      </div>
 
       <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden mt-8">
         {/* Header */}
