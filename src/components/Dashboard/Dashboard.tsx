@@ -4,7 +4,6 @@ import { useLanguage } from '../../context/LanguageContext';
 import { villageService } from '../../utils/supabase';
 import { pesaWorkOperations } from '../../utils/supabase';
 import { DashboardCharts } from './DashboardCharts';
-import { DashboardKPIs } from './DashboardKPIs';
 import { RetrospectiveAnalysis } from './RetrospectiveAnalysis';
 import { PredictiveAnalysis } from './PredictiveAnalysis';
 import Banner1 from '../../assets/Banner1.jpg';
@@ -503,19 +502,6 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         <div className="p-6">
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              <DashboardKPIs
-                totalVillages={totalVillages}
-                totalPopulation={totalPopulation}
-                stPopulation={stPopulation}
-                activeProjects={activeProjects}
-                distributedFunds={distributedFunds}
-                completedWorksCount={completedWorksCount}
-                totalWorksCount={totalWorksCount}
-                overallProgress={Number(overallProgress)}
-                talukaCount={talukaCount}
-                grampanchayatCount={grampanchayatCount}
-              />
-
               <DashboardCharts
                 userId={userId}
                 roleName={roleName}
