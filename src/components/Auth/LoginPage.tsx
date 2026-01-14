@@ -18,46 +18,133 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
   const [error, setError] = useState('');
   const [checkingAutoLogin, setCheckingAutoLogin] = useState(true);
 
-  // Check for auto-login from main ZP Chandrapur app
+  // Check for auto-login from main ZP Chandrapur app (SSO)
   useEffect(() => {
     const checkAutoLogin = async () => {
+      console.log('🔍 PESA: Checking for SSO auto-login...');
+
       try {
+        // First check if user is already logged in
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+
+        if (existingSession?.user) {
+          console.log('✅ PESA: User already has active session');
+
+          // Fetch role data for existing session
+          await fetchUserRole(existingSession.user.id);
+          setCheckingAutoLogin(false);
+          return;
+        }
+
+        // Try SSO auto-login
+        console.log('🔄 PESA: Attempting SSO auto-login...');
         const success = await handleAutoLogin('pesa');
+
         if (success) {
-          console.log('✅ PESA: Auto-login successful, fetching user role...');
+          console.log('✅ PESA: SSO auto-login successful!');
+
+          // Give Supabase a moment to fully establish the session
+          await new Promise(resolve => setTimeout(resolve, 100));
 
           // Fetch role data after successful auto-login
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
-            const { data: roleData } = await supabase
-              .from('user_roles')
-              .select('role_id')
-              .eq('user_id', session.user.id)
-              .single();
-
-            if (roleData) {
-              const { data: rolesData } = await supabase
-                .from('roles')
-                .select('name')
-                .eq('id', roleData.role_id)
-                .single();
-
-              if (rolesData) {
-                onRoleIdFetch(roleData.role_id, rolesData.name, session.user.id);
-              }
-            }
+            console.log('📋 PESA: Fetching user role and permissions...');
+            await fetchUserRole(session.user.id);
+          } else {
+            console.warn('⚠️ PESA: SSO succeeded but no session found');
           }
-          // Page will reload automatically from authReceiver
+        } else {
+          console.log('ℹ️ PESA: No SSO data found, showing login form');
         }
       } catch (error) {
-        console.error('❌ PESA: Error in auto-login check:', error);
+        console.error('❌ PESA: Error in SSO auto-login check:', error);
       } finally {
         setCheckingAutoLogin(false);
       }
     };
 
+    // Helper function to fetch user role
+    const fetchUserRole = async (userId: string) => {
+      try {
+        // Fetch role_id
+        const { data: roleData, error: roleError } = await supabase
+          .from('user_roles')
+          .select('role_id')
+          .eq('user_id', userId)
+          .single();
+
+        if (roleError) {
+          console.error('❌ PESA: Error fetching user role:', roleError);
+          return;
+        }
+
+        if (!roleData) {
+          console.warn('⚠️ PESA: No role found for user');
+          return;
+        }
+
+        let roleId = roleData.role_id;
+        let roleName: string | null = null;
+
+        // === TALUKA EMAILS (SPECIAL BYPASS) ===
+        const { data: { user } } = await supabase.auth.getUser();
+        const talukaEmails = [
+          'bdopskorpana@gmail.com',
+          'bdopsrajura@gmail.com',
+          'bdopsjiwati@gmail.com'
+        ];
+
+        const isTalukaEmail = user?.email && talukaEmails.includes(user.email.trim().toLowerCase());
+
+        // If taluka email => force roleId + roleName override
+        if (isTalukaEmail) {
+          console.log('🏛️ PESA: Taluka email detected, applying special role');
+          roleId = 7;
+          roleName = 'taluka';
+        }
+
+        // === ACCESS CHECK — SKIP if taluka email ===
+        if (roleId !== null && !isTalukaEmail) {
+          const { data: accessData } = await supabase
+            .from('application_permissions')
+            .select('id')
+            .eq('role_id', roleId)
+            .eq('application_name', 'pesa')
+            .maybeSingle();
+
+          if (!accessData) {
+            console.error('❌ PESA: User does not have access to PESA application');
+            alert(language === 'mr'
+              ? 'आपल्याला PESA ॲप्लिकेशनचा प्रवेश नाही'
+              : 'You do not have access to PESA application');
+            await supabase.auth.signOut();
+            return;
+          }
+        }
+
+        // Fetch roleName normally ONLY if not taluka email
+        if (!isTalukaEmail && roleId !== null) {
+          const { data: rolesData, error: rolesError } = await supabase
+            .from('roles')
+            .select('name')
+            .eq('id', roleId)
+            .single();
+
+          if (!rolesError && rolesData) {
+            roleName = rolesData.name;
+          }
+        }
+
+        console.log(`✅ PESA: User authenticated with role: ${roleName} (ID: ${roleId})`);
+        onRoleIdFetch(roleId, roleName, userId);
+      } catch (error) {
+        console.error('❌ PESA: Error in fetchUserRole:', error);
+      }
+    };
+
     checkAutoLogin();
-  }, [onRoleIdFetch]);
+  }, [onRoleIdFetch, language]);
 
   const handleSubmit = async (e: React.FormEvent) => {
 
