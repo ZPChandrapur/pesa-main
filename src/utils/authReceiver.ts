@@ -1,7 +1,7 @@
-// Authentication receiver utility for E-estimate application
-// This should be used in the E-estimate and FIMS applications to automatically log in users
+// Authentication receiver utility for PESA application
+// This handles automatic login from the main ZP Chandrapur application
 
-import { supabase } from '../lib/supabase';
+import { supabase } from './supabase';
 
 interface AuthTransferData {
   access_token: string;

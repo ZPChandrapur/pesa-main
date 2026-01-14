@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building2, Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { supabase } from '../../utils/supabase';
+import { handleAutoLogin } from '../../utils/authReceiver';
 import TribalBg from '../../assets/tribal_bg.jpg';
 
 interface LoginPageProps {
@@ -15,6 +16,48 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [checkingAutoLogin, setCheckingAutoLogin] = useState(true);
+
+  // Check for auto-login from main ZP Chandrapur app
+  useEffect(() => {
+    const checkAutoLogin = async () => {
+      try {
+        const success = await handleAutoLogin('pesa');
+        if (success) {
+          console.log('✅ PESA: Auto-login successful, fetching user role...');
+
+          // Fetch role data after successful auto-login
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const { data: roleData } = await supabase
+              .from('user_roles')
+              .select('role_id')
+              .eq('user_id', session.user.id)
+              .single();
+
+            if (roleData) {
+              const { data: rolesData } = await supabase
+                .from('roles')
+                .select('name')
+                .eq('id', roleData.role_id)
+                .single();
+
+              if (rolesData) {
+                onRoleIdFetch(roleData.role_id, rolesData.name, session.user.id);
+              }
+            }
+          }
+          // Page will reload automatically from authReceiver
+        }
+      } catch (error) {
+        console.error('❌ PESA: Error in auto-login check:', error);
+      } finally {
+        setCheckingAutoLogin(false);
+      }
+    };
+
+    checkAutoLogin();
+  }, [onRoleIdFetch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
 
@@ -128,6 +171,18 @@ export function LoginPage({ onRoleIdFetch }: LoginPageProps) {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (error) setError('');
   };
+
+  // Show loading state while checking for auto-login
+  if (checkingAutoLogin) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">{language === 'mr' ? 'प्रमाणीकरण तपासत आहे...' : 'Checking authentication...'}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
