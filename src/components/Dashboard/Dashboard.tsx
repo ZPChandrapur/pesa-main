@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Building2, Banknote, TrendingUp, Users, CheckCircle, Calendar, Clock, Target, Award } from 'lucide-react';
+import { MapPin, Building2, Banknote, TrendingUp, Users, CheckCircle, Calendar, Clock, Target, Award, BarChart3, TrendingDown, Zap } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { villageService } from '../../utils/supabase';
 import { pesaWorkOperations } from '../../utils/supabase';
+import { DashboardCharts } from './DashboardCharts';
+import { RetrospectiveAnalysis } from './RetrospectiveAnalysis';
+import { PredictiveAnalysis } from './PredictiveAnalysis';
 import Banner1 from '../../assets/Banner1.jpg';
 import Banner2 from '../../assets/Banner2.jpg';
 import Banner3 from '../../assets/Banner3.jpg';
@@ -28,6 +31,11 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
   const [totalWorksCount, setTotalWorksCount] = useState(0);
   const [talukaSummary, setTalukaSummary] = useState<any[]>([]);
   const [recentWorks, setRecentWorks] = useState<any[]>([]);
+  const [villages, setVillages] = useState<any[]>([]);
+  const [works, setWorks] = useState<any[]>([]);
+  const [talukaCount, setTalukaCount] = useState(0);
+  const [grampanchayatCount, setGrampanchayatCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<'overview' | 'retrospective' | 'predictive'>('overview');
 
   // Carousel images for Adiwasi theme (Chandrapur region)
   const adiwasiImages = [
@@ -65,7 +73,14 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
           allWorks = allWorks.filter((work) => allowedVillageIds.includes(work.village_id));
         }
 
+        setVillages(villages);
         setTotalVillages(villages.length);
+
+        const uniqueTalukas = new Set(villages.map((v: any) => v.block));
+        setTalukaCount(uniqueTalukas.size);
+
+        const uniqueGPs = new Set(villages.map((v: any) => v.gram_panchayat));
+        setGrampanchayatCount(uniqueGPs.size);
 
         // 🔹 Taluka-wise aggregation for dashboard table (FIXED GP POPULATION LOGIC)
         const talukaMap: Record<string, any> = {};
@@ -175,6 +190,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         setTotalFundAllocatedGp(totalFundAllocatedGpSum);
 
         if (allWorks && allWorks.length > 0) {
+          setWorks(allWorks);
           setTotalWorksCount(allWorks.length);
 
           const activeProjectsCount = allWorks.filter(work => work.current_status !== 'completed').length;
@@ -198,6 +214,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
             .slice(0, 5);
           setRecentWorks(sortedWorks);
         } else {
+          setWorks([]);
           setActiveProjects(0);
           setDistributedFunds(0);
           setCompletedWorksCount(0);
@@ -445,7 +462,66 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         })}
       </div>
 
-      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex-1 px-6 py-4 font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+              activeTab === 'overview'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-b-4 border-blue-700'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <BarChart3 className="w-5 h-5" />
+            Dashboard Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('retrospective')}
+            className={`flex-1 px-6 py-4 font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+              activeTab === 'retrospective'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-b-4 border-blue-700'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <TrendingDown className="w-5 h-5" />
+            Retrospective Analysis
+          </button>
+          <button
+            onClick={() => setActiveTab('predictive')}
+            className={`flex-1 px-6 py-4 font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
+              activeTab === 'predictive'
+                ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white border-b-4 border-blue-700'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Zap className="w-5 h-5" />
+            Predictive Analysis
+          </button>
+        </div>
+
+        <div className="p-6">
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              <DashboardCharts
+                userId={userId}
+                roleName={roleName}
+                villages={villages}
+                works={works}
+              />
+            </div>
+          )}
+
+          {activeTab === 'retrospective' && (
+            <RetrospectiveAnalysis works={works} villages={villages} />
+          )}
+
+          {activeTab === 'predictive' && (
+            <PredictiveAnalysis works={works} villages={villages} />
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden mt-8">
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
