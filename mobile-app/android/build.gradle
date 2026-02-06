@@ -8,7 +8,8 @@ buildscript {
         targetSdkVersion = Integer.parseInt(findProperty('android.targetSdkVersion') ?: '35')
         kotlinVersion = findProperty('android.kotlinVersion') ?: '1.9.25'
 
-        ndkVersion = "26.1.10909125"
+        // Update NDK to r28 to support 16KB page size requirements
+        ndkVersion = "28.0.0"
     }
     repositories {
         google()
