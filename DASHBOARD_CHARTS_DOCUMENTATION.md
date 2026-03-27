@@ -209,7 +209,7 @@ The dashboard respects user roles:
 
 **Filtering Logic:**
 ```typescript
-if (!['district', 'developer', 'super_admin'].includes(roleName)) {
+if (!['district', 'developer', 'super_admin', 'admin'].includes(roleName)) {
   // Filter villages by tal_user_access or gram_user_access
   villages = villages.filter(
     v => v.tal_user_access === userId || v.gram_user_access === userId
