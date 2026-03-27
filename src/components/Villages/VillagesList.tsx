@@ -115,7 +115,7 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
       setLoading(true);
       let data = await villageService.getAll();
 
-      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
+      if (!['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase()) && userId) {
         data = data.filter(v =>
           v.tal_user_access === userId || v.gram_user_access === userId
         );
