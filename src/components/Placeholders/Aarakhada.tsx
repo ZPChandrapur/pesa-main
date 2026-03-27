@@ -116,7 +116,7 @@ export function Aarakhada({ userId, roleName }: { userId: string; roleName: stri
       let data = await villageService.getAll();
 
       // ✅ If roleName is 'district', set all data as it is
-      if (['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase())) {
+      if (['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase())) {
         setVillages(data);
       } else {
         // ✅ For other roles, filter based on userId
