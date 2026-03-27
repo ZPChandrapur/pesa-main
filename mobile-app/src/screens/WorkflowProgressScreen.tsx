@@ -54,7 +54,7 @@ export const WorkflowProgressScreen: React.FC<WorkflowProgressScreenProps> = ({ 
       // Determine allowed village IDs based on role
       let allowedVillageIds: string[] = [];
 
-      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
+      if (!['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
         console.log('Filtering workflows for non-admin user');
         allowedVillageIds = (villagesData || [])
           .filter((v: any) => {
