@@ -105,7 +105,7 @@ export const WorkDashboardScreen: React.FC<WorkDashboardScreenProps> = ({ naviga
 
       let filteredVillages = data || [];
 
-      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
+      if (!['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase() || '') && userId) {
         console.log('Filtering villages for non-admin user');
         filteredVillages = (data || []).filter((v: any) => {
           if (v.tal_user_access === null && v.gram_user_access === null) {
