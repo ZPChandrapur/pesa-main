@@ -64,7 +64,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         let allWorks = await pesaWorkOperations.getAll();
 
         // If roleName is not 'district', filter data by user access
-        if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
+        if (!['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase()) && userId) {
           villages = villages.filter(
             (v) => v.tal_user_access === userId || v.gram_user_access === userId
           );
