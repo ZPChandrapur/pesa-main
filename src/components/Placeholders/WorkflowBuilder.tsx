@@ -68,7 +68,7 @@ const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ userId, roleName, all
         )
         .map(v => v.id);
 
-      if (!['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId) {
+      if (!['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase()) && userId) {
         if (!allowedVillageIds.length) {
           setWorks([]);
           setLoading(false);
