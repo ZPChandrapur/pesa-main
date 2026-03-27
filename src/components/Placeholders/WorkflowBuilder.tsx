@@ -61,7 +61,7 @@ const WorkflowBuilder: React.FC<WorkflowBuilderProps> = ({ userId, roleName, all
 
       let allowedVillageIds = allVillageData
         .filter(v =>
-          !['district', 'developer', 'super_admin'].includes(roleName?.trim().toLowerCase()) && userId
+          !['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase()) && userId
             ? (v.tal_user_access === userId || v.gram_user_access === userId)
             : true
 
