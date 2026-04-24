@@ -345,17 +345,22 @@ export function Aarakhada({ userId, roleName }: { userId: string; roleName: stri
         {/* Year */}
         <div className="space-y-2">
           <label className="block text-sm font-semibold text-gray-700">
-            {t('year')} (Format: 2024-25)
+            {t('year')}
             <span className="text-red-500 ml-1">*</span>
           </label>
-          <input
-            type="text"
+          <select
             value={formData.year ?? ''}
-            readOnly={readonly}
+            disabled={readonly}
             onChange={(e) => !readonly && handleChange('year', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
+            className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300"
             required
-          />
+          >
+            <option value="">{language === 'mr' ? 'वर्ष निवडा' : 'Select Year'}</option>
+            <option value="2024-25">2024-25</option>
+            <option value="2025-26">2025-26</option>
+            <option value="2026-27">2026-27</option>
+            <option value="2027-28">2027-28</option>
+          </select>
         </div>
         {/* Added Month - ✅ new field */}
         <div className="space-y-2">

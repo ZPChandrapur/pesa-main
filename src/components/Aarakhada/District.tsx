@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, Users, Target, DollarSign, TrendingUp, Filter, Download } from 'lucide-react';
+import { Building2, Users, Target, DollarSign, TrendingUp, Filter, Download, FileText } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { AarakhadaDistrictTable } from './AarakhadaDistrictTable';
 import { villageService, districtWorkService, pesaSupabase, workService } from '../../utils/supabase';
@@ -7,6 +7,7 @@ import * as XLSX from 'xlsx';
 import PesaLogo from '../../assets/pesaLogo.png';
 import { handleDownloadPhysicalExcel } from './DownloadPhysicalReport';
 import { handleDownloadFinancialExcel } from './DownloadFinancialReport';
+import { handleDownloadDistrictPdf } from './DownloadDistrictPdf';
 
 export function District() {
   const { t, language } = useLanguage();
@@ -66,6 +67,16 @@ const handleDownloadExcel = async () => {
     selectedTaluka,
     selectedCategory,
     language: language as 'en' | 'mr',
+  });
+};
+
+const handleDownloadPdf = async () => {
+  await handleDownloadDistrictPdf({
+    selectedDistrict,
+    selectedTaluka,
+    selectedCategory,
+    language: language as 'en' | 'mr',
+    activeTab,
   });
 };
 
@@ -162,14 +173,24 @@ const handleDownloadExcel = async () => {
             </div>
           </div>
 
-          <button
-            onClick={handleDownloadExcel}
-            className="bg-white text-purple-600 px-6 py-3 rounded-2xl hover:bg-purple-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
-            title={'Download Excel'}
-          >
-            <Download className="w-5 h-5" />
-            Download Excel
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleDownloadExcel}
+              className="bg-white text-purple-600 px-5 py-3 rounded-2xl hover:bg-purple-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
+              title={'Download Excel'}
+            >
+              <Download className="w-5 h-5" />
+              Excel
+            </button>
+            <button
+              onClick={handleDownloadPdf}
+              className="bg-white text-red-600 px-5 py-3 rounded-2xl hover:bg-red-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
+              title={'Download PDF'}
+            >
+              <FileText className="w-5 h-5" />
+              PDF
+            </button>
+          </div>
         </div>
       </div>
 

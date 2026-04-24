@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Filter, DollarSign, TrendingUp as TrendingUpIcon, Download } from 'lucide-react';
+import { Building2, Filter, DollarSign, TrendingUp as TrendingUpIcon, Download, FileText } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { AarakhadaWorkForm } from './AarakhadaWorkForm';
 import { AarakhadaTable } from './AarakhadaTable';
@@ -8,6 +8,7 @@ import { villageService, workService, pesaWorkOperations } from '../../utils/sup
 import * as XLSX from 'xlsx';
 import PesaLogo from '../../assets/pesaLogo.png';
 import { handleDownloadGrampanchayatFinancialExcel } from './DownloadGrampanchayatFinancialReport';
+import { handleDownloadGrampanchayatPdf } from './DownloadGrampanchayatPdf';
 
 interface GramPanchayatProps {
   userId?: string;
@@ -39,7 +40,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
     { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation, Water Conservation, Forest Ponds, Wildlife Tourism, and Forest Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
   ];
 
-  const years = ['2022-23', '2023-24', '2024-25', '2025-26'];
+  const years = ['2024-25', '2025-26', '2026-27', '2027-28'];
   const uniqueTalukas = Array.from(
     new Set(allWorks.map(w => w.taluka).filter(Boolean))
   ) as string[];
@@ -81,6 +82,16 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
           language: language as 'en' | 'mr',
         });
       }
+    };
+
+    const handleDownloadPdf = async () => {
+      await handleDownloadGrampanchayatPdf({
+        selectedTaluka,
+        selectedGramPanchayat,
+        selectedCategory,
+        language: language as 'en' | 'mr',
+        activeTab,
+      });
     };
 
   const loadVillages = async () => {
@@ -284,11 +295,19 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
             <div className="flex items-center space-x-4">
               <button
                 onClick={handleDownloadExcel}
-                className="bg-white text-purple-600 px-6 py-3 mt-3 rounded-2xl hover:bg-purple-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
+                className="bg-white text-purple-600 px-5 py-3 mt-3 rounded-2xl hover:bg-purple-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
                 title={'Download Excel'}
               >
                 <Download className="w-5 h-5" />
-                Download Excel
+                Excel
+              </button>
+              <button
+                onClick={handleDownloadPdf}
+                className="bg-white text-red-600 px-5 py-3 mt-3 rounded-2xl hover:bg-red-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
+                title={'Download PDF'}
+              >
+                <FileText className="w-5 h-5" />
+                PDF
               </button>
 
               {/* Taluka Filter */}
