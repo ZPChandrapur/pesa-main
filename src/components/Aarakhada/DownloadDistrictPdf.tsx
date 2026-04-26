@@ -1,4 +1,3 @@
-import html2pdf from 'html2pdf.js';
 import { pesaSupabase } from '../../utils/supabase';
 import GovtLogo from '../../assets/govtMH logo.png';
 
@@ -114,6 +113,7 @@ export const handleDownloadDistrictPdf = async ({
       pagebreak: { mode: ['avoid-all'] }
     };
 
+    const html2pdf = (await import('html2pdf.js')).default;
     html2pdf().set(options).from(element).save();
     
     // Clean up
