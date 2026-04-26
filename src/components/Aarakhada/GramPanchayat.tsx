@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Building2, Filter, DollarSign, TrendingUp as TrendingUpIcon, Download, FileText } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { useYear, YEAR_OPTIONS } from '../../context/YearContext';
 import { AarakhadaWorkForm } from './AarakhadaWorkForm';
 import { AarakhadaTable } from './AarakhadaTable';
 import { AarakhadaWork } from '../../types';
@@ -17,12 +18,12 @@ interface GramPanchayatProps {
 
 export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
   const { t, language } = useLanguage();
+  const { selectedYear } = useYear();
   const [activeTab, setActiveTab] = useState<'financial' | 'physical'>('physical');
   const [selectedGramPanchayat, setSelectedGramPanchayat] = useState('');
   const [selectedVillage, setSelectedVillage] = useState('');
   const [selectedTaluka, setSelectedTaluka] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'A' | 'B' | 'C' | 'D' | ''>('');
-  const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [villages, setVillages] = useState<any[]>([]);
@@ -40,7 +41,6 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
     { id: 'D', name: 'Category D - Afforestation, Wildlife Conservation, Water Conservation, Forest Ponds, Wildlife Tourism, and Forest Livelihood', name_mr: 'प्रकार ड - वनीकरण, वन्यजीव संवर्धन, जलसंधारण, वनतळी, वन्यजीव पर्यटन व वन उपजिविका' },
   ];
 
-  const years = ['2024-25', '2025-26', '2026-27', '2027-28'];
   const uniqueTalukas = Array.from(
     new Set(allWorks.map(w => w.taluka).filter(Boolean))
   ) as string[];
@@ -536,22 +536,12 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
           </div>
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-gray-700">
-              {language === 'mr' ? 'वर्ष निवडा' : 'Select Year'}
+              {language === 'mr' ? 'वर्ष' : 'Year'}
             </label>
             <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <select
-                value={selectedYear}
-                onChange={e => setSelectedYear(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white text-sm"
-              >
-                <option value="">{language === 'mr' ? 'सर्व वर्षे' : 'All Years'}</option>
-                {years.map(year => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+              <div className="w-full pl-3 pr-3 py-2 border border-gray-200 rounded-2xl bg-blue-50 text-sm font-semibold text-blue-700">
+                {selectedYear}
+              </div>
             </div>
           </div>
           {/* Month Filter updated: show all unique "Month-Year" options */}

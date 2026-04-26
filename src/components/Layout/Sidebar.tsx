@@ -1,8 +1,9 @@
 import React from 'react';
-import { Home, MapPin, Building2, Banknote, TrendingUp, Globe, LogOut } from 'lucide-react';
+import { Home, MapPin, Building2, Banknote, TrendingUp, Globe, LogOut, Calendar } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useUser } from '../../context/UserContext';
 import { useAuth } from '../../context/AuthContext';
+import { useYear, YEAR_OPTIONS } from '../../context/YearContext';
 import TribalBg from '../../assets/tribal_bg.jpg';
 
 interface SidebarProps {
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
 
 export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: SidebarProps) {
   const { t, language, setLanguage } = useLanguage();
+  const { selectedYear, setSelectedYear } = useYear();
   const { signOut, user } = useAuth();
 
   let allowedNavs: string[] = navItems.map(item => item.id);
@@ -91,14 +93,26 @@ export function Sidebar({ activeTab, onTabChange, roleId, roleName, userId }: Si
             </div>
           )}
           <div className="flex items-center gap-2 p-3 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-            <Globe className="w-4 h-4 text-slate-400" />
+            <Globe className="w-4 h-4 text-slate-400 flex-shrink-0" />
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as 'mr' | 'en')}
-              className="bg-transparent text-slate-300 text-sm font-medium focus:outline-none cursor-pointer"
+              className="bg-transparent text-slate-300 text-sm font-medium focus:outline-none cursor-pointer flex-1 min-w-0"
             >
               <option value="mr" className="bg-slate-800">मराठी</option>
               <option value="en" className="bg-slate-800">English</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 p-3 bg-slate-800/50 rounded-2xl border border-slate-700/50 mt-2">
+            <Calendar className="w-4 h-4 text-slate-400 flex-shrink-0" />
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="bg-transparent text-slate-300 text-sm font-medium focus:outline-none cursor-pointer flex-1 min-w-0"
+            >
+              {YEAR_OPTIONS.map(y => (
+                <option key={y} value={y} className="bg-slate-800">{y}</option>
+              ))}
             </select>
           </div>
         </div>

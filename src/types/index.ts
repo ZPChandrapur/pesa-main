@@ -49,6 +49,9 @@ export interface Village {
   // Village code
   village_code?: string;
 
+  // Year for fund allocation
+  year?: string;
+
   // Legacy optional
   population?: number;
   latitude?: number;

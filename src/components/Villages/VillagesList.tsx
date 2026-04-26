@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Users, Plus, Filter, MapPin, Edit, Trash2, Eye, Download } from 'lucide-react';
+import { Building2, Users, Plus, Filter, MapPin, CreditCard as Edit, Trash2, Eye, Download } from 'lucide-react';
 import { Village } from '../../types';
 import { VillageForm } from './VillageForm';
 import { pesaSupabase, villageService } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
+import { useYear } from '../../context/YearContext';
 import HeaderLogo from '../../assets/headerLogo.png';
 
 
 export function VillagesList({ userId, roleName }: { userId: string }) {
   const { t, language } = useLanguage();
+  const { selectedYear } = useYear();
   const [villages, setVillages] = useState<Village[]>([]);
   const [filteredVillages, setFilteredVillages] = useState<Village[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +105,7 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
 
   useEffect(() => {
     loadVillages();
-  }, []);
+  }, [selectedYear]);
 
   useEffect(() => {
     filterVillages();
@@ -114,6 +116,10 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
     try {
       setLoading(true);
       let data = await villageService.getAll();
+
+      if (selectedYear) {
+        data = data.filter((v: any) => !v.year || v.year === selectedYear);
+      }
 
       if (!['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase()) && userId) {
         data = data.filter(v =>

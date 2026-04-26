@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { YearProvider } from './context/YearContext';
 import { UserProvider } from './context/UserContext';
 import { LoginPage } from './components/Auth/LoginPage';
 import { Sidebar } from './components/Layout/Sidebar';
@@ -119,7 +120,9 @@ function App() {
     <AuthProvider>
       <UserProvider>
         <LanguageProvider>
-          <AppContent />
+          <YearProvider>
+            <AppContent />
+          </YearProvider>
         </LanguageProvider>
       </UserProvider>
     </AuthProvider>

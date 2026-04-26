@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapPin, Building2, Banknote, TrendingUp, Users, CheckCircle, Calendar, Clock, Target, Award, BarChart3, TrendingDown, Zap } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { useYear } from '../../context/YearContext';
 import { villageService } from '../../utils/supabase';
 import { pesaWorkOperations } from '../../utils/supabase';
 import { DashboardCharts } from './DashboardCharts';
@@ -19,6 +20,7 @@ import MahaPesa from '../../assets/mahaPesa.jpeg';
 
 export function Dashboard({ userId, roleName }: { userId: string; roleName: string }) {
   const { t, language } = useLanguage();
+  const { selectedYear } = useYear();
 
   const [totalVillages, setTotalVillages] = useState(0);
   const [totalPopulation, setTotalPopulation] = useState(0);
@@ -62,6 +64,10 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
       try {
         let villages = await villageService.getAll();
         let allWorks = await pesaWorkOperations.getAll();
+
+        if (selectedYear) {
+          allWorks = allWorks.filter((w: any) => w.year === selectedYear);
+        }
 
         // If roleName is not 'district', filter data by user access
         if (!['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase()) && userId) {
@@ -228,7 +234,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
     }
 
     fetchData();
-  }, [userId, roleName]);
+  }, [userId, roleName, selectedYear]);
 
   const stats = [
     {

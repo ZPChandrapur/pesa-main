@@ -1,6 +1,7 @@
 import React from 'react';
 import { Building2, Users, Target, DollarSign, TrendingUp, Filter, Download, FileText } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
+import { useYear } from '../../context/YearContext';
 import { AarakhadaDistrictTable } from './AarakhadaDistrictTable';
 import { villageService, districtWorkService, pesaSupabase, workService } from '../../utils/supabase';
 import * as XLSX from 'xlsx';
@@ -11,11 +12,11 @@ import { handleDownloadDistrictPdf } from './DownloadDistrictPdf';
 
 export function District() {
   const { t, language } = useLanguage();
+  const { selectedYear } = useYear();
   const [activeTab, setActiveTab] = React.useState<'financial' | 'physical'>('physical');
   const [selectedTaluka, setSelectedTaluka] = React.useState('');
   const [selectedDistrict, setSelectedDistrict] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<'A' | 'B' | 'C' | 'D' | ''>('');
-  const [selectedYear, setSelectedYear] = React.useState('');
   const [works, setWorks] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [districts, setDistricts] = React.useState<any[]>([]);
@@ -343,21 +344,10 @@ const handleDownloadPdf = async () => {
           </div>
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-gray-700">
-              {language === 'mr' ? 'वर्ष निवडा' : 'Select Year'}
+              {language === 'mr' ? 'वर्ष' : 'Year'}
             </label>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <select
-                value={selectedYear}
-                onChange={e => setSelectedYear(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white text-sm"
-              >
-                <option value="">{language === 'mr' ? 'सर्व वर्षे' : 'All Years'}</option>
-                <option value="2024-25">2024-25</option>
-                <option value="2025-26">2025-26</option>
-                <option value="2026-27">2026-27</option>
-                <option value="2027-28">2027-28</option>
-              </select>
+            <div className="w-full pl-3 pr-3 py-2 border border-gray-200 rounded-2xl bg-blue-50 text-sm font-semibold text-blue-700">
+              {selectedYear}
             </div>
           </div>
         </div>
