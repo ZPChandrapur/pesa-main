@@ -36,8 +36,15 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
     );
   }
 
-  const totalPages = Math.ceil(works.length / rowsPerPage);
-  const paginatedWorks = works.slice(
+  const sortedWorks = [...works].sort((a, b) => {
+    const talukaA = (a.taluka_name || '').toLowerCase();
+    const talukaB = (b.taluka_name || '').toLowerCase();
+    if (talukaA !== talukaB) return talukaA.localeCompare(talukaB);
+    return (a.work_category || '').localeCompare(b.work_category || '');
+  });
+
+  const totalPages = Math.ceil(sortedWorks.length / rowsPerPage);
+  const paginatedWorks = sortedWorks.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );

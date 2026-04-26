@@ -75,8 +75,15 @@ export function AarakhadaTalukaTable({
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   };
 
-  const totalPages = Math.ceil(filteredWorks.length / rowsPerPage);
-  const paginatedWorks = filteredWorks.slice(
+  const sortedWorks = [...filteredWorks].sort((a, b) => {
+    const gpA = (a.gram_panchayat || '').toLowerCase();
+    const gpB = (b.gram_panchayat || '').toLowerCase();
+    if (gpA !== gpB) return gpA.localeCompare(gpB);
+    return (a.work_category || '').localeCompare(b.work_category || '');
+  });
+
+  const totalPages = Math.ceil(sortedWorks.length / rowsPerPage);
+  const paginatedWorks = sortedWorks.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Edit, Trash2, Eye, Plus } from "lucide-react";
+import { CreditCard as Edit, Trash2, Eye, Plus } from "lucide-react";
 import { AarakhadaWork } from "../../types";
 import { useLanguage } from "../../context/LanguageContext";
 import { AarakhadaWorkForm } from './AarakhadaWorkForm';
@@ -154,8 +154,15 @@ export function AarakhadaTable({
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   };
 
-  const totalPages = Math.ceil(filteredWorks.length / rowsPerPage);
-  const paginatedWorks = filteredWorks.slice(
+  const sortedWorks = [...filteredWorks].sort((a, b) => {
+    const nameA = (a.village_name || '').toLowerCase();
+    const nameB = (b.village_name || '').toLowerCase();
+    if (nameA !== nameB) return nameA.localeCompare(nameB);
+    return (a.work_category || '').localeCompare(b.work_category || '');
+  });
+
+  const totalPages = Math.ceil(sortedWorks.length / rowsPerPage);
+  const paginatedWorks = sortedWorks.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
