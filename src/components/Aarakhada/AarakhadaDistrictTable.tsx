@@ -51,33 +51,33 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
               <th className="px-4 py-3">{t('srNo')}</th>
               <th className="px-4 py-3">{t('talukaName')}</th>
               <th className="px-4 py-3">{t('workCategory')}</th>
+              <th className="px-4 py-3">Year</th>
               <th className="px-4 py-3">{t('pesaGramPanchayatCount')}</th>
               <th className="px-4 py-3">{t('pesaVillageCount')}</th>
               <th className="px-4 py-3">{t('annualApprovedFund')}</th>
               <th className="px-4 py-3">{t('annualReceivedFund')}</th>
               <th className="px-4 py-3">{t('receivedInterest')}</th>
               <th className="px-4 py-3">{t('remainingFunds')}</th>
-              {/* <th className="px-4 py-3">{t('actions')}</th> */}
             </tr>
           ) : (
             <tr>
               <th className="px-4 py-3">{t('srNo')}</th>
               <th className="px-4 py-3">{t('talukaName')}</th>
               <th className="px-4 py-3">{t('workCategory')}</th>
+              <th className="px-4 py-3">Year</th>
               <th className="px-4 py-3">{t('pesaGramPanchayatCount')}</th>
               <th className="px-4 py-3">{t('pesaVillageCount')}</th>
               <th className="px-4 py-3">{t('sanctionedWorks')}</th>
               <th className="px-4 py-3">{t('completedWorks')}</th>
               <th className="px-4 py-3">{t('ongoingWorks')}</th>
               <th className="px-4 py-3">{t('pendingWorks')}</th>
-              {/* <th className="px-4 py-3">{t('actions')}</th> */}
             </tr>
           )}
         </thead>
         <tbody>
           {paginatedWorks.length === 0 ? (
             <tr>
-              <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+              <td colSpan={11} className="px-4 py-8 text-center text-gray-500">
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
                     <Target className="w-8 h-8 text-purple-400" />
@@ -137,6 +137,11 @@ export function AarakhadaDistrictTable({ works, workType, loading }: AarakhadaDi
                   <td className="px-4 py-3 font-medium">{(currentPage - 1) * rowsPerPage + index + 1}</td>
                   <td className="px-4 py-3">{work.taluka_name}</td>
                   <td className="px-4 py-3">{work.work_category || 0}</td>
+                  <td className="px-4 py-3">
+                    {work.year ? (
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">{work.year}</span>
+                    ) : '-'}
+                  </td>
                   <td className="px-4 py-3">{work.pesa_gram_panchayat_count}</td>
                   <td className="px-4 py-3">{work.pesa_village_count}</td>
                   {workType === 'financial' ? (

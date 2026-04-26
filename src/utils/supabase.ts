@@ -621,7 +621,8 @@ export const pesaWorkOperations = {
             .select('*')
             .eq('work_category', data.work_category)
             .eq('gram_panchayat', village.gram_panchayat)
-            .single();
+            .eq('year', data.year || '')
+            .maybeSingle();
 
           if (talukaPhysicalFetchError && talukaPhysicalFetchError.code !== 'PGRST116') {
             throw talukaPhysicalFetchError;
@@ -647,7 +648,8 @@ export const pesaWorkOperations = {
                 updated_at: new Date().toISOString(),
               })
               .eq('work_category', data.work_category)
-              .eq('gram_panchayat', village.gram_panchayat);
+              .eq('gram_panchayat', village.gram_panchayat)
+              .eq('year', data.year || '');
           } else {
             const talukaPhysicalData = {
               taluka_name: village.block,
@@ -673,7 +675,8 @@ export const pesaWorkOperations = {
             .select('*')
             .eq('work_category', data.work_category)
             .eq('gram_panchayat', village.gram_panchayat)
-            .single();
+            .eq('year', data.year || '')
+            .maybeSingle();
 
           if (talukaFinancialFetchError && talukaFinancialFetchError.code !== 'PGRST116') {
             throw talukaFinancialFetchError;
@@ -718,7 +721,8 @@ export const pesaWorkOperations = {
                 updated_at: new Date().toISOString(),
               })
               .eq('work_category', data.work_category)
-              .eq('gram_panchayat', village.gram_panchayat);
+              .eq('gram_panchayat', village.gram_panchayat)
+              .eq('year', data.year || '');
 
           } else {
             // ✅ Compute sums even for new insert
@@ -783,7 +787,7 @@ export const pesaWorkOperations = {
               .select('*')
               .eq('taluka_name', village.block)
               .eq('work_category', data.work_category)
-              .limit(1)
+              .eq('year', data.year || '')
               .maybeSingle();
 
           if (districtPhysicalFetchError && districtPhysicalFetchError.code !== 'PGRST116') {
@@ -808,7 +812,8 @@ export const pesaWorkOperations = {
                 updated_at: new Date().toISOString(),
               })
               .eq('taluka_name', village.block)
-              .eq('work_category', data.work_category);
+              .eq('work_category', data.work_category)
+              .eq('year', data.year || '');
           } else {
             const districtPhysicalData = {
               district_name: village.district,
@@ -836,7 +841,8 @@ export const pesaWorkOperations = {
             .select('*')
             .eq('taluka_name', village.block)
             .eq('work_category', data.work_category)
-            .single();
+            .eq('year', data.year || '')
+            .maybeSingle();
 
           if (districtFinancialFetchError && districtFinancialFetchError.code !== 'PGRST116') {
             throw districtFinancialFetchError;
@@ -889,7 +895,8 @@ export const pesaWorkOperations = {
                 updated_at: new Date().toISOString(),
               })
               .eq('taluka_name', village.block)
-              .eq('work_category', data.work_category);
+              .eq('work_category', data.work_category)
+              .eq('year', data.year || '');
 
           } else {
             const { data: districtWorksFinancial, error: fetchDistrictWorksError } = await pesaSupabase

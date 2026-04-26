@@ -90,6 +90,7 @@ export function AarakhadaTalukaTable({
               <th className="px-4 py-3">{t('srNo')}</th>
               <th className="px-4 py-3">{t('gramPanchayat')}</th>
               <th className="px-4 py-3">{t('workCategory')}</th>
+              <th className="px-4 py-3">Year</th>
               <th className="px-4 py-3">{t('pesaVillageCount')}</th>
               <th className="px-4 py-3">{t('annualApprovedFund')}</th>
               <th className="px-4 py-3">{t('annualReceivedFund')}</th>
@@ -99,26 +100,25 @@ export function AarakhadaTalukaTable({
               <th className="px-4 py-3">{t('currentExpenditure')}</th>
               <th className="px-4 py-3">{t('cumulativeExpenditure')}</th>
               <th className="px-4 py-3">{t('remainingFunds')}</th>
-              {/* <th className="px-4 py-3">{t('actions')}</th> */}
             </tr>
           ) : (
             <tr>
               <th className="px-4 py-3">{t('srNo')}</th>
               <th className="px-4 py-3">{t('gramPanchayat')}</th>
               <th className="px-4 py-3">{t('workCategory')}</th>
+              <th className="px-4 py-3">Year</th>
               <th className="px-4 py-3">{t('pesaVillageCount')}</th>
               <th className="px-4 py-3">{t('sanctionedWorks')}</th>
               <th className="px-4 py-3">{t('completedWorks')}</th>
               <th className="px-4 py-3">{t('ongoingWorks')}</th>
               <th className="px-4 py-3">{t('pendingWorks')}</th>
-              {/* <th className="px-4 py-3">{t('actions')}</th> */}
             </tr>
           )}
         </thead>
         <tbody>
           {paginatedWorks.length === 0 ? (
             <tr>
-              <td colSpan={workType === 'financial' ? 13 : 9} className="px-4 py-8 text-center text-gray-500">
+              <td colSpan={workType === 'financial' ? 14 : 10} className="px-4 py-8 text-center text-gray-500">
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
                     <DollarSign className="w-8 h-8 text-indigo-400" />
@@ -177,6 +177,11 @@ export function AarakhadaTalukaTable({
                   <td className="px-4 py-3 font-medium">{(currentPage - 1) * rowsPerPage + index + 1}</td>
                   <td className="px-4 py-3">{work.gram_panchayat || '-'}</td>
                   <td className="px-4 py-3">{work.work_category || 0}</td>
+                  <td className="px-4 py-3">
+                    {work.year ? (
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">{work.year}</span>
+                    ) : '-'}
+                  </td>
                   <td className="px-4 py-3">{work.pesa_village_count || 0}</td>
                   {workType === 'financial' ? (
                     <>
