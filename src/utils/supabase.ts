@@ -770,191 +770,149 @@ export const pesaWorkOperations = {
             await talukaWorkService.insert(talukaFinancialData);
           }
 
-          // ✅ Create work for District : district_aarakhada_physical table
-          const { data: allVillagesInTaluka, error: allVillagesInTalukaError } = await pesaSupabase
-            .from('villages')
-            .select('id, gram_panchayat')
-            .eq('block', village.block);
-          if (allVillagesInTalukaError) throw allVillagesInTalukaError;
+          // ✅ Create/update district_aarakhada_physical — aggregate from taluka table by year
+          {
+            const { data: talukaPhysicalAgg, error: talukaPhysicalAggError } = await pesaSupabase
+              .from('taluka_aarakhada_physical')
+              .select('sanctioned_works, completed_works, ongoing_works, pending_works, gram_panchayat, pesa_village_count')
+              .eq('taluka_name', village.block)
+              .eq('work_category', data.work_category)
+              .eq('year', data.year || '');
+            if (talukaPhysicalAggError) throw talukaPhysicalAggError;
 
-          const uniqueGramPanchayatsInTaluka = new Set(allVillagesInTaluka?.map(v => v.gram_panchayat) || []);
-          const pesaGramPanchayatCount = uniqueGramPanchayatsInTaluka.size;
-          const pesaVillageCountInTaluka = allVillagesInTaluka?.length || 0;
+            const distPhysAgg = (talukaPhysicalAgg || []).reduce(
+              (acc, r) => {
+                acc.sanctioned += Number(r.sanctioned_works) || 0;
+                acc.completed += Number(r.completed_works) || 0;
+                acc.ongoing += Number(r.ongoing_works) || 0;
+                acc.pending += Number(r.pending_works) || 0;
+                acc.gpSet.add(r.gram_panchayat);
+                acc.villageCount += Number(r.pesa_village_count) || 0;
+                return acc;
+              },
+              { sanctioned: 0, completed: 0, ongoing: 0, pending: 0, gpSet: new Set<string>(), villageCount: 0 }
+            );
 
-          const { data: existingDistrictPhysical, error: districtPhysicalFetchError } =
-            await pesaSupabase
+            const { data: existingDistrictPhysical } = await pesaSupabase
               .from('district_aarakhada_physical')
-              .select('*')
+              .select('id')
               .eq('taluka_name', village.block)
               .eq('work_category', data.work_category)
               .eq('year', data.year || '')
               .maybeSingle();
 
-          if (districtPhysicalFetchError && districtPhysicalFetchError.code !== 'PGRST116') {
-            throw districtPhysicalFetchError;
+            if (existingDistrictPhysical) {
+              await pesaSupabase
+                .from('district_aarakhada_physical')
+                .update({
+                  sanctioned_works: distPhysAgg.sanctioned,
+                  completed_works: distPhysAgg.completed,
+                  ongoing_works: distPhysAgg.ongoing,
+                  pending_works: distPhysAgg.pending,
+                  pesa_gram_panchayat_count: distPhysAgg.gpSet.size,
+                  pesa_village_count: distPhysAgg.villageCount,
+                  year: data.year || null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('taluka_name', village.block)
+                .eq('work_category', data.work_category)
+                .eq('year', data.year || '');
+            } else {
+              await districtWorkService.insert({
+                district_name: village.district,
+                taluka_name: village.block,
+                village_id: data.village_id,
+                work_category: data.work_category || null,
+                approved_works: data.approved_works ?? 0,
+                sanctioned_works: distPhysAgg.sanctioned,
+                completed_works: distPhysAgg.completed,
+                ongoing_works: distPhysAgg.ongoing,
+                pending_works: distPhysAgg.pending,
+                pesa_gram_panchayat_count: distPhysAgg.gpSet.size,
+                pesa_village_count: distPhysAgg.villageCount,
+                physical_progress_percentage: 0,
+                work_type: 'physical',
+                year: data.year || null,
+              });
+            }
           }
 
-          const districtCompletedWorksInc = status === 'completed' ? 1 : 0;
-          const districtOngoingWorksInc = status === 'in_progress' ? 1 : 0;
-          const districtPendingWorksInc = status === 'pending' ? 1 : 0;
-
-          if (existingDistrictPhysical) {
-            await pesaSupabase
-              .from('district_aarakhada_physical')
-              .update({
-                completed_works: districtCompletedWorksInc + existingDistrictPhysical.completed_works,
-                ongoing_works: districtOngoingWorksInc + existingDistrictPhysical.ongoing_works,
-                pending_works: districtPendingWorksInc + existingDistrictPhysical.pending_works,
-                sanctioned_works: districtCompletedWorksInc + districtOngoingWorksInc + districtPendingWorksInc + existingDistrictPhysical.completed_works + existingDistrictPhysical.ongoing_works + existingDistrictPhysical.pending_works,
-                pesa_gram_panchayat_count: pesaGramPanchayatCount,
-                pesa_village_count: pesaVillageCountInTaluka,
-                year: data.year || null,
-                updated_at: new Date().toISOString(),
-              })
+          // ✅ Create/update district_aarakhada_financial — aggregate from taluka table by year
+          {
+            const { data: talukaFinAgg, error: talukaFinAggError } = await pesaSupabase
+              .from('taluka_aarakhada_financial')
+              .select('annual_approved_fund, annual_received_fund, received_interest, total_received_fund, previous_expenditure, current_expenditure, cumulative_expenditure, remaining_funds, gram_panchayat, pesa_village_count')
               .eq('taluka_name', village.block)
               .eq('work_category', data.work_category)
               .eq('year', data.year || '');
-          } else {
-            const districtPhysicalData = {
-              district_name: village.district,
-              taluka_name: village.block,
-              village_id: data.village_id,
-              pesa_gram_panchayat_count: pesaGramPanchayatCount,
-              pesa_village_count: pesaVillageCountInTaluka,
-              work_category: data.work_category || null,
-              approved_works: data.approved_works ?? 0,
-              sanctioned_works: districtCompletedWorksInc + districtOngoingWorksInc + districtPendingWorksInc,
-              completed_works: districtCompletedWorksInc,
-              ongoing_works: districtOngoingWorksInc,
-              pending_works: districtPendingWorksInc,
-              physical_progress_percentage: data.physical_progress_percentage ?? 0,
-              work_name: data.work_name || null,
-              work_type: 'physical',
-              year: data.year || null,
-            };
-            await districtWorkService.insert(districtPhysicalData);
-          }
+            if (talukaFinAggError) throw talukaFinAggError;
 
-          // ✅ Create work for District : district_aarakhada_financial table
-          const { data: existingDistrictFinancial, error: districtFinancialFetchError } = await pesaSupabase
-            .from('district_aarakhada_financial')
-            .select('*')
-            .eq('taluka_name', village.block)
-            .eq('work_category', data.work_category)
-            .eq('year', data.year || '')
-            .maybeSingle();
-
-          if (districtFinancialFetchError && districtFinancialFetchError.code !== 'PGRST116') {
-            throw districtFinancialFetchError;
-          }
-
-          if (existingDistrictFinancial) {
-            const { data: districtWorksFinancial, error: fetchDistrictWorksError } = await pesaSupabase
-              .from("works")
-              .select("admin_approval_amount, agreement_approval_amount")
-              .eq("taluka", village.block)
-              .eq("work_category", data.work_category);
-
-            if (fetchDistrictWorksError) throw fetchDistrictWorksError;
-
-            const aggregatedDistrictFinancial = (districtWorksFinancial || []).reduce(
-              (acc, w) => {
-                acc.sanctioned_amount += Number(w.admin_approval_amount) || 0;
-                acc.released_amount += Number(w.agreement_approval_amount) || 0;
+            const distFinAgg = (talukaFinAgg || []).reduce(
+              (acc, r) => {
+                acc.approved += Number(r.annual_approved_fund) || 0;
+                acc.received += Number(r.annual_received_fund) || 0;
+                acc.interest += Number(r.received_interest) || 0;
+                acc.total_received += Number(r.total_received_fund) || 0;
+                acc.prev_exp += Number(r.previous_expenditure) || 0;
+                acc.curr_exp += Number(r.current_expenditure) || 0;
+                acc.cumulative += Number(r.cumulative_expenditure) || 0;
+                acc.remaining += Number(r.remaining_funds) || 0;
+                acc.gpSet.add(r.gram_panchayat);
+                acc.villageCount += Number(r.pesa_village_count) || 0;
                 return acc;
               },
-              { sanctioned_amount: 0, released_amount: 0 }
+              { approved: 0, received: 0, interest: 0, total_received: 0, prev_exp: 0, curr_exp: 0, cumulative: 0, remaining: 0, gpSet: new Set<string>(), villageCount: 0 }
             );
 
-            // ✅ Create work for District : district_aarakhada_physical table
-            const { data: allVillagesInTaluka, error: allVillagesInTalukaError } = await pesaSupabase
-              .from('villages')
-              .select('id, gram_panchayat')
-              .eq('block', village.block);
-            if (allVillagesInTalukaError) throw allVillagesInTalukaError;
-
-            const uniqueGramPanchayatsInTaluka = new Set(allVillagesInTaluka?.map(v => v.gram_panchayat) || []);
-            const pesaGramPanchayatCount = uniqueGramPanchayatsInTaluka.size;
-            // Calculate expenditure and remaining funds
-            const calculatedCumulative = existingDistrictFinancial.cumulative_expenditure;
-            const districtAnnualReceived = aggregatedDistrictFinancial.released_amount ?? existingDistrictFinancial.annual_received_fund ?? 0;
-            const calculatedRemaining = districtAnnualReceived - calculatedCumulative;
-
-            await pesaSupabase
+            const { data: existingDistrictFinancial } = await pesaSupabase
               .from('district_aarakhada_financial')
-              .update({
-                annual_approved_fund: aggregatedDistrictFinancial.sanctioned_amount,
-                annual_received_fund: aggregatedDistrictFinancial.released_amount,
-                pesa_gram_panchayat_count: pesaGramPanchayatCount,
-                previous_expenditure: data.previous_expenditure ?? existingDistrictFinancial.previous_expenditure ?? 0,
-                current_expenditure: data.current_expenditure ?? existingDistrictFinancial.current_expenditure ?? 0,
-                cumulative_expenditure: calculatedCumulative,
-                remaining_funds: calculatedRemaining,
-                pesa_village_count: pesaVillageCountInTaluka,
-                year: data.year || null,
-                updated_at: new Date().toISOString(),
-              })
+              .select('id')
               .eq('taluka_name', village.block)
               .eq('work_category', data.work_category)
-              .eq('year', data.year || '');
+              .eq('year', data.year || '')
+              .maybeSingle();
 
-          } else {
-            const { data: districtWorksFinancial, error: fetchDistrictWorksError } = await pesaSupabase
-              .from("works")
-              .select("admin_approval_amount, agreement_approval_amount")
-              .eq("taluka", village.block)
-              .eq("work_category", data.work_category);
-
-            if (fetchDistrictWorksError) throw fetchDistrictWorksError;
-
-            const aggregatedDistrictFinancial = (districtWorksFinancial || []).reduce(
-              (acc, w) => {
-                acc.sanctioned_amount += Number(w.admin_approval_amount) || 0;
-                acc.released_amount += Number(w.agreement_approval_amount) || 0;
-                return acc;
-              },
-              { sanctioned_amount: 0, released_amount: 0 }
-            );
-
-            // ✅ Create work for District : district_aarakhada_physical table
-            const { data: allVillagesInTaluka, error: allVillagesInTalukaError } = await pesaSupabase
-              .from('villages')
-              .select('id, gram_panchayat')
-              .eq('block', village.block);
-            if (allVillagesInTalukaError) throw allVillagesInTalukaError;
-
-            const uniqueGramPanchayatsInTaluka = new Set(allVillagesInTaluka?.map(v => v.gram_panchayat) || []);
-            const pesaGramPanchayatCount = uniqueGramPanchayatsInTaluka.size;
-            // Calculate expenditure and remaining funds
-            const calculatedCumulative = (data.previous_expenditure || 0) + (data.current_expenditure || 0);
-            const calculatedRemaining = aggregatedDistrictFinancial.released_amount - calculatedCumulative;
-
-            const districtFinancialData = {
-              district_name: village.district,
-              taluka_name: village.block,
-              village_id: data.village_id,
-              pesa_village_count: pesaVillageCountInTaluka,
-              pesa_gram_panchayat_count: pesaGramPanchayatCount,
-              annual_approved_fund: aggregatedDistrictFinancial.sanctioned_amount,
-              annual_received_fund: aggregatedDistrictFinancial.released_amount,
-              previous_expenditure: data.previous_expenditure ?? 0,
-              current_expenditure: data.current_expenditure ?? 0,
-              cumulative_expenditure: calculatedCumulative,
-              remaining_funds: calculatedRemaining,
-              received_interest: data.received_interest ?? 0,
-              total_received_fund: data.total_received_fund ?? 0,
-              work_category: data.work_category || null,
-              work_name: data.work_name || null,
-              status: data.current_status || 'pending',
-              financial_progress: data.financial_progress ?? 0,
-              start_date: data.start_date || null,
-              completion_date: data.completion_date || null,
-              work_type: 'financial',
-              year: data.year || null,
-              created_at: new Date().toISOString(),
-            };
-
-            await districtWorkService.insert(districtFinancialData);
+            if (existingDistrictFinancial) {
+              await pesaSupabase
+                .from('district_aarakhada_financial')
+                .update({
+                  annual_approved_fund: distFinAgg.approved,
+                  annual_received_fund: distFinAgg.received,
+                  received_interest: distFinAgg.interest,
+                  total_received_fund: distFinAgg.total_received,
+                  previous_expenditure: distFinAgg.prev_exp,
+                  current_expenditure: distFinAgg.curr_exp,
+                  cumulative_expenditure: distFinAgg.cumulative,
+                  remaining_funds: distFinAgg.remaining,
+                  pesa_gram_panchayat_count: distFinAgg.gpSet.size,
+                  pesa_village_count: distFinAgg.villageCount,
+                  year: data.year || null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('taluka_name', village.block)
+                .eq('work_category', data.work_category)
+                .eq('year', data.year || '');
+            } else {
+              await districtWorkService.insert({
+                district_name: village.district,
+                taluka_name: village.block,
+                village_id: data.village_id,
+                pesa_gram_panchayat_count: distFinAgg.gpSet.size,
+                pesa_village_count: distFinAgg.villageCount,
+                annual_approved_fund: distFinAgg.approved,
+                annual_received_fund: distFinAgg.received,
+                received_interest: distFinAgg.interest,
+                total_received_fund: distFinAgg.total_received,
+                previous_expenditure: distFinAgg.prev_exp,
+                current_expenditure: distFinAgg.curr_exp,
+                cumulative_expenditure: distFinAgg.cumulative,
+                remaining_funds: distFinAgg.remaining,
+                work_category: data.work_category || null,
+                work_type: 'financial',
+                year: data.year || null,
+                created_at: new Date().toISOString(),
+              });
+            }
           }
         }
       } catch (err) {
