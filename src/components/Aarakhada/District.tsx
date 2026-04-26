@@ -15,6 +15,7 @@ export function District() {
   const [selectedTaluka, setSelectedTaluka] = React.useState('');
   const [selectedDistrict, setSelectedDistrict] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<'A' | 'B' | 'C' | 'D' | ''>('');
+  const [selectedYear, setSelectedYear] = React.useState('');
   const [works, setWorks] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [districts, setDistricts] = React.useState<any[]>([]);
@@ -39,6 +40,7 @@ export function District() {
       if (selectedDistrict) query = query.eq('district_name', selectedDistrict);
       if (selectedTaluka) query = query.eq('taluka_name', selectedTaluka);
       if (selectedCategory) query = query.eq('work_category', selectedCategory);
+      if (selectedYear) query = query.eq('year', selectedYear);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -75,6 +77,7 @@ const handleDownloadPdf = async () => {
     selectedDistrict,
     selectedTaluka,
     selectedCategory,
+    selectedYear,
     language: language as 'en' | 'mr',
     activeTab,
   });
@@ -120,7 +123,7 @@ const handleDownloadPdf = async () => {
 
   React.useEffect(() => {
     loadWorks();
-  }, [selectedDistrict, selectedTaluka, selectedCategory, activeTab, language]);
+  }, [selectedDistrict, selectedTaluka, selectedCategory, selectedYear, activeTab, language]);
 
   const isNoVillages = !Object.keys(villagesByTaluka).length;
 
@@ -296,7 +299,7 @@ const handleDownloadPdf = async () => {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-6 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-gray-700">
               {language === 'mr' ? 'तालुका निवडा' : 'Select Taluka'}
@@ -335,6 +338,25 @@ const handleDownloadPdf = async () => {
                     {language === 'mr' ? category.name_mr : category.name}
                   </option>
                 ))}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold text-gray-700">
+              {language === 'mr' ? 'वर्ष निवडा' : 'Select Year'}
+            </label>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={selectedYear}
+                onChange={e => setSelectedYear(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 transition-all duration-300 bg-white text-sm"
+              >
+                <option value="">{language === 'mr' ? 'सर्व वर्षे' : 'All Years'}</option>
+                <option value="2024-25">2024-25</option>
+                <option value="2025-26">2025-26</option>
+                <option value="2026-27">2026-27</option>
+                <option value="2027-28">2027-28</option>
               </select>
             </div>
           </div>

@@ -643,6 +643,7 @@ export const pesaWorkOperations = {
                 ongoing_works: talukaOngoingWorksInc + existingTalukaPhysical.ongoing_works,
                 pending_works: talukaPendingWorksInc + existingTalukaPhysical.pending_works,
                 sanctioned_works: talukaCompletedWorksInc + talukaOngoingWorksInc + talukaPendingWorksInc + existingTalukaPhysical.completed_works + existingTalukaPhysical.ongoing_works + existingTalukaPhysical.pending_works,
+                year: data.year || null,
                 updated_at: new Date().toISOString(),
               })
               .eq('work_category', data.work_category)
@@ -661,6 +662,7 @@ export const pesaWorkOperations = {
               work_name: data.work_name,
               work_type: 'physical',
               pesa_village_count: pesaVillageCount,
+              year: data.year || null,
             };
             await talukaWorkService.insert(talukaPhysicalData);
           }
@@ -712,6 +714,7 @@ export const pesaWorkOperations = {
                 current_expenditure: data.current_expenditure ?? existingTalukaFinancial.current_expenditure ?? 0,
                 cumulative_expenditure: calculatedTalukaCumulative,
                 remaining_funds: calculatedTalukaRemaining,
+                year: data.year || null,
                 updated_at: new Date().toISOString(),
               })
               .eq('work_category', data.work_category)
@@ -758,6 +761,7 @@ export const pesaWorkOperations = {
               work_type: 'financial',
               pesa_village_count: pesaVillageCount,
               sanctioned_works: (data.completed_works ?? 0) + (data.ongoing_works ?? 0) + (data.pending_works ?? 0),
+              year: data.year || null,
             };
             await talukaWorkService.insert(talukaFinancialData);
           }
@@ -800,6 +804,7 @@ export const pesaWorkOperations = {
                 sanctioned_works: districtCompletedWorksInc + districtOngoingWorksInc + districtPendingWorksInc + existingDistrictPhysical.completed_works + existingDistrictPhysical.ongoing_works + existingDistrictPhysical.pending_works,
                 pesa_gram_panchayat_count: pesaGramPanchayatCount,
                 pesa_village_count: pesaVillageCountInTaluka,
+                year: data.year || null,
                 updated_at: new Date().toISOString(),
               })
               .eq('taluka_name', village.block)
@@ -820,6 +825,7 @@ export const pesaWorkOperations = {
               physical_progress_percentage: data.physical_progress_percentage ?? 0,
               work_name: data.work_name || null,
               work_type: 'physical',
+              year: data.year || null,
             };
             await districtWorkService.insert(districtPhysicalData);
           }
@@ -879,6 +885,7 @@ export const pesaWorkOperations = {
                 cumulative_expenditure: calculatedCumulative,
                 remaining_funds: calculatedRemaining,
                 pesa_village_count: pesaVillageCountInTaluka,
+                year: data.year || null,
                 updated_at: new Date().toISOString(),
               })
               .eq('taluka_name', village.block)
@@ -936,6 +943,7 @@ export const pesaWorkOperations = {
               start_date: data.start_date || null,
               completion_date: data.completion_date || null,
               work_type: 'financial',
+              year: data.year || null,
               created_at: new Date().toISOString(),
             };
 

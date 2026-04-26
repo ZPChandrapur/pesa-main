@@ -19,6 +19,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
   const [selectedTaluka, setSelectedTaluka] = React.useState('');
   const [selectedGramPanchayat, setSelectedGramPanchayat] = React.useState('');
   const [selectedCategory, setSelectedCategory] = React.useState<'A' | 'B' | 'C' | 'D' | ''>('');
+  const [selectedYear, setSelectedYear] = React.useState('');
   const [works, setWorks] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [talukas, setTalukas] = React.useState<any[]>([]);
@@ -95,12 +96,14 @@ export function Taluka({ userId, roleName }: TalukaProps) {
       const filteredFinancial = financial.filter(w =>
         (!selectedCategory || w.work_category === selectedCategory) &&
         (!selectedGramPanchayat || w.gram_panchayat === selectedGramPanchayat) &&
-        (!selectedTaluka || w.taluka_name === selectedTaluka)
+        (!selectedTaluka || w.taluka_name === selectedTaluka) &&
+        (!selectedYear || w.year === selectedYear)
       );
       const filteredPhysical = physical.filter(w =>
         (!selectedCategory || w.work_category === selectedCategory) &&
         (!selectedGramPanchayat || w.gram_panchayat === selectedGramPanchayat) &&
-        (!selectedTaluka || w.taluka_name === selectedTaluka)
+        (!selectedTaluka || w.taluka_name === selectedTaluka) &&
+        (!selectedYear || w.year === selectedYear)
       );
 
       setTalukaAarakhadaFinancial(filteredFinancial || []);
@@ -128,6 +131,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
       selectedTaluka,
       selectedGramPanchayat,
       selectedCategory,
+      selectedYear,
       language: language as 'en' | 'mr',
       activeTab,
     });
@@ -175,7 +179,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
 
   React.useEffect(() => {
     loadTalukaAarakhadaData();
-  }, [selectedTaluka, selectedGramPanchayat, selectedCategory]);
+  }, [selectedTaluka, selectedGramPanchayat, selectedCategory, selectedYear]);
 
   React.useEffect(() => {
     if (activeTab === 'financial') {
@@ -341,7 +345,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
           <div className="space-y-1">
             <label className="block text-xs font-semibold text-gray-700">
               {language === 'mr' ? 'तालुका निवडा' : 'Select Taluka'}
@@ -406,6 +410,25 @@ export function Taluka({ userId, roleName }: TalukaProps) {
                     {language === 'mr' ? c.name_mr : c.name}
                   </option>
                 ))}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold text-gray-700">
+              {language === 'mr' ? 'वर्ष निवडा' : 'Select Year'}
+            </label>
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-300 bg-white text-sm"
+              >
+                <option value="">{language === 'mr' ? 'सर्व वर्षे' : 'All Years'}</option>
+                <option value="2024-25">2024-25</option>
+                <option value="2025-26">2025-26</option>
+                <option value="2026-27">2026-27</option>
+                <option value="2027-28">2027-28</option>
               </select>
             </div>
           </div>

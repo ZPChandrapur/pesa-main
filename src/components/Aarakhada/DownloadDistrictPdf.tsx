@@ -1,4 +1,3 @@
-import html2pdf from 'html2pdf.js';
 import { pesaSupabase } from '../../utils/supabase';
 import GovtLogo from '../../assets/govtMH logo.png';
 
@@ -6,6 +5,7 @@ interface DownloadDistrictPdfProps {
   selectedDistrict?: string;
   selectedTaluka?: string;
   selectedCategory?: string;
+  selectedYear?: string;
   language?: 'en' | 'mr';
   activeTab: 'financial' | 'physical';
 }
@@ -34,10 +34,10 @@ export const handleDownloadDistrictPdf = async ({
   selectedDistrict,
   selectedTaluka,
   selectedCategory,
+  selectedYear,
   language = 'en',
   activeTab,
 }: DownloadDistrictPdfProps) => {
-  // Improved PDF generation with better Marathi font support and Excel-like formatting
   try {
     const tableName = activeTab === 'financial' ? 'district_aarakhada_financial' : 'district_aarakhada_physical';
     let query = pesaSupabase.from(tableName).select('*');
@@ -45,6 +45,7 @@ export const handleDownloadDistrictPdf = async ({
     if (selectedDistrict) query = query.eq('district_name', selectedDistrict);
     if (selectedTaluka) query = query.eq('taluka_name', selectedTaluka);
     if (selectedCategory) query = query.eq('work_category', selectedCategory);
+    if (selectedYear) query = query.eq('year', selectedYear);
 
     const { data: works, error } = await query;
     if (error) {
@@ -114,6 +115,7 @@ export const handleDownloadDistrictPdf = async ({
       pagebreak: { mode: ['avoid-all'] }
     };
 
+    const html2pdf = (await import('html2pdf.js')).default;
     html2pdf().set(options).from(element).save();
     
     // Clean up

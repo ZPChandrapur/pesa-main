@@ -7,6 +7,7 @@ interface DownloadTalukaPdfProps {
   selectedTaluka?: string;
   selectedGramPanchayat?: string;
   selectedCategory?: string;
+  selectedYear?: string;
   language?: 'en' | 'mr';
   activeTab: 'financial' | 'physical';
 }
@@ -35,6 +36,7 @@ export const handleDownloadTalukaPdf = async ({
   selectedTaluka,
   selectedGramPanchayat,
   selectedCategory,
+  selectedYear,
   language = 'en',
   activeTab,
 }: DownloadTalukaPdfProps) => {
@@ -45,6 +47,7 @@ export const handleDownloadTalukaPdf = async ({
     if (selectedTaluka) query = query.eq('taluka_name', selectedTaluka);
     if (selectedGramPanchayat) query = query.eq('gram_panchayat', selectedGramPanchayat);
     if (selectedCategory) query = query.eq('work_category', selectedCategory);
+    if (selectedYear) query = query.eq('year', selectedYear);
 
     const { data: works, error } = await query;
     if (error) {
