@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Clock, CheckCircle, AlertCircle, Plus, Edit, Trash2, Eye, Copy, Layers, Download } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle, AlertCircle, Plus, Edit, Trash2, Eye, Copy, Layers, Download, Banknote } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { pesaWorkflowOperations, pesaWorkOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
@@ -423,11 +423,23 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
       </div>
     );
   }
+  // Calculate total released amount from filtered works
+  const totalReleasedAmount = filteredWorks.reduce((sum, work) => {
+    const amount = Number(work.agreement_approval_amount) || 0;
+    return sum + amount;
+  }, 0);
+
   const cards = [
     { icon: CheckCircle, label: t('completed'), value: completedStages, color: 'from-green-500 to-emerald-600' },
     { icon: Clock, label: t('inProgress'), value: inProgress, color: 'from-blue-500 to-indigo-600' },
     { icon: AlertCircle, label: t('pending'), value: pending, color: 'from-amber-500 to-orange-600' },
     { icon: TrendingUp, label: t('overallProgress'), value: `${overallProgress}%`, color: 'from-purple-500 to-pink-600' },
+    { 
+      icon: Banknote, 
+      label: language === 'mr' ? 'एकूण प्राप्त निधी' : 'Total Released Amount', 
+      value: totalReleasedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 }), 
+      color: 'from-indigo-500 to-blue-600' 
+    },
   ];
   const uniqueYears = Array.from(new Set(works.map(w => w.year).filter(Boolean) as (string | number)[])).map(String);
   const uniqueTalukas = Array.from(
@@ -479,6 +491,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     'from-blue-500 to-indigo-600': 'text-blue-600',
     'from-amber-500 to-orange-600': 'text-orange-600',
     'from-purple-500 to-pink-600': 'text-pink-600',
+    'from-indigo-500 to-blue-600': 'text-indigo-600',
   };
 
 

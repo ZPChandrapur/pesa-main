@@ -183,9 +183,19 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
     }
   };
 
+  // Cascade filters: Taluka -> Gram Panchayat -> Village
+  const gramPanchayatsByTaluka = selectedTaluka
+    ? Array.from(new Set(villages
+        .filter(v => (v.taluka ?? '').trim().toLowerCase() === selectedTaluka.trim().toLowerCase())
+        .map(v => v.gram_panchayat)
+        .filter(Boolean)))
+    : Array.from(new Set(villages.map(v => v.gram_panchayat).filter(Boolean)));
+
   const filteredVillages = selectedGramPanchayat
     ? villages.filter(v => v.gram_panchayat === selectedGramPanchayat)
-    : villages;
+    : selectedTaluka
+      ? villages.filter(v => (v.taluka ?? '').trim().toLowerCase() === selectedTaluka.trim().toLowerCase())
+      : villages;
 
   const isNoVillages = !villages || villages.length === 0;
 
@@ -260,7 +270,6 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
   const totalPreviousMonthExpenditure = getUniqueWorkSum(accessibleWorks, 'previous_expenditure');
   const totalCurrentMonthExpenditure = getUniqueWorkSum(accessibleWorks, 'current_expenditure');
   const totalCumulativeExpenditure = getUniqueWorkSum(accessibleWorks, 'cumulative_expenditure');
-  const gramPanchayatNames = Array.from(new Set(villages.map(v => v.gram_panchayat))).filter(Boolean);
 
   const labelColorsMap = {
     'from-purple-500 to-pink-600': 'text-pink-600',
@@ -319,7 +328,11 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
                   <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <select
                     value={selectedTaluka}
-                    onChange={e => setSelectedTaluka(e.target.value)}
+                    onChange={e => {
+                      setSelectedTaluka(e.target.value);
+                      setSelectedGramPanchayat('');
+                      setSelectedVillage('');
+                    }}
                     className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl
                  focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500
                  transition-all duration-300 bg-white text-sm"
@@ -344,13 +357,16 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
                   <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <select
                     value={selectedGramPanchayat}
-                    onChange={e => setSelectedGramPanchayat(e.target.value)}
+                    onChange={e => {
+                      setSelectedGramPanchayat(e.target.value);
+                      setSelectedVillage('');
+                    }}
                     className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-2xl
                  focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500
                  transition-all duration-300 bg-white text-sm"
                   >
                     <option value="">{language === 'mr' ? 'ग्रामपंचायत निवडा' : 'Select Gram Panchayat'}</option>
-                    {gramPanchayatNames.map(name => (
+                    {gramPanchayatsByTaluka.map(name => (
                       <option key={name} value={name}>{name}</option>
                     ))}
                   </select>
@@ -379,7 +395,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
           },
           {
             icon: DollarSign,
-            label: language === 'mr' ? 'एकूण खर्च' : 'Total Expenditure',
+            label: language === 'mr' ? 'चालू महिन्याचा खर्च' : 'Total Expenditure',
             value: `₹${totalExpenditure.toLocaleString()}`,
             color: 'from-orange-500 to-red-600',
           }
