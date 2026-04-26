@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, MapPin } from 'lucide-react';
 import { Village } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
+import { useYear } from '../../context/YearContext';
 import { pesaSupabase, supabase } from '../../utils/supabase';
 interface VillageFormProps {
   village?: Village | null;
@@ -13,14 +14,16 @@ interface VillageFormProps {
 
 export function VillageForm({ village, onSave, onCancel, isOpen, readonly = false }: VillageFormProps) {
   const { t } = useLanguage();
+  const { selectedYear } = useYear();
   const [accessUsers, setAccessUsers] = useState<{ user_id: string }[]>([]);
   const initialFormData: Omit<Village, 'id' | 'created_at' | 'updated_at'> & {
     gram_panchayat_population?: number | null;
     gram_panchayat_st_population?: number | null;
     village_population?: number | null;
     village_st_population?: number | null;
-    amount_per_head_st_population?: string | null; // changed to string to preserve decimals while typing
+    amount_per_head_st_population?: string | null;
     is_pesa?: boolean;
+    year?: string;
   } = {
     village_name: '',
     district: 'Chandrapur',
@@ -34,6 +37,7 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
     gram_user_access: '',
     village_code: '',
     is_pesa: false,
+    year: selectedYear,
   };
   const [formData, setFormData] = useState(initialFormData);
   useEffect(() => {
@@ -51,9 +55,10 @@ export function VillageForm({ village, onSave, onCancel, isOpen, readonly = fals
         village_code: village.village_code || '',
         is_pesa: village.is_pesa ?? false,
         gram_user_access: (village as any).gram_user_access || '',
+        year: (village as any).year || selectedYear,
       });
     } else {
-      setFormData(initialFormData);
+      setFormData({ ...initialFormData, year: selectedYear });
     }
   }, [village]);
 
@@ -241,6 +246,13 @@ const handleSubmit = async (e: React.FormEvent) => {
                 readOnly={readonly}
                 className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
               />
+            </div>
+            {/* Year */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700">{t('year')}</label>
+              <div className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-blue-50 text-sm font-semibold text-blue-700">
+                {(formData as any).year || selectedYear}
+              </div>
             </div>
             {/* Village Code */}
             <div>

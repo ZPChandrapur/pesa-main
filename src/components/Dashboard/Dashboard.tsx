@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Building2, Banknote, TrendingUp, Users, CheckCircle, Calendar, Clock, Target, Award, BarChart3, TrendingDown, Zap } from 'lucide-react';
+import { MapPin, Building2, Banknote, TrendingUp, Users, CheckCircle, Calendar, Clock, Target, Award, BarChart3, TrendingDown, Zap, Wallet } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import { useYear } from '../../context/YearContext';
-import { villageService } from '../../utils/supabase';
+import { villageService, pesaSupabase } from '../../utils/supabase';
 import { pesaWorkOperations } from '../../utils/supabase';
 import { DashboardCharts } from './DashboardCharts';
 import { RetrospectiveAnalysis } from './RetrospectiveAnalysis';
@@ -37,6 +37,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
   const [works, setWorks] = useState<any[]>([]);
   const [talukaCount, setTalukaCount] = useState(0);
   const [grampanchayatCount, setGrampanchayatCount] = useState(0);
+  const [totalEkunPraptNidhi, setTotalEkunPraptNidhi] = useState(0);
   const [activeTab, setActiveTab] = useState<'overview' | 'retrospective' | 'predictive'>('overview');
 
   // Carousel images for Adiwasi theme (Chandrapur region)
@@ -67,6 +68,22 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
 
         if (selectedYear) {
           allWorks = allWorks.filter((w: any) => w.year === selectedYear);
+        }
+
+        // Fetch total received fund from taluka financial table
+        try {
+          let talukaFinQuery = pesaSupabase
+            .from('taluka_aarakhada_financial')
+            .select('annual_received_fund');
+          if (selectedYear) talukaFinQuery = talukaFinQuery.eq('year', selectedYear);
+          const { data: talukaFinData } = await talukaFinQuery;
+          const sumReceived = (talukaFinData || []).reduce(
+            (sum: number, row: any) => sum + (Number(row.annual_received_fund) || 0),
+            0
+          );
+          setTotalEkunPraptNidhi(sumReceived);
+        } catch {
+          setTotalEkunPraptNidhi(0);
         }
 
         // If roleName is not 'district', filter data by user access
@@ -285,6 +302,14 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         maximumFractionDigits: 0,
       }),
       color: 'from-orange-500 to-amber-500',
+    },
+    {
+      id: 'ekun_prapt_nidhi',
+      icon: Wallet,
+      label: language === 'mr' ? 'एकूण प्राप्त निधी' : 'Total Received Fund',
+      value: totalEkunPraptNidhi.toLocaleString('en-IN', { maximumFractionDigits: 0 }),
+      color: 'from-teal-500 to-emerald-600',
+      bgColor: 'from-teal-50 to-emerald-50',
     },
     {
       id: 'completed',

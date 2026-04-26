@@ -118,7 +118,7 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
       let data = await villageService.getAll();
 
       if (selectedYear) {
-        data = data.filter((v: any) => !v.year || v.year === selectedYear);
+        data = data.filter((v: any) => v.year === selectedYear);
       }
 
       if (!['district', 'developer', 'super_admin', 'admin'].includes(roleName?.trim().toLowerCase()) && userId) {

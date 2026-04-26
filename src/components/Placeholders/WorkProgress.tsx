@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Clock, CheckCircle, AlertCircle, Plus, Edit, Trash2, Eye, Copy, Layers, Download, Banknote } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle, AlertCircle, Plus, CreditCard as Edit, Trash2, Eye, Copy, Layers, Download, Banknote } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { pesaWorkflowOperations, pesaWorkOperations } from '../../utils/supabase';
 import { useLanguage } from '../../context/LanguageContext';
+import { useYear } from '../../context/YearContext';
 import WorkflowBuilder from '../Placeholders/WorkflowBuilder';
 import WorkflowProgress from '../Placeholders/WorkflowProgress';
 import { Village } from '../../types';
@@ -41,6 +42,7 @@ interface PesaWork {
 }
 export function WorkProgress({ userId, roleName }: { userId: string; roleName: string }) {
   const { t, language } = useLanguage();
+  const { selectedYear } = useYear();
   const [works, setWorks] = useState<PesaWork[]>([]);
   const [availableWorkNames, setAvailableWorkNames] = useState<any[]>([]);
   const [pesaGrampanchayats, setPesaGrampanchayats] = useState<string[]>([]);
@@ -102,15 +104,17 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
   });
   // Added states for filtering dropdowns
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'completed'>('all');
-  const [yearFilter, setYearFilter] = useState<string>('all');
   const [workCategoryFilter, setWorkCategoryFilter] = useState<string>('all');
   const [pesaGrampanchayatFilter, setPesaGrampanchayatFilter] = useState<string>('all');
   const [villageFilter, setVillageFilter] = useState<string>('all');
   const [talukaFilter, setTalukaFilter] = useState<string>('all');
-  const completedStages = works.filter(w => w.current_status === 'completed').length;
-  const inProgress = works.filter(w => w.current_status === 'in_progress').length;
-  const pending = works.filter(w => w.current_status === 'pending').length;
-  const overallProgress = works.length ? Math.round((completedStages / works.length) * 100) : 0;
+  // These are computed after filteredWorks is defined, but JS hoisting means we need to compute from works first
+  // We'll recalculate below after filteredWorks definition - for now keep works-based for initial render
+  const completedStages = works.filter(w => w.current_status === 'completed' && (!selectedYear || String(w.year) === selectedYear)).length;
+  const inProgress = works.filter(w => w.current_status === 'in_progress' && (!selectedYear || String(w.year) === selectedYear)).length;
+  const pending = works.filter(w => w.current_status === 'pending' && (!selectedYear || String(w.year) === selectedYear)).length;
+  const yearFilteredTotal = works.filter(w => !selectedYear || String(w.year) === selectedYear).length;
+  const overallProgress = yearFilteredTotal ? Math.round((completedStages / yearFilteredTotal) * 100) : 0;
   useEffect(() => {
     loadWorks();
     loadAvailableWorkNames();
@@ -396,7 +400,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
   };
   const filteredWorks = works.filter(w => {
     const statusMatch = statusFilter === 'all' || w.current_status === statusFilter;
-    const yearMatch = yearFilter === 'all' || String(w.year) === yearFilter;
+    const yearMatch = !selectedYear || String(w.year) === selectedYear;
     const workCategoryMatch = workCategoryFilter === 'all' || w.work_category === workCategoryFilter;
     const pesaGrampanchayatMatch =
       pesaGrampanchayatFilter === "all" ||
@@ -441,7 +445,6 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
       color: 'from-indigo-500 to-blue-600' 
     },
   ];
-  const uniqueYears = Array.from(new Set(works.map(w => w.year).filter(Boolean) as (string | number)[])).map(String);
   const uniqueTalukas = Array.from(
     new Set(works.map(w => w.taluka).filter(Boolean))
   ) as string[];
@@ -669,19 +672,12 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
             </select>
           </div>
 
-          {/* Year Filter */}
+          {/* Year (centralized from sidebar) */}
           <div className="flex flex-col w-full">
             <label className="font-bold text-gray-700">{t('year')}</label>
-            <select
-              value={yearFilter}
-              onChange={e => setYearFilter(e.target.value)}
-              className="px-2 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 w-full"
-            >
-              <option value="all">{t('All')}</option>
-              {uniqueYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+            <div className="px-3 py-2 border border-gray-200 rounded-xl bg-blue-50 text-sm font-semibold text-blue-700">
+              {selectedYear || t('All')}
+            </div>
           </div>
 
           {/* Work Category Filter */}
