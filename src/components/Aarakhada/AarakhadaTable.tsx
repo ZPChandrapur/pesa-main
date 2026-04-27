@@ -154,7 +154,30 @@ export function AarakhadaTable({
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   };
 
-  const sortedWorks = [...filteredWorks].sort((a, b) => {
+  // For physical tab: aggregate rows by (village_name, work_category, year, added_month)
+  // so the UI shows one row per village×category (like before), with summed counts.
+  // Financial tab keeps individual work rows (with work_name).
+  const displayWorks = workType === 'physical'
+    ? (() => {
+        const map = new Map<string, AarakhadaWork>();
+        filteredWorks.forEach(w => {
+          const key = `${w.village_name}|${w.work_category}|${w.year}|${w.added_month ?? ''}`;
+          if (!map.has(key)) {
+            map.set(key, { ...w,
+              sanctioned_works: 0, completed_works: 0,
+              ongoing_works: 0, pending_works: 0 });
+          }
+          const agg = map.get(key)!;
+          agg.sanctioned_works = (agg.sanctioned_works ?? 0) + (w.sanctioned_works ?? 0);
+          agg.completed_works  = (agg.completed_works  ?? 0) + (w.completed_works  ?? 0);
+          agg.ongoing_works    = (agg.ongoing_works    ?? 0) + (w.ongoing_works    ?? 0);
+          agg.pending_works    = (agg.pending_works    ?? 0) + (w.pending_works    ?? 0);
+        });
+        return Array.from(map.values());
+      })()
+    : filteredWorks;
+
+  const sortedWorks = [...displayWorks].sort((a, b) => {
     const nameA = (a.village_name || '').toLowerCase();
     const nameB = (b.village_name || '').toLowerCase();
     if (nameA !== nameB) return nameA.localeCompare(nameB);
