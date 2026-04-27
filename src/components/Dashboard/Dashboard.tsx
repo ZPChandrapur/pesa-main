@@ -7,11 +7,11 @@ import { pesaWorkOperations } from '../../utils/supabase';
 import { DashboardCharts } from './DashboardCharts';
 import { RetrospectiveAnalysis } from './RetrospectiveAnalysis';
 import { PredictiveAnalysis } from './PredictiveAnalysis';
-import Banner1 from '../../assets/Banner1.jpg';
-import Banner2 from '../../assets/Banner2.jpg';
-import Banner3 from '../../assets/Banner3.jpg';
-import Banner4 from '../../assets/Banner4.jpg';
-import Banner5 from '../../assets/Banner5.jpg';
+// import Banner1 from '../../assets/Banner1.jpg';
+// import Banner2 from '../../assets/Banner2.jpg';
+// import Banner3 from '../../assets/Banner3.jpg';
+// import Banner4 from '../../assets/Banner4.jpg';
+// import Banner5 from '../../assets/Banner5.jpg';
 import Banner6 from '../../assets/Banner6.jpeg';
 import Banner7 from '../../assets/Banner7.jpeg';
 import Banner8 from '../../assets/Banner8.jpeg';
@@ -49,11 +49,11 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
   // Carousel images for Adiwasi theme (Chandrapur region)
   const adiwasiImages = [
     ImgBanner1,
-    Banner1,
-    Banner2,
-    Banner3,
-    Banner4,
-    Banner5,
+    // Banner1,
+    // Banner2,
+    // Banner3,
+    // Banner4,
+    // Banner5,
     Banner6,
     Banner7,
     Banner8,
