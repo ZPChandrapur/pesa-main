@@ -12,6 +12,12 @@ import Banner2 from '../../assets/Banner2.jpg';
 import Banner3 from '../../assets/Banner3.jpg';
 import Banner4 from '../../assets/Banner4.jpg';
 import Banner5 from '../../assets/Banner5.jpg';
+import Banner6 from '../../assets/Banner6.jpeg';
+import Banner7 from '../../assets/Banner7.jpeg';
+import Banner8 from '../../assets/Banner8.jpeg';
+import Banner9 from '../../assets/Banner9.jpeg';
+import Banner10 from '../../assets/Banner10.jpeg';
+
 import ImgBanner1 from '../../assets/img-banner-1.png';
 import Img1 from '../../assets/img-1.jpg';
 import GovtLogo from '../../assets/govtMH logo.png';
@@ -48,6 +54,11 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
     Banner3,
     Banner4,
     Banner5,
+    Banner6,
+    Banner7,
+    Banner8,
+    Banner9,
+    Banner10,
     Img1,
   ];
 
