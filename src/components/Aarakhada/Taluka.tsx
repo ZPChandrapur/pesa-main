@@ -126,6 +126,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
           selectedTaluka,
           selectedGramPanchayat,
           selectedCategory,
+          selectedYear,
           language: language as 'en' | 'mr',
         });
         if (success) {
@@ -146,10 +147,10 @@ export function Taluka({ userId, roleName }: TalukaProps) {
     setDownloadingPdf(true);
     try {
       const success = await handleDownloadTalukaPdf({
-        selectedTaluka,
-        selectedGramPanchayat,
-        selectedCategory,
-        selectedYear,
+        selectedTaluka: selectedTaluka || undefined,
+        selectedGramPanchayat: selectedGramPanchayat || undefined,
+        selectedCategory: selectedCategory || undefined,
+        selectedYear: selectedYear || undefined,
         language: language as 'en' | 'mr',
         activeTab,
       });

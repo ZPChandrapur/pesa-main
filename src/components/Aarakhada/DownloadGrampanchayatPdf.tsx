@@ -7,6 +7,7 @@ interface DownloadGrampanchayatPdfProps {
   selectedTaluka?: string;
   selectedGramPanchayat?: string;
   selectedCategory?: string;
+  selectedYear?: string;
   language?: 'en' | 'mr';
   activeTab: 'financial' | 'physical';
 }
@@ -35,16 +36,18 @@ export const handleDownloadGrampanchayatPdf = async ({
   selectedTaluka,
   selectedGramPanchayat,
   selectedCategory,
+  selectedYear,
   language = 'en',
   activeTab,
 }: DownloadGrampanchayatPdfProps) => {
   try {
-    const tableName = activeTab === 'financial' ? 'aarakhada_financial' : 'aarakhada_works';
+    const tableName = activeTab === 'financial' ? 'aarakhada_financial' : 'aarakhada_physical';
     let query = pesaSupabase.from(tableName).select('*');
 
-    if (selectedTaluka) query = query.eq('taluka_name', selectedTaluka);
+    if (selectedTaluka) query = query.eq('taluka', selectedTaluka);
     if (selectedGramPanchayat) query = query.eq('gram_panchayat', selectedGramPanchayat);
     if (selectedCategory) query = query.eq('work_category', selectedCategory);
+    if (selectedYear) query = query.eq('year', selectedYear);
 
     const { data: works, error } = await query;
     if (error) {

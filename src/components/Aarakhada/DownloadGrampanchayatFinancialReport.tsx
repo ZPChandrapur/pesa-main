@@ -6,6 +6,7 @@ interface DownloadGrampanchayatFinancialReportProps {
     selectedGramPanchayat?: string;
     selectedVillage?: string;
     selectedCategory?: string;
+    selectedYear?: string;
     language?: 'en' | 'mr';
 }
 
@@ -14,6 +15,7 @@ export const handleDownloadGrampanchayatFinancialExcel = async ({
     selectedGramPanchayat,
     selectedCategory,
     selectedVillage,
+    selectedYear,
     language = 'en',
 }: DownloadGrampanchayatFinancialReportProps) => {
     try {
@@ -21,10 +23,11 @@ export const handleDownloadGrampanchayatFinancialExcel = async ({
             .from('aarakhada_financial')
             .select('*');
 
-        if (selectedTaluka) financialQuery = financialQuery.eq('taluka_name', selectedTaluka);
+        if (selectedTaluka) financialQuery = financialQuery.eq('taluka', selectedTaluka);
         if (selectedGramPanchayat) financialQuery = financialQuery.eq('gram_panchayat', selectedGramPanchayat);
         if (selectedVillage) financialQuery = financialQuery.eq('village_name', selectedVillage);
         if (selectedCategory) financialQuery = financialQuery.eq('work_category', selectedCategory);
+        if (selectedYear) financialQuery = financialQuery.eq('year', selectedYear);
 
         const { data: financialWorks, error: financialError } = await financialQuery;
 

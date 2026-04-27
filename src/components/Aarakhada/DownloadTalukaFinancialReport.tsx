@@ -5,6 +5,7 @@ interface DownloadTalukaFinancialReportProps {
     selectedTaluka?: string;
     selectedGramPanchayat?: string;
     selectedCategory?: string;
+    selectedYear?: string;
     language?: 'en' | 'mr';
 }
 
@@ -12,6 +13,7 @@ export const handleDownloadTalukaFinancialExcel = async ({
     selectedTaluka,
     selectedGramPanchayat,
     selectedCategory,
+    selectedYear,
     language = 'en',
 }: DownloadTalukaFinancialReportProps): Promise<boolean> => {
     try {
@@ -22,6 +24,7 @@ export const handleDownloadTalukaFinancialExcel = async ({
         if (selectedTaluka) financialQuery = financialQuery.eq('taluka_name', selectedTaluka);
         if (selectedGramPanchayat) financialQuery = financialQuery.eq('gram_panchayat', selectedGramPanchayat);
         if (selectedCategory) financialQuery = financialQuery.eq('work_category', selectedCategory);
+        if (selectedYear) financialQuery = financialQuery.eq('year', selectedYear);
 
         const { data: financialWorks, error: financialError } = await financialQuery;
 

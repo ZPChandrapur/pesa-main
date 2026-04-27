@@ -79,6 +79,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
           selectedTaluka,
           selectedGramPanchayat,
           selectedCategory,
+          selectedYear,
           language: language as 'en' | 'mr',
         });
       }
@@ -89,6 +90,7 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
         selectedTaluka,
         selectedGramPanchayat,
         selectedCategory,
+        selectedYear,
         language: language as 'en' | 'mr',
         activeTab,
       });

@@ -434,15 +434,16 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
   }, 0);
 
   const cards = [
+    { icon: Layers, label: language === 'mr' ? 'एकूण कामे' : 'Total Works', value: yearFilteredTotal, color: 'from-sky-500 to-blue-600' },
     { icon: CheckCircle, label: t('completed'), value: completedStages, color: 'from-green-500 to-emerald-600' },
     { icon: Clock, label: t('inProgress'), value: inProgress, color: 'from-blue-500 to-indigo-600' },
     { icon: AlertCircle, label: t('pending'), value: pending, color: 'from-amber-500 to-orange-600' },
-    { icon: TrendingUp, label: t('overallProgress'), value: `${overallProgress}%`, color: 'from-purple-500 to-pink-600' },
-    { 
-      icon: Banknote, 
-      label: language === 'mr' ? 'एकूण प्राप्त निधी' : 'Total Released Amount', 
-      value: totalReleasedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 }), 
-      color: 'from-indigo-500 to-blue-600' 
+    { icon: TrendingUp, label: t('overallProgress'), value: `${overallProgress}%`, color: 'from-teal-500 to-emerald-600' },
+    {
+      icon: Banknote,
+      label: language === 'mr' ? 'एकूण प्राप्त निधी' : 'Total Released Amount',
+      value: totalReleasedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 }),
+      color: 'from-orange-500 to-red-600'
     },
   ];
   const uniqueTalukas = Array.from(
