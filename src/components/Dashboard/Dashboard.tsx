@@ -18,8 +18,8 @@ import Banner8 from '../../assets/Banner8.jpeg';
 import Banner9 from '../../assets/Banner9.jpeg';
 import Banner10 from '../../assets/Banner10.jpeg';
 
-import ImgBanner1 from '../../assets/img-banner-1.png';
-import Img1 from '../../assets/img-1.jpg';
+// import ImgBanner1 from '../../assets/img-banner-1.png';
+// import Img1 from '../../assets/img-1.jpg';
 import GovtLogo from '../../assets/govtMH logo.png';
 import HeaderLogo from '../../assets/headerLogo.png';
 import MahaPesa from '../../assets/mahaPesa.jpeg';
@@ -48,7 +48,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
 
   // Carousel images for Adiwasi theme (Chandrapur region)
   const adiwasiImages = [
-    ImgBanner1,
+    // ImgBanner1,
     // Banner1,
     // Banner2,
     // Banner3,
@@ -59,7 +59,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
     Banner8,
     Banner9,
     Banner10,
-    Img1,
+    // Img1,
   ];
 
   const [currentSlide, setCurrentSlide] = useState(0);

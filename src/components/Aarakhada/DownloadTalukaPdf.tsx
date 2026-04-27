@@ -13,17 +13,25 @@ interface DownloadTalukaPdfProps {
 }
 
 const loadImageAsBase64 = (src: string): Promise<string> =>
-  new Promise((resolve, reject) => {
+  new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext('2d')!.drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext('2d')?.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch (err) {
+        console.warn('Failed to convert image to base64, using placeholder:', err);
+        resolve('');
+      }
     };
-    img.onerror = reject;
+    img.onerror = () => {
+      console.warn('Failed to load image from:', src);
+      resolve('');
+    };
     img.src = src;
   });
 
@@ -39,7 +47,7 @@ export const handleDownloadTalukaPdf = async ({
   selectedYear,
   language = 'en',
   activeTab,
-}: DownloadTalukaPdfProps) => {
+}: DownloadTalukaPdfProps): Promise<boolean> => {
   try {
     const tableName = activeTab === 'financial' ? 'taluka_aarakhada_financial' : 'taluka_aarakhada_physical';
     let query = pesaSupabase.from(tableName).select('*');
@@ -51,12 +59,13 @@ export const handleDownloadTalukaPdf = async ({
 
     const { data: works, error } = await query;
     if (error) {
-      alert('Failed to fetch data');
-      return;
+      console.error('Failed to fetch data from database:', error);
+      alert(`${language === 'mr' ? 'डेटा प्राप्त करने में विफल' : 'Failed to fetch data'}: ${error.message || error}`);
+      return false;
     }
     if (!works || works.length === 0) {
       alert(language === 'mr' ? 'निवडलेल्या फिल्टरसाठी डेटा उपलब्ध नाही' : 'No data available for selected filters');
-      return;
+      return false;
     }
 
     const logoBase64 = await loadImageAsBase64(GovtLogo);
@@ -71,13 +80,18 @@ export const handleDownloadTalukaPdf = async ({
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
 
+    // Set font to support Unicode/Marathi characters
+    if (language === 'mr') {
+      doc.setFont('courier');
+    }
+
     const headerColor: [number, number, number] = [26, 78, 148];
     doc.setFillColor(...headerColor);
     doc.rect(0, 0, pageWidth, 32, 'F');
 
     doc.addImage(logoBase64, 'PNG', 8, 3, 26, 26);
 
-    doc.setFont('helvetica', 'bold');
+    doc.setFont(language === 'mr' ? 'courier' : 'helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(255, 255, 255);
     doc.text(
@@ -85,6 +99,7 @@ export const handleDownloadTalukaPdf = async ({
       pageWidth / 2, 12, { align: 'center' }
     );
 
+    doc.setFont(language === 'mr' ? 'courier' : 'helvetica', 'normal');
     doc.setFontSize(10);
     doc.text(
       language === 'mr'
@@ -96,6 +111,7 @@ export const handleDownloadTalukaPdf = async ({
     const tabLabel = activeTab === 'financial'
       ? (language === 'mr' ? 'आर्थिक प्रगती अहवाल' : 'Financial Progress Report')
       : (language === 'mr' ? 'भौतिक प्रगती अहवाल' : 'Physical Progress Report');
+    doc.setFont(language === 'mr' ? 'courier' : 'helvetica', 'normal');
     doc.setFontSize(9);
     doc.text(tabLabel, pageWidth / 2, 27, { align: 'center' });
 
@@ -111,8 +127,9 @@ export const handleDownloadTalukaPdf = async ({
     doc.save(fileName);
     return true;
   } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
     console.error('Error generating PDF:', err);
-    alert('Failed to generate PDF report.');
+    alert(`${language === 'mr' ? 'पीडीएफ रिपोर्ट तैयार करने में विफल' : 'Failed to generate PDF report'}: ${errorMsg}`);
     return false;
   }
 };
@@ -241,12 +258,29 @@ function generateFinancialTable(
     head: [headerRow1, headerRow2],
     body,
     theme: 'grid',
-    styles: { fontSize: 5.5, cellPadding: 1.2, halign: 'center', valign: 'middle' },
-    headStyles: { fillColor: [26, 78, 148], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 5.5 },
+    styles: { 
+      fontSize: 5.5, 
+      cellPadding: 1.2, 
+      halign: 'center', 
+      valign: 'middle',
+      font: language === 'mr' ? 'courier' : 'helvetica',
+    },
+    headStyles: { 
+      fillColor: [26, 78, 148], 
+      textColor: [255, 255, 255], 
+      fontStyle: 'bold', 
+      fontSize: 5.5,
+      font: language === 'mr' ? 'courier' : 'helvetica',
+    },
     alternateRowStyles: { fillColor: [240, 245, 255] },
     columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 25, halign: 'left' } },
     margin: { left: 4, right: 4 },
-    didDrawPage: () => addFooter(doc, language),
+    didDrawPage: (hookData: any) => {
+      if (language === 'mr') {
+        hookData.doc.setFont('courier');
+      }
+      addFooter(hookData.doc, language);
+    },
   });
 }
 
@@ -353,12 +387,29 @@ function generatePhysicalTable(
     head: [headerRow1, headerRow2],
     body,
     theme: 'grid',
-    styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', valign: 'middle' },
-    headStyles: { fillColor: [26, 78, 148], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+    styles: { 
+      fontSize: 7, 
+      cellPadding: 1.5, 
+      halign: 'center', 
+      valign: 'middle',
+      font: language === 'mr' ? 'courier' : 'helvetica',
+    },
+    headStyles: { 
+      fillColor: [26, 78, 148], 
+      textColor: [255, 255, 255], 
+      fontStyle: 'bold', 
+      fontSize: 7,
+      font: language === 'mr' ? 'courier' : 'helvetica',
+    },
     alternateRowStyles: { fillColor: [240, 245, 255] },
     columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 30, halign: 'left' } },
     margin: { left: 5, right: 5 },
-    didDrawPage: () => addFooter(doc, language),
+    didDrawPage: (hookData: any) => {
+      if (language === 'mr') {
+        hookData.doc.setFont('courier');
+      }
+      addFooter(hookData.doc, language);
+    },
   });
 }
 

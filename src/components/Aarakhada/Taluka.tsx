@@ -23,6 +23,8 @@ export function Taluka({ userId, roleName }: TalukaProps) {
   const [selectedCategory, setSelectedCategory] = React.useState<'A' | 'B' | 'C' | 'D' | ''>('');
   const [works, setWorks] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [downloadingExcel, setDownloadingExcel] = React.useState(false);
+  const [downloadingPdf, setDownloadingPdf] = React.useState(false);
   const [talukas, setTalukas] = React.useState<any[]>([]);
   const [villages, setVillages] = React.useState<any[]>([]);
   const [gramPanchayatsByTaluka, setGramPanchayatsByTaluka] = React.useState<Record<string, string[]>>({});
@@ -118,24 +120,48 @@ export function Taluka({ userId, roleName }: TalukaProps) {
 
   const handleDownloadExcel = async () => {
     if (activeTab === 'financial') {
-      await handleDownloadTalukaFinancialExcel({
-        selectedTaluka,
-        selectedGramPanchayat,
-        selectedCategory,
-        language: language as 'en' | 'mr',
-      });
+      setDownloadingExcel(true);
+      try {
+        const success = await handleDownloadTalukaFinancialExcel({
+          selectedTaluka,
+          selectedGramPanchayat,
+          selectedCategory,
+          language: language as 'en' | 'mr',
+        });
+        if (success) {
+          console.log('Excel download completed successfully');
+        }
+      } catch (error) {
+        console.error('Error during Excel download:', error);
+        alert(language === 'mr' ? 'एक्सेल डाउनलोड में त्रुटि हुई' : 'Error during Excel download');
+      } finally {
+        setDownloadingExcel(false);
+      }
+    } else {
+      alert(language === 'mr' ? 'भौतिक डेटा के लिए एक्सेल डाउनलोड अभी उपलब्ध नहीं है। कृपया पीडीएफ डाउनलोड करें।' : 'Excel download for physical data is not available yet. Please use PDF download.');
     }
   };
 
   const handleDownloadPdf = async () => {
-    await handleDownloadTalukaPdf({
-      selectedTaluka,
-      selectedGramPanchayat,
-      selectedCategory,
-      selectedYear,
-      language: language as 'en' | 'mr',
-      activeTab,
-    });
+    setDownloadingPdf(true);
+    try {
+      const success = await handleDownloadTalukaPdf({
+        selectedTaluka,
+        selectedGramPanchayat,
+        selectedCategory,
+        selectedYear,
+        language: language as 'en' | 'mr',
+        activeTab,
+      });
+      if (success) {
+        console.log('PDF download completed successfully');
+      }
+    } catch (error) {
+      console.error('Error during PDF download:', error);
+      alert(language === 'mr' ? 'पीडीएफ डाउनलोड में त्रुटि हुई' : 'Error during PDF download');
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const activeFilteredData =
@@ -219,19 +245,21 @@ export function Taluka({ userId, roleName }: TalukaProps) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleDownloadExcel}
-              className="bg-white text-purple-600 px-5 py-3 rounded-2xl hover:bg-purple-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
-              title={'Download Excel'}
+              disabled={downloadingExcel || downloadingPdf || !selectedTaluka}
+              className="bg-white text-purple-600 px-5 py-3 rounded-2xl hover:bg-purple-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              title={selectedTaluka ? 'Download Excel' : 'Select a Taluka first'}
             >
-              <Download className="w-5 h-5" />
-              Excel
+              <Download className={`w-5 h-5 ${downloadingExcel ? 'animate-spin' : ''}`} />
+              {downloadingExcel ? (language === 'mr' ? 'डाउनलोड...' : 'Downloading...') : 'Excel'}
             </button>
             <button
               onClick={handleDownloadPdf}
-              className="bg-white text-red-600 px-5 py-3 rounded-2xl hover:bg-red-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg"
-              title={'Download PDF'}
+              disabled={downloadingExcel || downloadingPdf || !selectedTaluka}
+              className="bg-white text-red-600 px-5 py-3 rounded-2xl hover:bg-red-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              title={selectedTaluka ? 'Download PDF' : 'Select a Taluka first'}
             >
-              <FileText className="w-5 h-5" />
-              PDF
+              <FileText className={`w-5 h-5 ${downloadingPdf ? 'animate-spin' : ''}`} />
+              {downloadingPdf ? (language === 'mr' ? 'डाउनलोड...' : 'Downloading...') : 'PDF'}
             </button>
           </div>
         </div>

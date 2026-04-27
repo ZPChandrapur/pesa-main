@@ -13,7 +13,7 @@ export const handleDownloadTalukaFinancialExcel = async ({
     selectedGramPanchayat,
     selectedCategory,
     language = 'en',
-}: DownloadTalukaFinancialReportProps) => {
+}: DownloadTalukaFinancialReportProps): Promise<boolean> => {
     try {
         let financialQuery = pesaSupabase
             .from('taluka_aarakhada_financial')
@@ -27,13 +27,13 @@ export const handleDownloadTalukaFinancialExcel = async ({
 
         if (financialError) {
             console.error('Failed to fetch financial data:', financialError);
-            alert('Failed to fetch financial report data');
-            return;
+            alert(`${language === 'mr' ? 'वित्तीय डेटा प्राप्त करने में विफल' : 'Failed to fetch financial report data'}: ${financialError.message || financialError}`);
+            return false;
         }
 
         if (!financialWorks || financialWorks.length === 0) {
-            alert('No data available for the selected filters');
-            return;
+            alert(language === 'mr' ? 'निवडलेल्या फिल्टरसाठी डेटा उपलब्ध नाही' : 'No data available for the selected filters');
+            return false;
         }
 
         const parseNumeric = (val: any): number => {
@@ -393,13 +393,26 @@ export const handleDownloadTalukaFinancialExcel = async ({
 
         XLSX.utils.book_append_sheet(wb, ws, 'Financial Works Report');
 
-        const fileName = `Financial_Works_Report_${monthName}_${year}_${selectedTaluka ?? ''}_${selectedGramPanchayat ?? ''}_${selectedCategory ?? ''}.xlsx`;
-        XLSX.writeFile(wb, fileName);
+        // Generate clean filename
+        const fileNameParts = ['Financial_Works_Report', monthName, year];
+        if (selectedTaluka) fileNameParts.push(selectedTaluka);
+        if (selectedGramPanchayat) fileNameParts.push(selectedGramPanchayat);
+        if (selectedCategory) fileNameParts.push(selectedCategory);
+        
+        const fileName = `${fileNameParts.join('_')}.xlsx`;
+        
+        try {
+          XLSX.writeFile(wb, fileName);
+        } catch (writeError) {
+          console.error('Error writing Excel file:', writeError);
+          throw new Error(`Failed to write Excel file: ${writeError instanceof Error ? writeError.message : String(writeError)}`);
+        }
 
         return true;
     } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
         console.error('Error generating financial report:', error);
-        alert('Failed to generate financial report. Please try again.');
+        alert(`${language === 'mr' ? 'वित्तीय रिपोर्ट तैयार करने में विफल' : 'Failed to generate financial report'}: ${errorMsg}`);
         return false;
     }
 };
