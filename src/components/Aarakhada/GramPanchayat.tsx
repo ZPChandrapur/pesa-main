@@ -207,69 +207,29 @@ export function GramPanchayat({ userId, roleName }: GramPanchayatProps) {
       return works.filter(w => accessibleVillageIds.has(w.village_id));
     })();
 
-  const getUniqueWorkSum = (
+  const getWorkSum = (
     works: AarakhadaWork[],
     valueKey: keyof AarakhadaWork
   ): number => {
     if (isNoVillages || !works.length) return 0;
-
-    const uniqueWorksMap = new Map<string, AarakhadaWork>();
-
-    for (const work of works) {
-      if (!work.work_name || !work.work_category || !work.village_id) continue;
-
-      const key = `${work.work_name}-${work.work_category}-${work.village_id}`;
-      const existing = uniqueWorksMap.get(key);
-
-      const currentDate = work.added_month
-        ? new Date(`01 ${work.added_month}`)
-        : null;
-
-      const existingDate = existing?.added_month
-        ? new Date(`01 ${existing.added_month}`)
-        : null;
-
-      if (
-        !existing ||
-        (currentDate &&
-          existingDate &&
-          !isNaN(currentDate.getTime()) &&
-          !isNaN(existingDate.getTime()) &&
-          currentDate > existingDate)
-      ) {
-        uniqueWorksMap.set(key, work);
-      }
-    }
-
-    let sum = 0;
-
-    for (const work of uniqueWorksMap.values()) {
-      const rawValue = work[valueKey];
-
-      const numericValue =
-        typeof rawValue === 'number'
-          ? rawValue
-          : Number(rawValue);
-
-      if (!isNaN(numericValue)) {
-        sum += numericValue;
-      }
-    }
-
-    return sum;
+    return works.reduce((sum, work) => {
+      const raw = work[valueKey];
+      const n = typeof raw === 'number' ? raw : Number(raw);
+      return sum + (isNaN(n) ? 0 : n);
+    }, 0);
   };
 
   const totalVillages = isNoVillages ? 0 : villages.length;
-  const totalWorks = getUniqueWorkSum(accessibleWorks, 'sanctioned_works');
-  const totalExpenditure = getUniqueWorkSum(accessibleWorks, 'current_expenditure');
-  const totalSanctionedWorks = getUniqueWorkSum(accessibleWorks, 'sanctioned_works');
-  const totalCompletedWorks = getUniqueWorkSum(accessibleWorks, 'completed_works');
-  const totalOngoingWorks = getUniqueWorkSum(accessibleWorks, 'ongoing_works');
-  const totalPendingWorks = getUniqueWorkSum(accessibleWorks, 'pending_works');
-  const totalReleasedAmount = getUniqueWorkSum(accessibleWorks, 'released_amount');
-  const totalPreviousMonthExpenditure = getUniqueWorkSum(accessibleWorks, 'previous_expenditure');
-  const totalCurrentMonthExpenditure = getUniqueWorkSum(accessibleWorks, 'current_expenditure');
-  const totalCumulativeExpenditure = getUniqueWorkSum(accessibleWorks, 'cumulative_expenditure');
+  const totalWorks = getWorkSum(accessibleWorks, 'sanctioned_works');
+  const totalExpenditure = getWorkSum(accessibleWorks, 'current_expenditure');
+  const totalSanctionedWorks = getWorkSum(accessibleWorks, 'sanctioned_works');
+  const totalCompletedWorks = getWorkSum(accessibleWorks, 'completed_works');
+  const totalOngoingWorks = getWorkSum(accessibleWorks, 'ongoing_works');
+  const totalPendingWorks = getWorkSum(accessibleWorks, 'pending_works');
+  const totalReleasedAmount = getWorkSum(accessibleWorks, 'released_amount');
+  const totalPreviousMonthExpenditure = getWorkSum(accessibleWorks, 'previous_expenditure');
+  const totalCurrentMonthExpenditure = getWorkSum(accessibleWorks, 'current_expenditure');
+  const totalCumulativeExpenditure = getWorkSum(accessibleWorks, 'cumulative_expenditure');
 
   const labelColorsMap = {
     'from-purple-500 to-pink-600': 'text-pink-600',
