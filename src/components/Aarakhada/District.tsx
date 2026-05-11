@@ -363,7 +363,7 @@ const handleDownloadPdf = async () => {
                 icon: Building2,
               },
               {
-                label: language === 'mr' ? 'वार्षिक प्राप्त निधी (₹)' : 'Annual Received Fund (₹)',
+                label: language === 'mr' ? 'वार्षिक प्रस्तावित निधी (₹)' : 'Annual Received Fund (₹)',
                 value: `₹${totalAnnualReceivedFund.toLocaleString()}`,
                 color: 'from-indigo-600 to-purple-700',
                 icon: DollarSign,

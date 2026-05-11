@@ -212,11 +212,11 @@ function generateFinancialTable(
     head: [headerRow1, headerRow2],
     body,
     theme: 'grid',
-    styles: { fontSize: 6, cellPadding: 1.5, halign: 'center', valign: 'middle' },
-    headStyles: { fillColor: [26, 78, 148], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 6 },
+    styles: { fontSize: 8, cellPadding: 2.2, halign: 'center', valign: 'middle', overflow: 'linebreak' },
+    headStyles: { fillColor: [26, 78, 148], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, cellPadding: 2.2 },
     alternateRowStyles: { fillColor: [240, 245, 255] },
-    columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 28, halign: 'left' } },
-    margin: { left: 5, right: 5 },
+    columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 28, halign: 'left' } },
+    margin: { left: 6, right: 6 },
     didDrawPage: (data) => addFooter(doc, language),
   });
 }
@@ -312,11 +312,11 @@ function generatePhysicalTable(
     head: [headerRow1, headerRow2],
     body,
     theme: 'grid',
-    styles: { fontSize: 7, cellPadding: 1.5, halign: 'center', valign: 'middle' },
-    headStyles: { fillColor: [26, 78, 148], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+    styles: { fontSize: 8.5, cellPadding: 2.3, halign: 'center', valign: 'middle', overflow: 'linebreak' },
+    headStyles: { fillColor: [26, 78, 148], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5, cellPadding: 2.3 },
     alternateRowStyles: { fillColor: [240, 245, 255] },
-    columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 30, halign: 'left' } },
-    margin: { left: 5, right: 5 },
+    columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 32, halign: 'left' } },
+    margin: { left: 6, right: 6 },
     didDrawPage: (data) => addFooter(doc, language),
   });
 }

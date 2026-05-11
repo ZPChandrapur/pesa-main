@@ -458,7 +458,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
             {[
               {
-                label: language === 'mr' ? 'वार्षिक प्राप्त निधी (₹)' : 'Annual Received Fund (₹)',
+                label: language === 'mr' ? 'वार्षिक प्रस्तावित निधी (₹)' : 'Annual Received Fund (₹)',
                 value: `₹${totalAnnualFund.toLocaleString()}`,
                 color: 'from-indigo-500 to-purple-600',
                 icon: DollarSign,

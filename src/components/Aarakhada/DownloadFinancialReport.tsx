@@ -129,7 +129,7 @@ export const handleDownloadFinancialExcel = async ({
             language === 'mr' ? 'पेसा ग्रा.पं. संख्या' : 'PESA GP',
             language === 'mr' ? 'पेसा गावांची संख्या' : 'PESA Villages',
             language === 'mr' ? 'वार्षिक मंजूर निधी (₹)' : 'Annual Approved Fund (₹)',
-            language === 'mr' ? 'वार्षिक प्राप्त निधी (₹)' : 'Annual Received Fund (₹)',
+            language === 'mr' ? 'वार्षिक प्रस्तावित निधी (₹)' : 'Annual Received Fund (₹)',
             language === 'mr' ? 'योजने अंतर्गत प्राप्त व्याजाची रक्कम' : 'Interest Received under the Scheme',
         ];
 

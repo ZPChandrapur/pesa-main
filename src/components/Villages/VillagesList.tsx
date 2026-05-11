@@ -212,7 +212,7 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
   };
 
   const totalVillages = filteredVillages.length;
-  const totalGP = new Set(filteredVillages.map(v => v.gram_panchayat)).size;
+  const totalGP = new Set(filteredVillages.filter(v => v.gram_panchayat).map(v => v.gram_panchayat)).size;
 
   const uniqueGpPopulations = new Map<string, number>();
   filteredVillages.forEach(v => {
@@ -222,7 +222,7 @@ export function VillagesList({ userId, roleName }: { userId: string }) {
   });
 
   const filteredGramPanchayats = Array.from(
-    new Set(villages.filter(v => !selectedBlock || v.block === selectedBlock).map(v => v.gram_panchayat))
+    new Set(villages.filter(v => (!selectedBlock || v.block === selectedBlock) && v.gram_panchayat).map(v => v.gram_panchayat))
   );
 
   useEffect(() => {

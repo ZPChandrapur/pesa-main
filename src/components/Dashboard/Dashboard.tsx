@@ -113,7 +113,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         const uniqueTalukas = new Set(villages.map((v: any) => v.block));
         setTalukaCount(uniqueTalukas.size);
 
-        const uniqueGPs = new Set(villages.map((v: any) => v.gram_panchayat));
+        const uniqueGPs = new Set(villages.map((v: any) => v.gram_panchayat).filter(Boolean));
         setGrampanchayatCount(uniqueGPs.size);
 
         // 🔹 Taluka-wise aggregation for dashboard table (FIXED GP POPULATION LOGIC)
@@ -317,7 +317,7 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
     {
       id: 'ekun_prapt_nidhi',
       icon: Wallet,
-      label: language === 'mr' ? 'एकूण प्राप्त निधी' : 'Total Received Fund',
+      label: language === 'mr' ? 'एकूण प्रस्तावित निधी' : 'Total Received Fund',
       value: totalEkunPraptNidhi.toLocaleString('en-IN', { maximumFractionDigits: 0 }),
       color: 'from-teal-500 to-emerald-600',
       bgColor: 'from-teal-50 to-emerald-50',
@@ -434,13 +434,13 @@ export function Dashboard({ userId, roleName }: { userId: string; roleName: stri
         </div>
       </div>
 
-      <div className="relative w-full h-64 md:h-96 bg-gray-100 rounded-3xl overflow-hidden shadow-2xl">
+      <div className="relative w-full h-96 md:h-[500px] bg-gray-100 rounded-3xl overflow-hidden shadow-2xl">
         {adiwasiImages.map((img, index) => (
           <img
             key={index}
             src={img}
             alt={`Adiwasi scene ${index + 1}`}
-            className={`absolute inset-0 w-full h-full object-cover rounded-3xl transition-opacity duration-1000 ease-in-out ${currentSlide === index ? 'opacity-100' : 'opacity-0'
+            className={`absolute inset-0 w-full h-full object-contain rounded-3xl transition-opacity duration-1000 ease-in-out ${currentSlide === index ? 'opacity-100' : 'opacity-0'
               }`}
           />
         ))}

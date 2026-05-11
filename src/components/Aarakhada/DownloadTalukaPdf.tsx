@@ -185,7 +185,7 @@ function generateFinancialTable(
     { content: language === 'mr' ? 'ग्रामपंचायत' : 'Gram Panchayat', rowSpan: 2 },
     { content: language === 'mr' ? 'पेसा गावे' : 'PESA Villages', rowSpan: 2 },
     { content: language === 'mr' ? 'मंजूर निधी' : 'Approved Fund', rowSpan: 2 },
-    { content: language === 'mr' ? 'प्राप्त निधी' : 'Received Fund', rowSpan: 2 },
+    { content: language === 'mr' ? 'प्रस्तावित निधी' : 'Received Fund', rowSpan: 2 },
     { content: language === 'mr' ? 'व्याज' : 'Interest', rowSpan: 2 },
   ];
   categories.forEach(cat => {
@@ -259,22 +259,24 @@ function generateFinancialTable(
     body,
     theme: 'grid',
     styles: { 
-      fontSize: 5.5, 
-      cellPadding: 1.2, 
+      fontSize: 8, 
+      cellPadding: 2.2, 
       halign: 'center', 
       valign: 'middle',
       font: language === 'mr' ? 'courier' : 'helvetica',
+      overflow: 'linebreak',
     },
     headStyles: { 
       fillColor: [26, 78, 148], 
       textColor: [255, 255, 255], 
       fontStyle: 'bold', 
-      fontSize: 5.5,
+      fontSize: 8,
       font: language === 'mr' ? 'courier' : 'helvetica',
+      cellPadding: 2.2,
     },
     alternateRowStyles: { fillColor: [240, 245, 255] },
-    columnStyles: { 0: { cellWidth: 8 }, 1: { cellWidth: 25, halign: 'left' } },
-    margin: { left: 4, right: 4 },
+    columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 28, halign: 'left' } },
+    margin: { left: 6, right: 6 },
     didDrawPage: (hookData: any) => {
       if (language === 'mr') {
         hookData.doc.setFont('courier');
@@ -388,22 +390,24 @@ function generatePhysicalTable(
     body,
     theme: 'grid',
     styles: { 
-      fontSize: 7, 
-      cellPadding: 1.5, 
+      fontSize: 8.5, 
+      cellPadding: 2.3, 
       halign: 'center', 
       valign: 'middle',
       font: language === 'mr' ? 'courier' : 'helvetica',
+      overflow: 'linebreak',
     },
     headStyles: { 
       fillColor: [26, 78, 148], 
       textColor: [255, 255, 255], 
       fontStyle: 'bold', 
-      fontSize: 7,
+      fontSize: 8.5,
       font: language === 'mr' ? 'courier' : 'helvetica',
+      cellPadding: 2.3,
     },
     alternateRowStyles: { fillColor: [240, 245, 255] },
-    columnStyles: { 0: { cellWidth: 10 }, 1: { cellWidth: 30, halign: 'left' } },
-    margin: { left: 5, right: 5 },
+    columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 32, halign: 'left' } },
+    margin: { left: 6, right: 6 },
     didDrawPage: (hookData: any) => {
       if (language === 'mr') {
         hookData.doc.setFont('courier');

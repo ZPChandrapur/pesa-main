@@ -237,13 +237,13 @@ const handleSubmit = async (e: React.FormEvent) => {
 
             {/* Gram Panchayat */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700">{t('gramPanchayat')}</label>
+              <label className="block text-sm font-semibold text-gray-700">{t('gramPanchayat')} <span className="text-gray-500 text-xs">(Optional)</span></label>
               <input
                 type="text"
                 value={formData.gram_panchayat}
                 onChange={(e) => !readonly && handleChange('gram_panchayat', e.target.value)}
-                required
                 readOnly={readonly}
+                placeholder="Leave blank for villages without GP"
                 className="w-full px-4 py-3 border border-gray-200 rounded-2xl"
               />
             </div>

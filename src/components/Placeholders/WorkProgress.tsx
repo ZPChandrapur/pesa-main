@@ -441,7 +441,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
     { icon: TrendingUp, label: t('overallProgress'), value: `${overallProgress}%`, color: 'from-teal-500 to-emerald-600' },
     {
       icon: Banknote,
-      label: language === 'mr' ? 'एकूण प्राप्त निधी' : 'Total Released Amount',
+      label: language === 'mr' ? 'एकूण प्रस्तावित निधी' : 'Total Released Amount',
       value: totalReleasedAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 }),
       color: 'from-orange-500 to-red-600'
     },
@@ -577,6 +577,7 @@ export function WorkProgress({ userId, roleName }: { userId: string; roleName: s
             <div className="flex items-end gap-4 flex-shrink-0">
               {/* Download Button */}
               <button
+                onClick={handleDownloadCSV}
                 className="h-12 px-6 bg-white text-cyan-600 rounded-2xl
                flex items-center gap-2 font-medium shadow-lg
                whitespace-nowrap"
