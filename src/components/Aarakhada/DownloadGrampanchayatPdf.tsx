@@ -245,10 +245,10 @@ function generatePhysicalTable(
     const entry = grouped.get(key)!;
     const cat = work.work_category;
     if (entry[cat]) {
-      entry[cat].sanctioned = parseNumeric(work.sanctioned_works);
-      entry[cat].completed = parseNumeric(work.completed_works);
-      entry[cat].ongoing = parseNumeric(work.progress_works || work.ongoing_works);
-      entry[cat].pending = parseNumeric(work.not_started_works || work.pending_works);
+      entry[cat].sanctioned += parseNumeric(work.sanctioned_works);
+      entry[cat].completed += parseNumeric(work.completed_works);
+      entry[cat].ongoing += parseNumeric(work.progress_works || work.ongoing_works);
+      entry[cat].pending += parseNumeric(work.not_started_works || work.pending_works);
     }
   });
 

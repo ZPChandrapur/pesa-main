@@ -1,10 +1,11 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { pesaSupabase } from '../../utils/supabase';
 
 interface DownloadPhysicalReportProps {
     selectedDistrict?: string;
     selectedTaluka?: string;
     selectedCategory?: string;
+    selectedYear?: number | string;
     language?: 'en' | 'mr';
 }
 
@@ -12,6 +13,7 @@ export const handleDownloadPhysicalExcel = async ({
     selectedDistrict,
     selectedTaluka,
     selectedCategory,
+    selectedYear,
     language = 'en',
 }: DownloadPhysicalReportProps) => {
     try {
@@ -22,6 +24,7 @@ export const handleDownloadPhysicalExcel = async ({
         if (selectedDistrict) physicalQuery = physicalQuery.eq('district_name', selectedDistrict);
         if (selectedTaluka) physicalQuery = physicalQuery.eq('taluka_name', selectedTaluka);
         if (selectedCategory) physicalQuery = physicalQuery.eq('work_category', selectedCategory);
+        if (selectedYear) physicalQuery = physicalQuery.eq('year', selectedYear);
 
         const { data: physicalWorks, error: physicalError } = await physicalQuery;
 
@@ -51,6 +54,10 @@ export const handleDownloadPhysicalExcel = async ({
 
         const districtsByTaluka = new Map<string, Map<string, any>>();
 
+        // DEBUG: Log total records fetched
+        console.log('Total records fetched for Excel:', physicalWorks.length);
+        let sumFromExcel = 0;
+
         physicalWorks.forEach(work => {
             const key = `${work.district_name}|${work.taluka_name}`;
             if (!districtsByTaluka.has(key)) {
@@ -63,12 +70,16 @@ export const handleDownloadPhysicalExcel = async ({
             }
             const entry = districtsByTaluka.get(key)!;
             const category = work.work_category;
-            entry.set(`${category}_sanctioned`, parseNumeric(work.sanctioned_works));
-            entry.set(`${category}_approved`, parseNumeric(work.approved_works));
-            entry.set(`${category}_completed`, parseNumeric(work.completed_works));
-            entry.set(`${category}_ongoing`, parseNumeric(work.ongoing_works));
-            entry.set(`${category}_pending`, parseNumeric(work.pending_works));
+            entry.set(`${category}_sanctioned`, (entry.get(`${category}_sanctioned`) || 0) + parseNumeric(work.sanctioned_works));
+            entry.set(`${category}_approved`, (entry.get(`${category}_approved`) || 0) + parseNumeric(work.approved_works));
+            entry.set(`${category}_completed`, (entry.get(`${category}_completed`) || 0) + parseNumeric(work.completed_works));
+            entry.set(`${category}_ongoing`, (entry.get(`${category}_ongoing`) || 0) + parseNumeric(work.ongoing_works));
+            entry.set(`${category}_pending`, (entry.get(`${category}_pending`) || 0) + parseNumeric(work.pending_works));
+            sumFromExcel += parseNumeric(work.sanctioned_works);
         });
+
+        console.log('Sum from individual records:', sumFromExcel);
+        console.log('Total unique talukas:', districtsByTaluka.size);
 
         const wb = XLSX.utils.book_new();
         const wsData: any[][] = [];
@@ -266,9 +277,9 @@ export const handleDownloadPhysicalExcel = async ({
         ws['!cols'] = columnWidths;
 
         if (!ws['!rows']) ws['!rows'] = [];
-        ws['!rows'][0] = { hpt: 25 };
-        ws['!rows'][2] = { hpt: 48 };
-        ws['!rows'][3] = { hpt: 25 };
+        ws['!rows'][0] = { hpt: 30 };
+        ws['!rows'][2] = { hpt: 55 };
+        ws['!rows'][3] = { hpt: 30 };
 
         const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
 
@@ -291,19 +302,26 @@ export const handleDownloadPhysicalExcel = async ({
                 };
 
                 if (R === 0) {
-                    cellStyle.font = { ...cellStyle.font, bold: true, size: 14, color: { rgb: 'FFFFFF' } };
-                    cellStyle.fill = { fgColor: { rgb: '4472C4' } };
-                    cellStyle.alignment = { horizontal: 'center', vertical: 'center' };
-                } else if (R === 2 || R === 3) {
                     cellStyle.font = {
                         ...cellStyle.font,
                         bold: true,
-                        size: 11,
+                        size: 18,
                         color: { rgb: 'FFFFFF' }
                     };
 
                     cellStyle.fill = {
-                        fgColor: { rgb: '4472C4' }
+                        fgColor: { rgb: '1F4E78' }
+                    };
+                } else if (R === 2 || R === 3) {
+                    cellStyle.font = {
+                        ...cellStyle.font,
+                        bold: true,
+                        size: 18,
+                        color: { rgb: 'FFFFFF' }
+                    };
+
+                    cellStyle.fill = {
+                        fgColor: { rgb: '1F4E78' }
                     };
 
                     cellStyle.alignment = {
@@ -319,8 +337,9 @@ export const handleDownloadPhysicalExcel = async ({
                         right: { style: 'thin', color: { rgb: '000000' } }
                     };
                 } else if (R === wsData.length - 1) {
-                    cellStyle.font = { ...cellStyle.font, bold: true };
-                    cellStyle.fill = { fgColor: { rgb: 'D9D9D9' } };
+                    cellStyle.fill = {
+                        fgColor: { rgb: 'C6EFCE' }
+                    };
                     cellStyle.border = {
                         top: { style: 'medium', color: { rgb: '000000' } },
                         bottom: { style: 'medium', color: { rgb: '000000' } },
@@ -331,6 +350,11 @@ export const handleDownloadPhysicalExcel = async ({
                         cellStyle.alignment = { horizontal: 'right', vertical: 'center' };
                     }
                 } else if (R > 3) {
+                    if (R % 2 === 0) {
+                        cellStyle.fill = {
+                            fgColor: { rgb: 'F2F2F2' }
+                        };
+                    }
                     cellStyle.border = {
                         top: { style: 'thin', color: { rgb: '000000' } },
                         bottom: { style: 'thin', color: { rgb: '000000' } },
@@ -375,6 +399,7 @@ export const DownloadPhysicalReportButton = ({
     selectedDistrict,
     selectedTaluka,
     selectedCategory,
+    selectedYear,
     language,
     className = '',
     children
@@ -387,6 +412,7 @@ export const DownloadPhysicalReportButton = ({
             selectedDistrict,
             selectedTaluka,
             selectedCategory,
+            selectedYear,
             language,
         });
     };

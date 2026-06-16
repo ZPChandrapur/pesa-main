@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { pesaSupabase } from '../../utils/supabase';
 
 interface DownloadTalukaFinancialReportProps {
@@ -171,9 +171,9 @@ export const handleDownloadTalukaFinancialExcel = async ({
 
         wsData.push(headerRow1);
 
-        const headerRow2: any[] = Array(7).fill('');
+        const headerRow2: any[] = Array(6).fill('');
 
-        let columnPointer = 7;
+        let columnPointer = 6;
 
         ['A', 'B', 'C', 'D'].forEach(cat => {
             if (!selectedCategory || selectedCategory === cat) {
@@ -282,7 +282,7 @@ export const handleDownloadTalukaFinancialExcel = async ({
         });
 
         // Static headers (row 2 & 3)
-        [0, 1, 2, 3, 4, 5, 6].forEach(col => {
+        [0, 1, 2, 3, 4, 5].forEach(col => {
             merges.push({
                 s: { r: 2, c: col },
                 e: { r: 3, c: col },
@@ -290,7 +290,7 @@ export const handleDownloadTalukaFinancialExcel = async ({
         });
 
         // Category header merges
-        let startCol = 7;
+        let startCol = 6;
         ['A', 'B', 'C', 'D'].forEach(cat => {
             if (!selectedCategory || selectedCategory === cat) {
                 merges.push({
@@ -310,24 +310,34 @@ export const handleDownloadTalukaFinancialExcel = async ({
 
         ws['!merges'] = merges;
 
-        ws['!cols'] = [
-            { wch: 6 },
+        const columnWidths: XLSX.ColInfo[] = [
+            { wch: 8 },
+            { wch: 22 },
             { wch: 18 },
-            { wch: 14 },
-            { wch: 16 },
-            { wch: 20 },
-            { wch: 20 },
-            { wch: 20 },
-            ...Array(headerRow1.length - 7).fill({ wch: 16 }),
+            { wch: 18 },
+            { wch: 18 },
+            { wch: 18 },
         ];
 
+        // Category sub-columns (KEEP NARROW)
+        const numCategories = selectedCategory ? 1 : 4;
+        for (let i = 0; i < numCategories * 5; i++) {
+            columnWidths.push({ wch: 14 });
+        }
 
-        ws['!cols'] = Array(headerRow1.length).fill({ wch: 16 });
+        // Total columns
+        if (!selectedCategory) {
+            for (let i = 0; i < 5; i++) {
+                columnWidths.push({ wch: 14 });
+            }
+        }
+
+        ws['!cols'] = columnWidths;
 
         if (!ws['!rows']) ws['!rows'] = [];
-        ws['!rows'][0] = { hpt: 25 };
-        ws['!rows'][2] = { hpt: 45 };
-        ws['!rows'][3] = { hpt: 25 };
+        ws['!rows'][0] = { hpt: 30 };
+        ws['!rows'][2] = { hpt: 55 };
+        ws['!rows'][3] = { hpt: 30 };
 
         const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
 
@@ -337,56 +347,92 @@ export const handleDownloadTalukaFinancialExcel = async ({
                 if (!ws[cellAddress]) ws[cellAddress] = { v: '' };
 
                 let cellStyle: any = {
-                    font: {
-                        name: 'Calibri',
-                        size: 11
-                    },
                     alignment: {
                         horizontal: 'center',
                         vertical: 'center',
                         wrapText: true
                     },
-                    border: {
-                        top: { style: 'thin' },
-                        bottom: { style: 'thin' },
-                        left: { style: 'thin' },
-                        right: { style: 'thin' }
+                    font: {
+                        name: 'Calibri',
+                        size: 11
                     }
                 };
 
                 if (R === 0) {
-                    cellStyle.font = { ...cellStyle.font, bold: true, size: 14, color: { rgb: 'FFFFFF' } };
-                    cellStyle.fill = { fgColor: { rgb: '4472C4' } };
-                    cellStyle.alignment = { horizontal: 'center', vertical: 'center' };
-                }
+                    cellStyle.font = {
+                        ...cellStyle.font,
+                        bold: true,
+                        size: 18,
+                        color: { rgb: 'FFFFFF' }
+                    };
 
-                else if (R === 2 || R === 3) {
-                    cellStyle.font = { ...cellStyle.font, bold: true };
-                    cellStyle.fill = { fgColor: { rgb: '4472C4' } };
+                    cellStyle.fill = {
+                        fgColor: { rgb: '1F4E78' }
+                    };
+                } else if (R === 2 || R === 3) {
+                    cellStyle.font = {
+                        ...cellStyle.font,
+                        bold: true,
+                        size: 12,
+                        color: { rgb: 'FFFFFF' }
+                    };
+
+                    cellStyle.fill = {
+                        fgColor: { rgb: '1F4E78' }
+                    };
+
                     cellStyle.alignment = {
                         horizontal: 'center',
                         vertical: 'center',
                         wrapText: true
                     };
-                }
 
-                else if (R === wsData.length - 1) {
-                    cellStyle.font = { ...cellStyle.font, bold: true };
-                    cellStyle.fill = { fgColor: { rgb: 'D9D9D9' } };
-                    cellStyle.alignment = {
-                        horizontal: C >= 3 ? 'right' : 'center',
-                        vertical: 'center'
+                    cellStyle.border = {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
                     };
-                }
-
-                else if (R > 3) {
-                    cellStyle.alignment = {
-                        horizontal: C >= 3 ? 'right' : 'center',
-                        vertical: 'center'
+                } else if (R === wsData.length - 1) {
+                    cellStyle.font = {
+                        ...cellStyle.font,
+                        bold: true,
+                        size: 12
                     };
+                    cellStyle.fill = {
+                        fgColor: { rgb: 'C6EFCE' }
+                    };
+                    cellStyle.border = {
+                        top: { style: 'medium', color: { rgb: '000000' } },
+                        bottom: { style: 'medium', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    };
+                    if (C >= 2) {
+                        cellStyle.alignment = { horizontal: 'right', vertical: 'center' };
+                    }
+                } else if (R > 3) {
+                    if (R % 2 === 0) {
+                        cellStyle.fill = {
+                            fgColor: { rgb: 'F2F2F2' }
+                        };
+                    }
+                    cellStyle.border = {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    };
+                    if (C === 0) {
+                        cellStyle.alignment = { horizontal: 'center', vertical: 'center' };
+                    } else if (C === 1) {
+                        cellStyle.alignment = { horizontal: 'left', vertical: 'center' };
+                    } else {
+                        cellStyle.alignment = { horizontal: 'right', vertical: 'center' };
+                    }
                 }
 
-                if (C >= 3 && R > 3 && R < wsData.length - 1) {
+                if (C >= 2 && R > 3 && R < wsData.length - 1) {
                     ws[cellAddress].z = '#,##0';
                 }
 
@@ -401,14 +447,14 @@ export const handleDownloadTalukaFinancialExcel = async ({
         if (selectedTaluka) fileNameParts.push(selectedTaluka);
         if (selectedGramPanchayat) fileNameParts.push(selectedGramPanchayat);
         if (selectedCategory) fileNameParts.push(selectedCategory);
-        
+
         const fileName = `${fileNameParts.join('_')}.xlsx`;
-        
+
         try {
-          XLSX.writeFile(wb, fileName);
+            XLSX.writeFile(wb, fileName);
         } catch (writeError) {
-          console.error('Error writing Excel file:', writeError);
-          throw new Error(`Failed to write Excel file: ${writeError instanceof Error ? writeError.message : String(writeError)}`);
+            console.error('Error writing Excel file:', writeError);
+            throw new Error(`Failed to write Excel file: ${writeError instanceof Error ? writeError.message : String(writeError)}`);
         }
 
         return true;

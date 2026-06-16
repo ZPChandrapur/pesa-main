@@ -4,10 +4,11 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useYear } from '../../context/YearContext';
 import { AarakhadaTalukaTable } from './AarakhadaTalukaTable';
 import { villageService, talukaWorkService } from '../../utils/supabase';
-import * as XLSX from 'xlsx';
+
 import PesaLogo from '../../assets/pesaLogo.png';
 import { handleDownloadTalukaFinancialExcel } from './DownloadTalukaFinancialReport';
 import { handleDownloadTalukaPdf } from './DownloadTalukaPdf';
+import { handleDownloadTalukaPhysicalExcel } from './DownloadTalukaPhysicalReport';
 
 interface TalukaProps {
   userId?: string;
@@ -30,6 +31,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
   const [gramPanchayatsByTaluka, setGramPanchayatsByTaluka] = React.useState<Record<string, string[]>>({});
   const [talukaAarakhadaFinancial, setTalukaAarakhadaFinancial] = React.useState<any[]>([]);
   const [talukaAarakhadaPhysical, setTalukaAarakhadaPhysical] = React.useState<any[]>([]);
+  const villagesRef = React.useRef<any[]>([]);
 
   const defaultWorkCategories = [
     { id: 'A', name: 'Category A - Infrastructure', name_mr: 'प्रकार अ - पायाभूत सुविधा' },
@@ -51,6 +53,7 @@ export function Taluka({ userId, roleName }: TalukaProps) {
           );
         }
         setVillages(data);
+        villagesRef.current = data;
 
         const uniqueTalukas = Array.from(
           new Map(data.map(v => [v.block, { id: v.block, name: v.block, name_mr: v.block_mr || v.block }])).values()
@@ -100,13 +103,13 @@ export function Taluka({ userId, roleName }: TalukaProps) {
         (!selectedCategory || w.work_category === selectedCategory) &&
         (!selectedGramPanchayat || w.gram_panchayat === selectedGramPanchayat) &&
         (!selectedTaluka || w.taluka_name === selectedTaluka) &&
-        (!selectedYear || w.year === selectedYear)
+        (!selectedYear || String(w.year) === String(selectedYear))
       );
       const filteredPhysical = physical.filter(w =>
         (!selectedCategory || w.work_category === selectedCategory) &&
         (!selectedGramPanchayat || w.gram_panchayat === selectedGramPanchayat) &&
         (!selectedTaluka || w.taluka_name === selectedTaluka) &&
-        (!selectedYear || w.year === selectedYear)
+        (!selectedYear || String(w.year) === String(selectedYear))
       );
 
       setTalukaAarakhadaFinancial(filteredFinancial || []);
@@ -139,7 +142,21 @@ export function Taluka({ userId, roleName }: TalukaProps) {
         setDownloadingExcel(false);
       }
     } else {
-      alert(language === 'mr' ? 'भौतिक डेटा के लिए एक्सेल डाउनलोड अभी उपलब्ध नहीं है। कृपया पीडीएफ डाउनलोड करें।' : 'Excel download for physical data is not available yet. Please use PDF download.');
+      setDownloadingExcel(true);
+      try {
+        await handleDownloadTalukaPhysicalExcel({
+          selectedTaluka,
+          selectedGramPanchayat,
+          selectedCategory,
+          selectedYear,
+          language: language as 'en' | 'mr',
+        });
+      } catch (error) {
+        console.error('Error during physical Excel download:', error);
+        alert(language === 'mr' ? 'एक्सेल डाउनलोड में त्रुटि हुई' : 'Error during Excel download');
+      } finally {
+        setDownloadingExcel(false);
+      }
     }
   };
 
@@ -170,11 +187,16 @@ export function Taluka({ userId, roleName }: TalukaProps) {
 
   const isNoVillages = !villages || villages.length === 0;
 
-  const accessibleGramPanchayats = new Set(villages.map(v => v.gram_panchayat));
+  const villagesSource = villagesRef.current.length > 0 ? villagesRef.current : villages;
 
-  const filteredActiveData = activeFilteredData.filter(w =>
-    accessibleGramPanchayats.has(w.gram_panchayat)
-  );
+  const isDistrictRole = ['district', 'developer', 'super_admin', 'admin']
+    .includes(roleName?.trim().toLowerCase() ?? '');
+
+  const accessibleGramPanchayats = new Set(villagesSource.map(v => v.gram_panchayat));
+
+  const filteredActiveData = isDistrictRole || accessibleGramPanchayats.size === 0
+    ? activeFilteredData
+    : activeFilteredData.filter(w => accessibleGramPanchayats.has(w.gram_panchayat));
 
   const totalGramPanchayatCount = isNoVillages
     ? 0
@@ -194,10 +216,10 @@ export function Taluka({ userId, roleName }: TalukaProps) {
 
   // Financial card summaries
   const totalAnnualFund = filteredActiveData.reduce((sum, w) => sum + (Number(w.annual_received_fund) || 0), 0);
-  const totalTillLastMonth = filteredActiveData.reduce((sum, w) => sum + (Number(w.expenditure_till_last_month) || 0), 0);
-  const totalCurrentMonth = filteredActiveData.reduce((sum, w) => sum + (Number(w.current_month_expenditure) || 0), 0);
+  const totalTillLastMonth = filteredActiveData.reduce((sum, w) => sum + (Number(w.previous_expenditure) || 0), 0);
+  const totalCurrentMonth = filteredActiveData.reduce((sum, w) => sum + (Number(w.current_expenditure) || 0), 0);
   const totalCumulative = filteredActiveData.reduce((sum, w) => sum + (Number(w.cumulative_expenditure) || 0), 0);
-  const totalRemaining = filteredActiveData.reduce((sum, w) => sum + (Number(w.remaining_fund) || 0), 0);
+  const totalRemaining = filteredActiveData.reduce((sum, w) => sum + (Number(w.remaining_funds) || 0), 0);
 
   // Physical card summaries
   const totalSanctionedWorks = filteredActiveData.reduce((sum, w) => sum + (w.sanctioned_works || 0), 0);
@@ -206,8 +228,12 @@ export function Taluka({ userId, roleName }: TalukaProps) {
   const totalPendingWorks = filteredActiveData.reduce((sum, w) => sum + (w.pending_works || 0), 0);
 
   React.useEffect(() => {
+
     loadTalukaAarakhadaData();
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTaluka, selectedGramPanchayat, selectedCategory, selectedYear]);
+
 
   React.useEffect(() => {
     if (activeTab === 'financial') {
@@ -246,18 +272,18 @@ export function Taluka({ userId, roleName }: TalukaProps) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleDownloadExcel}
-              disabled={downloadingExcel || downloadingPdf || !selectedTaluka}
+              disabled={downloadingExcel || downloadingPdf}
               className="bg-white text-purple-600 px-5 py-3 rounded-2xl hover:bg-purple-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-              title={selectedTaluka ? 'Download Excel' : 'Select a Taluka first'}
+              title="Download Excel"
             >
               <Download className={`w-5 h-5 ${downloadingExcel ? 'animate-spin' : ''}`} />
               {downloadingExcel ? (language === 'mr' ? 'डाउनलोड...' : 'Downloading...') : 'Excel'}
             </button>
             <button
               onClick={handleDownloadPdf}
-              disabled={downloadingExcel || downloadingPdf || !selectedTaluka}
+              disabled={downloadingExcel || downloadingPdf}
               className="bg-white text-red-600 px-5 py-3 rounded-2xl hover:bg-red-50 transition-all duration-300 hover:scale-105 flex items-center gap-2 font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-              title={selectedTaluka ? 'Download PDF' : 'Select a Taluka first'}
+              title="Download PDF"
             >
               <FileText className={`w-5 h-5 ${downloadingPdf ? 'animate-spin' : ''}`} />
               {downloadingPdf ? (language === 'mr' ? 'डाउनलोड...' : 'Downloading...') : 'PDF'}

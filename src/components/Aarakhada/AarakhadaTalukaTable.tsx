@@ -26,9 +26,10 @@ export function AarakhadaTalukaTable({
   const rowsPerPage = 10;
 
   useEffect(() => {
+    if (!works || works.length === 0) return;
     const fetchAllWorks = async () => {
       try {
-        const allWorksData = await pesaWorkOperations.getAll(); // fetch all works data
+        const allWorksData = await pesaWorkOperations.getAll();
         setAllWorks(allWorksData);
       } catch (error) {
         console.error('Error loading all works:', error);
@@ -36,7 +37,7 @@ export function AarakhadaTalukaTable({
       }
     };
     fetchAllWorks();
-  }, []);
+  }, [works]);
 
   if (loading) {
     return (
@@ -51,7 +52,7 @@ export function AarakhadaTalukaTable({
     ? works // show all works for district-level
     : works.filter(work =>
       allowedGramPanchayats.some(
-        gp => gp.trim().toLowerCase() === (work.gram_panchayat || '').trim().toLowerCase()
+        gp => gp != null && gp.trim().toLowerCase() === (work.gram_panchayat || '').trim().toLowerCase()
       )
     );
 
