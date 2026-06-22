@@ -1,12 +1,10 @@
-import ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
+import * as XLSX from 'xlsx';
 import { pesaSupabase } from '../../utils/supabase';
 
 interface DownloadPhysicalReportProps {
     selectedDistrict?: string;
     selectedTaluka?: string;
     selectedCategory?: string;
-    selectedYear?: number | string;
     language?: 'en' | 'mr';
 }
 
@@ -14,7 +12,6 @@ export const handleDownloadPhysicalExcel = async ({
     selectedDistrict,
     selectedTaluka,
     selectedCategory,
-    selectedYear,
     language = 'en',
 }: DownloadPhysicalReportProps) => {
     try {
@@ -25,7 +22,6 @@ export const handleDownloadPhysicalExcel = async ({
         if (selectedDistrict) physicalQuery = physicalQuery.eq('district_name', selectedDistrict);
         if (selectedTaluka) physicalQuery = physicalQuery.eq('taluka_name', selectedTaluka);
         if (selectedCategory) physicalQuery = physicalQuery.eq('work_category', selectedCategory);
-        if (selectedYear) physicalQuery = physicalQuery.eq('year', selectedYear);
 
         const { data: physicalWorks, error: physicalError } = await physicalQuery;
 
@@ -55,10 +51,6 @@ export const handleDownloadPhysicalExcel = async ({
 
         const districtsByTaluka = new Map<string, Map<string, any>>();
 
-        // DEBUG: Log total records fetched
-        console.log('Total records fetched for Excel:', physicalWorks.length);
-        let sumFromExcel = 0;
-
         physicalWorks.forEach(work => {
             const key = `${work.district_name}|${work.taluka_name}`;
             if (!districtsByTaluka.has(key)) {
@@ -71,17 +63,14 @@ export const handleDownloadPhysicalExcel = async ({
             }
             const entry = districtsByTaluka.get(key)!;
             const category = work.work_category;
-            entry.set(`${category}_sanctioned`, (entry.get(`${category}_sanctioned`) || 0) + parseNumeric(work.sanctioned_works));
-            entry.set(`${category}_approved`, (entry.get(`${category}_approved`) || 0) + parseNumeric(work.approved_works));
-            entry.set(`${category}_completed`, (entry.get(`${category}_completed`) || 0) + parseNumeric(work.completed_works));
-            entry.set(`${category}_ongoing`, (entry.get(`${category}_ongoing`) || 0) + parseNumeric(work.ongoing_works));
-            entry.set(`${category}_pending`, (entry.get(`${category}_pending`) || 0) + parseNumeric(work.pending_works));
-            sumFromExcel += parseNumeric(work.sanctioned_works);
+            entry.set(`${category}_sanctioned`, parseNumeric(work.sanctioned_works));
+            entry.set(`${category}_approved`, parseNumeric(work.approved_works));
+            entry.set(`${category}_completed`, parseNumeric(work.completed_works));
+            entry.set(`${category}_ongoing`, parseNumeric(work.ongoing_works));
+            entry.set(`${category}_pending`, parseNumeric(work.pending_works));
         });
 
-        console.log('Sum from individual records:', sumFromExcel);
-        console.log('Total unique talukas:', districtsByTaluka.size);
-
+        const wb = XLSX.utils.book_new();
         const wsData: any[][] = [];
 
         const titleText = language === 'mr'
@@ -224,118 +213,155 @@ export const handleDownloadPhysicalExcel = async ({
         wsData.push([]);
         wsData.push(totalRow);
 
-        const totalColumns = headerRow1.length;
-        const wb = new ExcelJS.Workbook();
-        const ws = wb.addWorksheet('Physical Works Report');
 
-        const colWidths: { width: number }[] = [];
-        colWidths.push({ width: 8 }, { width: 22 }, { width: 18 }, { width: 18 }, { width: 35 });
-        const numCategories = selectedCategory ? 1 : 4;
-        for (let i = 0; i < numCategories * 4; i++) {
-            colWidths.push({ width: 14 });
-        }
-        if (!selectedCategory) {
-            for (let i = 0; i < 4; i++) {
-                colWidths.push({ width: 14 });
-            }
-        }
-        ws.columns = colWidths;
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-        wsData.forEach(rowData => {
-            ws.addRow(rowData);
-        });
+        const merges: XLSX.Range[] = [];
 
-        ws.mergeCells(1, 1, 1, totalColumns);
+        merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: headerRow1.length - 1 } });
 
-        let colIdx = 6;
+        let colIndex = 5;
         ['A', 'B', 'C', 'D'].forEach(cat => {
             if (!selectedCategory || selectedCategory === cat) {
-                ws.mergeCells(3, colIdx, 3, colIdx + 3);
-                colIdx += 4;
+                merges.push({ s: { r: 2, c: colIndex }, e: { r: 2, c: colIndex + 3 } });
+                colIndex += 4;
             }
         });
+
         if (!selectedCategory) {
-            ws.mergeCells(3, colIdx, 3, colIdx + 3);
+            merges.push({ s: { r: 2, c: colIndex }, e: { r: 2, c: colIndex + 3 } });
         }
 
-        ws.mergeCells(3, 1, 4, 1);
-        ws.mergeCells(3, 2, 4, 2);
-        ws.mergeCells(3, 3, 4, 3);
-        ws.mergeCells(3, 4, 4, 4);
-        ws.mergeCells(3, 5, 4, 5);
+        merges.push({ s: { r: 3, c: 0 }, e: { r: 3, c: 0 } });
+        merges.push({ s: { r: 3, c: 1 }, e: { r: 3, c: 1 } });
+        merges.push({ s: { r: 3, c: 2 }, e: { r: 3, c: 2 } });
+        merges.push({ s: { r: 3, c: 3 }, e: { r: 3, c: 3 } });
+        merges.push({ s: { r: 3, c: 4 }, e: { r: 3, c: 4 } });
 
-        const lastRowNum = wsData.length;
-        ws.mergeCells(lastRowNum, 1, lastRowNum, 2);
+        merges.push({ s: { r: wsData.length - 1, c: 0 }, e: { r: wsData.length - 1, c: 1 } });
 
-        ws.getRow(1).height = 30;
-        ws.getRow(3).height = 55;
-        ws.getRow(4).height = 30;
+        ws['!merges'] = merges;
 
-        const thinBorder = {
-            top: { style: 'thin' as const, color: { argb: 'FF000000' } },
-            bottom: { style: 'thin' as const, color: { argb: 'FF000000' } },
-            left: { style: 'thin' as const, color: { argb: 'FF000000' } },
-            right: { style: 'thin' as const, color: { argb: 'FF000000' } },
-        };
+        const columnWidths: XLSX.ColInfo[] = [
+            { wch: 8 },
+            { wch: 22 },
+            { wch: 18 },
+            { wch: 18 },
+            { wch: 35 },
+        ];
 
-        wsData.forEach((rowData, rowIdx) => {
-            const R = rowIdx;
-            const excelRow = ws.getRow(R + 1);
+        // Category sub-columns (KEEP NARROW)
+        const numCategories = selectedCategory ? 1 : 4;
+        for (let i = 0; i < numCategories * 4; i++) {
+            columnWidths.push({ wch: 14 });
+        }
 
-            rowData.forEach((cellValue: any, colIdx: number) => {
-                const cell = excelRow.getCell(colIdx + 1);
-                const C = colIdx;
+        // Total columns
+        if (!selectedCategory) {
+            for (let i = 0; i < 4; i++) {
+                columnWidths.push({ wch: 14 });
+            }
+        }
 
-                cell.font = { name: 'Calibri', size: 11 };
-                cell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+        ws['!cols'] = columnWidths;
+
+        if (!ws['!rows']) ws['!rows'] = [];
+        ws['!rows'][0] = { hpt: 25 };
+        ws['!rows'][2] = { hpt: 48 };
+        ws['!rows'][3] = { hpt: 25 };
+
+        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+
+        for (let R = range.s.r; R <= range.e.r; ++R) {
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                if (!ws[cellAddress]) ws[cellAddress] = { v: '' };
+                if (!ws[cellAddress].s) ws[cellAddress].s = {};
+
+                let cellStyle: any = {
+                    alignment: {
+                        horizontal: 'center',
+                        vertical: 'center',
+                        wrapText: true
+                    },
+                    font: {
+                        name: 'Calibri',
+                        size: 11
+                    }
+                };
 
                 if (R === 0) {
-                    cell.font = { name: 'Calibri', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } };
+                    cellStyle.font = { ...cellStyle.font, bold: true, size: 14, color: { rgb: 'FFFFFF' } };
+                    cellStyle.fill = { fgColor: { rgb: '4472C4' } };
+                    cellStyle.alignment = { horizontal: 'center', vertical: 'center' };
                 } else if (R === 2 || R === 3) {
-                    cell.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } };
-                    cell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
-                    cell.border = thinBorder;
-                } else if (R === lastRowNum - 1) {
-                    cell.font = { name: 'Calibri', size: 12, bold: true };
-                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
-                    cell.border = {
-                        top: { style: 'medium', color: { argb: 'FF000000' } },
-                        bottom: { style: 'medium', color: { argb: 'FF000000' } },
-                        left: { style: 'thin', color: { argb: 'FF000000' } },
-                        right: { style: 'thin', color: { argb: 'FF000000' } },
+                    cellStyle.font = {
+                        ...cellStyle.font,
+                        bold: true,
+                        size: 11,
+                        color: { rgb: 'FFFFFF' }
+                    };
+
+                    cellStyle.fill = {
+                        fgColor: { rgb: '4472C4' }
+                    };
+
+                    cellStyle.alignment = {
+                        horizontal: 'center',
+                        vertical: 'center',
+                        wrapText: true
+                    };
+
+                    cellStyle.border = {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    };
+                } else if (R === wsData.length - 1) {
+                    cellStyle.font = { ...cellStyle.font, bold: true };
+                    cellStyle.fill = { fgColor: { rgb: 'D9D9D9' } };
+                    cellStyle.border = {
+                        top: { style: 'medium', color: { rgb: '000000' } },
+                        bottom: { style: 'medium', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
                     };
                     if (C >= 3) {
-                        cell.alignment = { horizontal: 'right', vertical: 'center' };
-                        cell.numFmt = '#,##0';
+                        cellStyle.alignment = { horizontal: 'right', vertical: 'center' };
                     }
                 } else if (R > 3) {
-                    if (R % 2 === 0) {
-                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
-                    }
-                    cell.border = thinBorder;
+                    cellStyle.border = {
+                        top: { style: 'thin', color: { rgb: '000000' } },
+                        bottom: { style: 'thin', color: { rgb: '000000' } },
+                        left: { style: 'thin', color: { rgb: '000000' } },
+                        right: { style: 'thin', color: { rgb: '000000' } }
+                    };
                     if (C === 0) {
-                        cell.alignment = { horizontal: 'center', vertical: 'center' };
+                        cellStyle.alignment = { horizontal: 'center', vertical: 'center' };
                     } else if (C <= 2) {
-                        cell.alignment = { horizontal: 'left', vertical: 'center' };
+                        cellStyle.alignment = { horizontal: 'left', vertical: 'center' };
                     } else {
-                        cell.alignment = { horizontal: 'right', vertical: 'center' };
-                    }
-                    if (C >= 3 && R < lastRowNum - 1) {
-                        cell.numFmt = '#,##0';
+                        cellStyle.alignment = { horizontal: 'right', vertical: 'center' };
                     }
                 }
-            });
-        });
+
+                if (C >= 3 && R > 3 && R < wsData.length - 1) {
+                    ws[cellAddress].z = '#,##0';
+                }
+
+                ws[cellAddress].s = cellStyle;
+            }
+        }
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Physical Works Report');
 
         const fileName = `Physical_Works_Report_${monthName}_${year}_${selectedDistrict ? `${selectedDistrict}_` : ''
             }${selectedTaluka ? `${selectedTaluka}_` : ''
             }${selectedCategory ? `Category_${selectedCategory}_` : ''
             }.xlsx`;
 
-        const buffer = await wb.xlsx.writeBuffer();
-        saveAs(new Blob([buffer]), fileName);
+        XLSX.writeFile(wb, fileName);
 
         return true;
     } catch (error) {
@@ -349,7 +375,6 @@ export const DownloadPhysicalReportButton = ({
     selectedDistrict,
     selectedTaluka,
     selectedCategory,
-    selectedYear,
     language,
     className = '',
     children
@@ -362,7 +387,6 @@ export const DownloadPhysicalReportButton = ({
             selectedDistrict,
             selectedTaluka,
             selectedCategory,
-            selectedYear,
             language,
         });
     };
