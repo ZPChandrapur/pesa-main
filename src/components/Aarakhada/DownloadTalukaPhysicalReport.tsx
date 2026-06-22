@@ -1,4 +1,5 @@
-import * as XLSX from 'xlsx-js-style';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { pesaSupabase } from '../../utils/supabase';
 
 interface DownloadTalukaPhysicalReportProps {
@@ -90,7 +91,6 @@ export const handleDownloadTalukaPhysicalExcel = async ({
             ? ['मंजुर कामे', 'पुर्ण झालेली कामे', 'प्रगती पथावरील कामे', 'अद्याप सुरु न झालेली कामे']
             : ['Sanctioned', 'Completed', 'Ongoing', 'Pending'];
 
-        const wb = XLSX.utils.book_new();
         const wsData: any[][] = [];
 
         const titleText = language === 'mr'
@@ -190,169 +190,116 @@ export const handleDownloadTalukaPhysicalExcel = async ({
         wsData.push([]);
         wsData.push(totalRow);
 
-        /* ===== SHEET SETUP ===== */
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        const merges: XLSX.Range[] = [];
+        const totalColumns = headerRow1.length;
+        const wb = new ExcelJS.Workbook();
+        const ws = wb.addWorksheet('Physical Report');
 
-        // Title
-        merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: headerRow1.length - 1 } });
+        const colWidths: { width: number }[] = [];
+        colWidths.push({ width: 8 }, { width: 22 }, { width: 18 });
+        const numCategories = selectedCategory ? 1 : 4;
+        for (let i = 0; i < numCategories * 4; i++) {
+            colWidths.push({ width: 14 });
+        }
+        if (!selectedCategory) {
+            for (let i = 0; i < 4; i++) {
+                colWidths.push({ width: 14 });
+            }
+        }
+        ws.columns = colWidths;
 
-        // Static cols span rows 2 & 3
-        [0, 1, 2].forEach(col => {
-            merges.push({ s: { r: 2, c: col }, e: { r: 3, c: col } });
+        wsData.forEach(rowData => {
+            ws.addRow(rowData);
         });
 
-        // Category header merges
-        let startCol = 3;
+        ws.mergeCells(1, 1, 1, totalColumns);
+
+        [1, 2, 3].forEach(col => {
+            ws.mergeCells(3, col, 4, col);
+        });
+
+        let startCol = 4;
         ['A', 'B', 'C', 'D'].forEach(cat => {
             if (!selectedCategory || selectedCategory === cat) {
-                merges.push({ s: { r: 2, c: startCol }, e: { r: 2, c: startCol + 3 } });
+                ws.mergeCells(3, startCol, 3, startCol + 3);
                 startCol += 4;
             }
         });
-
         if (!selectedCategory) {
-            merges.push({ s: { r: 2, c: startCol }, e: { r: 2, c: startCol + 3 } });
+            ws.mergeCells(3, startCol, 3, startCol + 3);
         }
 
-        ws['!merges'] = merges;
-        const columnWidths: XLSX.ColInfo[] = [
-            { wch: 8 },
-            { wch: 22 },
-            { wch: 18 },
-        ];
+        const lastRowNum = wsData.length;
+        ws.mergeCells(lastRowNum, 1, lastRowNum, 2);
 
-        // Category sub-columns (KEEP NARROW)
-        const numCategories = selectedCategory ? 1 : 4;
-        for (let i = 0; i < numCategories * 4; i++) {
-            columnWidths.push({ wch: 14 });
-        }
+        ws.getRow(1).height = 30;
+        ws.getRow(3).height = 55;
+        ws.getRow(4).height = 30;
 
-        // Total columns
-        if (!selectedCategory) {
-            for (let i = 0; i < 4; i++) {
-                columnWidths.push({ wch: 14 });
-            }
-        }
+        const thinBorder = {
+            top: { style: 'thin' as const, color: { argb: 'FF000000' } },
+            bottom: { style: 'thin' as const, color: { argb: 'FF000000' } },
+            left: { style: 'thin' as const, color: { argb: 'FF000000' } },
+            right: { style: 'thin' as const, color: { argb: 'FF000000' } },
+        };
 
-        ws['!cols'] = columnWidths;
+        wsData.forEach((rowData, rowIdx) => {
+            const R = rowIdx;
+            const excelRow = ws.getRow(R + 1);
 
-        if (!ws['!rows']) ws['!rows'] = [];
-        ws['!rows'][0] = { hpt: 30 };
-        ws['!rows'][2] = { hpt: 55 };
-        ws['!rows'][3] = { hpt: 30 };
+            rowData.forEach((cellValue: any, colIdx: number) => {
+                const cell = excelRow.getCell(colIdx + 1);
+                const C = colIdx;
 
-        /* ===== STYLES ===== */
-        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
-
-        for (let R = range.s.r; R <= range.e.r; ++R) {
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-                if (!ws[cellAddress]) ws[cellAddress] = { v: '' };
-                if (!ws[cellAddress].s) ws[cellAddress].s = {};
-
-                let cellStyle: any = {
-                    alignment: {
-                        horizontal: 'center',
-                        vertical: 'center',
-                        wrapText: true
-                    },
-                    font: {
-                        name: 'Calibri',
-                        size: 11
-                    }
-                };
+                cell.font = { name: 'Calibri', size: 11 };
+                cell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
 
                 if (R === 0) {
-                    cellStyle.font = {
-                        ...cellStyle.font,
-                        bold: true,
-                        size: 18,
-                        color: { rgb: 'FFFFFF' }
-                    };
-
-                    cellStyle.fill = {
-                        fgColor: { rgb: '1F4E78' }
-                    };
+                    cell.font = { name: 'Calibri', size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } };
                 } else if (R === 2 || R === 3) {
-                    cellStyle.font = {
-                        ...cellStyle.font,
-                        bold: true,
-                        size: 12,
-                        color: { rgb: 'FFFFFF' }
-                    };
-
-                    cellStyle.fill = {
-                        fgColor: { rgb: '1F4E78' }
-                    };
-
-                    cellStyle.alignment = {
-                        horizontal: 'center',
-                        vertical: 'center',
-                        wrapText: true
-                    };
-
-                    cellStyle.border = {
-                        top: { style: 'thin', color: { rgb: '000000' } },
-                        bottom: { style: 'thin', color: { rgb: '000000' } },
-                        left: { style: 'thin', color: { rgb: '000000' } },
-                        right: { style: 'thin', color: { rgb: '000000' } }
-                    };
-                } else if (R === wsData.length - 1) {
-                    cellStyle.font = {
-                        ...cellStyle.font,
-                        bold: true,
-                        size: 12
-                    };
-                    cellStyle.fill = {
-                        fgColor: { rgb: 'C6EFCE' }
-                    };
-                    cellStyle.border = {
-                        top: { style: 'medium', color: { rgb: '000000' } },
-                        bottom: { style: 'medium', color: { rgb: '000000' } },
-                        left: { style: 'thin', color: { rgb: '000000' } },
-                        right: { style: 'thin', color: { rgb: '000000' } }
+                    cell.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } };
+                    cell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true };
+                    cell.border = thinBorder;
+                } else if (R === lastRowNum - 1) {
+                    cell.font = { name: 'Calibri', size: 12, bold: true };
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6EFCE' } };
+                    cell.border = {
+                        top: { style: 'medium', color: { argb: 'FF000000' } },
+                        bottom: { style: 'medium', color: { argb: 'FF000000' } },
+                        left: { style: 'thin', color: { argb: 'FF000000' } },
+                        right: { style: 'thin', color: { argb: 'FF000000' } },
                     };
                     if (C >= 2) {
-                        cellStyle.alignment = { horizontal: 'right', vertical: 'center' };
+                        cell.alignment = { horizontal: 'right', vertical: 'center' };
+                        cell.numFmt = '#,##0';
                     }
                 } else if (R > 3) {
                     if (R % 2 === 0) {
-                        cellStyle.fill = {
-                            fgColor: { rgb: 'F2F2F2' }
-                        };
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
                     }
-                    cellStyle.border = {
-                        top: { style: 'thin', color: { rgb: '000000' } },
-                        bottom: { style: 'thin', color: { rgb: '000000' } },
-                        left: { style: 'thin', color: { rgb: '000000' } },
-                        right: { style: 'thin', color: { rgb: '000000' } }
-                    };
+                    cell.border = thinBorder;
                     if (C === 0) {
-                        cellStyle.alignment = { horizontal: 'center', vertical: 'center' };
+                        cell.alignment = { horizontal: 'center', vertical: 'center' };
                     } else if (C === 1) {
-                        cellStyle.alignment = { horizontal: 'left', vertical: 'center' };
+                        cell.alignment = { horizontal: 'left', vertical: 'center' };
                     } else {
-                        cellStyle.alignment = { horizontal: 'right', vertical: 'center' };
+                        cell.alignment = { horizontal: 'right', vertical: 'center' };
+                    }
+                    if (C >= 2 && R < lastRowNum - 1) {
+                        cell.numFmt = '#,##0';
                     }
                 }
-
-                if (C >= 2 && R > 3 && R < wsData.length - 1) {
-                    ws[cellAddress].z = '#,##0';
-                }
-
-                ws[cellAddress].s = cellStyle;
-            }
-        }
-
-        XLSX.utils.book_append_sheet(wb, ws, 'Physical Report');
+            });
+        });
 
         const fileNameParts = ['PESA_Taluka_Physical_Report', String(year)];
         if (selectedTaluka) fileNameParts.push(selectedTaluka);
         if (selectedGramPanchayat) fileNameParts.push(selectedGramPanchayat);
         if (selectedCategory) fileNameParts.push(`Cat_${selectedCategory}`);
 
-        XLSX.writeFile(wb, `${fileNameParts.join('_')}.xlsx`);
+        const buffer = await wb.xlsx.writeBuffer();
+        saveAs(new Blob([buffer]), `${fileNameParts.join('_')}.xlsx`);
         return true;
 
     } catch (error) {
